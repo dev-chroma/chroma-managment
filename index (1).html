@@ -1,0 +1,1792 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ChromaDiaries Enterprise OS</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    
+    <!-- PDF, Excel & Print Libraries -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: { sans: ['Plus Jakarta Sans', 'sans-serif'] },
+                    colors: {
+                        brand: { 50: '#f0fdf4', 100: '#dcfce7', 500: '#10b981', 600: '#059669', 700: '#047857', 800: '#065f46', 900: '#064e3b' }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body { font-family: 'Plus Jakarta Sans', sans-serif; background-color: #f8fafc; color: #0f172a; }
+        .sidebar-item-active { background: linear-gradient(90deg, rgba(16, 185, 129, 0.15) 0%, rgba(16, 185, 129, 0) 100%); border-left: 4px solid #10b981; color: #ffffff; font-weight: 600; }
+        .cd-table td, .cd-table th { padding: 12px 16px; font-size: 0.8125rem; border-bottom: 1px solid #f1f5f9; white-space: nowrap; }
+        .cd-table tr:hover { background-color: #f8fafc; }
+        .sticky-action-col { position: sticky; right: 0; background-color: #ffffff; box-shadow: -6px 0 10px -4px rgba(0, 0, 0, 0.05); z-index: 10; }
+        tr:hover .sticky-action-col { background-color: #f8fafc; }
+        .status-badge { padding: 4px 10px; border-radius: 9999px; font-size: 11px; font-weight: 700; display: inline-flex; align-items: center; gap: 4px; }
+        .status-badge-pending { background-color: #fef3c7; color: #d97706; border: 1px solid #fde68a; }
+        .status-badge-completed { background-color: #d1fae5; color: #059669; border: 1px solid #a7f3d0; }
+        .status-badge-progress { background-color: #e0f2fe; color: #0284c7; border: 1px solid #bae6fd; }
+        .status-badge-default { background-color: #f1f5f9; color: #475569; border: 1px solid #e2e8f0; }
+        
+        @media print {
+            body * { visibility: hidden; }
+            #printableArea, #printableArea * { visibility: visible; }
+            #printableArea { position: absolute; left: 0; top: 0; width: 100%; }
+        }
+    </style>
+</head>
+<body class="bg-slate-50 min-h-screen flex flex-col antialiased overflow-x-hidden">
+
+    <!-- MOBILE BACKDROP OVERLAY -->
+    <div id="mobileBackdrop" onclick="toggleMobileSidebar()" class="fixed inset-0 bg-slate-900/60 z-30 hidden md:hidden backdrop-blur-sm transition-opacity"></div>
+
+    <div id="app" class="flex flex-1 h-screen overflow-hidden">
+        <!-- SIDEBAR -->
+        <aside id="sidebar" class="fixed min-h-screen md:relative z-40 w-64 bg-slate-900 text-slate-300 flex flex-col shrink-0 border-r border-slate-800 -translate-x-full md:translate-x-0 transition-transform duration-300 ease-in-out">
+            <div class="p-5 flex items-center justify-between border-b border-slate-800">
+                <div class="flex items-center space-x-3">
+                    <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-brand-600 to-emerald-400 flex items-center justify-center text-white font-extrabold text-xl shadow-lg shadow-brand-600/30">C</div>
+                    <div>
+                        <h1 class="font-bold text-white text-sm tracking-wide">ChromaDiaries</h1>
+                        <span class="text-[10px] text-brand-500 uppercase font-semibold tracking-wider">Enterprise OS</span>
+                    </div>
+                </div>
+                <!-- Close Mobile Sidebar -->
+                <button onclick="toggleMobileSidebar()" class="md:hidden text-slate-400 hover:text-white p-2">
+                    <i class="fa-solid fa-xmark text-lg"></i>
+                </button>
+            </div>
+
+            <nav class="flex-1 py-4 space-y-1 px-3 overflow-y-auto">
+                <a href="#" onclick="switchTab('home')" id="nav-home" class="sidebar-item sidebar-item-active flex items-center space-x-3 px-3 py-2.5 rounded-lg text-xs transition">
+                    <i class="fa-solid fa-chart-pie w-5 text-emerald-400 text-base"></i><span>Dashboard Overview</span>
+                </a>
+                <a href="#" onclick="switchTab('workspace')" id="nav-workspace" class="sidebar-item flex items-center space-x-3 px-3 py-2.5 rounded-lg text-xs transition">
+                    <i class="fa-solid fa-layer-group w-5 text-sky-400 text-base"></i><span>Workspace Hub</span>
+                </a>
+                <a href="#" onclick="switchTab('resources')" id="nav-resources" class="sidebar-item flex items-center space-x-3 px-3 py-2.5 rounded-lg text-xs transition">
+                    <i class="fa-solid fa-folder-open w-5 text-purple-400 text-base"></i><span>Resources Center</span>
+                </a>
+                <a href="#" onclick="switchTab('users')" id="nav-users" class="sidebar-item flex items-center space-x-3 px-3 py-2.5 rounded-lg text-xs transition admin-only hidden">
+                    <i class="fa-solid fa-users-gear w-5 text-amber-400 text-base"></i><span>Users & Directory</span>
+                </a>
+                <a href="#" onclick="switchTab('settings')" id="nav-settings" class="sidebar-item flex items-center space-x-3 px-3 py-2.5 rounded-lg text-xs transition admin-only hidden">
+                    <i class="fa-solid fa-sliders w-5 text-rose-400 text-base"></i><span>System Controls</span>
+                </a>
+                <a href="#" onclick="switchTab('mega-analysis')" id="nav-mega-analysis" class="sidebar-item flex items-center space-x-3 px-3 py-2.5 rounded-lg text-xs transition admin-only hidden">
+                    <i class="fa-solid fa-chart-line w-5 text-teal-400 text-base"></i><span>Mega Analytics</span>
+                </a>
+                <a href="#" onclick="switchTab('profile')" id="nav-profile" class="sidebar-item flex items-center space-x-3 px-3 py-2.5 rounded-lg text-xs transition">
+                    <i class="fa-solid fa-id-card w-5 text-indigo-400 text-base"></i><span>My Account</span>
+                </a>
+            </nav>
+
+            <div class="p-4 border-t border-slate-800 bg-slate-950/60 flex items-center justify-between">
+                <div class="flex items-center space-x-3 overflow-hidden">
+                    <div id="sideUserAvatar" class="w-8 h-8 rounded-full bg-brand-600 flex items-center justify-center text-white text-xs font-bold shrink-0">U</div>
+                    <div class="truncate">
+                        <div id="navUserName" class="font-bold text-white text-xs truncate">User</div>
+                        <div id="navUserRole" class="text-[10px] text-slate-400 truncate">Role</div>
+                    </div>
+                </div>
+                <button onclick="logout()" title="Logout" class="text-slate-400 hover:text-rose-400 p-1.5 transition"><i class="fa-solid fa-arrow-right-from-bracket"></i></button>
+            </div>
+        </aside>
+
+        <!-- MAIN AREA -->
+        <div class="flex-1 flex flex-col min-w-0 overflow-hidden">
+            <header class="bg-white border-b border-slate-200 h-16 flex items-center justify-between px-4 sm:px-6 shrink-0 shadow-sm">
+                <div class="flex items-center space-x-3 sm:space-x-4">
+                    <!-- Hamburger Menu Button -->
+                    <button onclick="toggleMobileSidebar()" class="md:hidden text-slate-600 hover:text-slate-900 focus:outline-none p-1.5 rounded-lg bg-slate-100 border border-slate-200">
+                        <i class="fa-solid fa-bars text-lg"></i>
+                    </button>
+                    <h2 id="pageTitle" class="text-sm sm:text-base font-extrabold text-slate-800 truncate">Dashboard Overview</h2>
+                    <span class="text-slate-300 hidden sm:inline">|</span>
+                    <div class="hidden sm:flex items-center space-x-2 text-xs font-semibold text-slate-500 bg-slate-100 px-3 py-1 rounded-full border border-slate-200">
+                        <i class="fa-regular fa-calendar text-brand-600"></i>
+                        <span id="liveDateBadge">Today</span>
+                    </div>
+                </div>
+                <button onclick="fetchLatestData()" class="px-3 py-1.5 sm:px-3.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded-lg transition flex items-center border border-slate-200 shadow-sm">
+                    <i class="fa-solid fa-rotate mr-1.5 sm:mr-2 text-brand-600"></i> <span class="hidden sm:inline">Sync Database</span>
+                </button>
+            </header>
+
+            <main class="flex-1 overflow-y-auto p-4 sm:p-6 bg-slate-50 space-y-6">
+                
+                <!-- HOME TAB -->
+                <section id="tab-home" class="tab-content space-y-6">
+                    <div class="bg-gradient-to-r from-slate-900 via-slate-800 to-brand-900 rounded-2xl p-6 text-white shadow-xl relative overflow-hidden flex justify-between items-center">
+                        <div class="space-y-2 z-10">
+                            <span class="text-xs uppercase font-extrabold tracking-widest text-brand-400 bg-brand-950/60 border border-brand-800/80 px-2.5 py-1 rounded-md">Performance Hub</span>
+                            <h2 class="text-xl sm:text-2xl font-black">Welcome back, <span id="homeWelcomeName">User</span>! 👋</h2>
+                            <p class="text-slate-300 text-xs max-w-xl leading-relaxed">System overview for team productivity, active tasks, status distribution, and individual work targets.</p>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                        <div class="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-sm flex items-center space-x-4">
+                            <div class="p-3.5 bg-emerald-50 text-emerald-600 rounded-xl border border-emerald-100"><i class="fa-solid fa-pen-nib text-xl"></i></div>
+                            <div>
+                                <div class="text-[11px] text-slate-400 font-bold uppercase tracking-wider">Total Writings</div>
+                                <div id="homeStatWritings" class="text-2xl font-extrabold text-slate-800">0</div>
+                            </div>
+                        </div>
+                        <div class="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-sm flex items-center space-x-4">
+                            <div class="p-3.5 bg-sky-50 text-sky-600 rounded-xl border border-sky-100"><i class="fa-solid fa-photo-film text-xl"></i></div>
+                            <div>
+                                <div class="text-[11px] text-slate-400 font-bold uppercase tracking-wider">Total Media</div>
+                                <div id="homeStatMedia" class="text-2xl font-extrabold text-slate-800">0</div>
+                            </div>
+                        </div>
+                        <div class="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-sm flex items-center space-x-4">
+                            <div class="p-3.5 bg-amber-50 text-amber-600 rounded-xl border border-amber-100"><i class="fa-solid fa-video text-xl"></i></div>
+                            <div>
+                                <div class="text-[11px] text-slate-400 font-bold uppercase tracking-wider">Total Videos</div>
+                                <div id="homeStatVideo" class="text-2xl font-extrabold text-slate-800">0</div>
+                            </div>
+                        </div>
+                        <div class="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-sm flex items-center space-x-4">
+                            <div class="p-3.5 bg-rose-50 text-rose-600 rounded-xl border border-rose-100"><i class="fa-solid fa-bullhorn text-xl"></i></div>
+                            <div>
+                                <div class="text-[11px] text-slate-400 font-bold uppercase tracking-wider">Total Outreach</div>
+                                <div id="homeStatOutreach" class="text-2xl font-extrabold text-slate-800">0</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-sm space-y-3">
+                        <h3 class="font-bold text-xs uppercase tracking-wider text-slate-500">Live Status Counter Summary</h3>
+                        <div id="homeStatusCountsGrid" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-3"></div>
+                    </div>
+
+                    <div class="bg-white p-6 rounded-2xl border border-slate-200/80 shadow-sm space-y-4">
+                        <div class="flex justify-between items-center border-b pb-3">
+                            <h3 class="font-bold text-sm text-slate-800">Overall Team Output Analytics</h3>
+                            <span class="text-xs text-slate-400">Real-time DB aggregated</span>
+                        </div>
+                        <div class="h-64"><canvas id="homeMainChart"></canvas></div>
+                    </div>
+                </section>
+
+                <!-- WORKSPACE TAB -->
+                <section id="tab-workspace" class="tab-content hidden space-y-4">
+                    <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
+                        <div class="bg-white p-4 rounded-xl border border-slate-200/80 shadow-sm">
+                            <div class="text-[10px] text-slate-400 font-bold uppercase">Current Team Output</div>
+                            <div id="wsSummaryTotal" class="text-xl font-bold text-brand-600">0</div>
+                        </div>
+                        <div class="bg-white p-4 rounded-xl border border-slate-200/80 shadow-sm">
+                            <div class="text-[10px] text-slate-400 font-bold uppercase">Status Mix</div>
+                            <div id="wsSummaryStatus" class="text-xs font-semibold text-slate-700 truncate">-</div>
+                        </div>
+                        <div class="bg-white p-4 rounded-xl border border-slate-200/80 shadow-sm">
+                            <div class="text-[10px] text-slate-400 font-bold uppercase">Active Team Members</div>
+                            <div id="wsSummaryUsers" class="text-xl font-bold text-sky-600">0</div>
+                        </div>
+                        <div class="bg-white p-4 rounded-xl border border-slate-200/80 shadow-sm">
+                            <div class="text-[10px] text-slate-400 font-bold uppercase">Configured Options</div>
+                            <div id="wsSummaryOptions" class="text-xl font-bold text-amber-600">0</div>
+                        </div>
+                    </div>
+
+                    <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-3 bg-white p-3.5 rounded-xl border border-slate-200/80 shadow-sm">
+                        <div class="flex flex-wrap gap-2" id="workspaceTeamSwitcher">
+                            <button onclick="setWorkspaceTeam('Editing')" id="wsTab-Editing" class="px-3.5 py-2 text-xs font-bold rounded-lg bg-brand-600 text-white shadow-sm">Editing</button>
+                            <button onclick="setWorkspaceTeam('Media')" id="wsTab-Media" class="px-3.5 py-2 text-xs font-bold rounded-lg text-slate-600 hover:bg-slate-100">Media</button>
+                            <button onclick="setWorkspaceTeam('Video')" id="wsTab-Video" class="px-3.5 py-2 text-xs font-bold rounded-lg text-slate-600 hover:bg-slate-100">Video Production</button>
+                            <button onclick="setWorkspaceTeam('Outreach')" id="wsTab-Outreach" class="px-3.5 py-2 text-xs font-bold rounded-lg text-slate-600 hover:bg-slate-100">Outreach</button>
+                        </div>
+                        <div class="flex flex-wrap items-center gap-2">
+                            <button onclick="exportWorkspaceToPDF()" class="px-3 py-1.5 bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs rounded-lg shadow-sm transition"><i class="fa-solid fa-file-pdf mr-1"></i> PDF</button>
+                            <button onclick="exportWorkspaceToExcel()" class="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-lg shadow-sm transition"><i class="fa-solid fa-file-excel mr-1"></i> Excel</button>
+                            <button onclick="printTableData('workspaceTable')" class="px-3 py-1.5 bg-slate-700 hover:bg-slate-800 text-white font-bold text-xs rounded-lg shadow-sm transition"><i class="fa-solid fa-print mr-1"></i> Print</button>
+                            <button onclick="openAddModal()" class="px-4 py-1.5 text-xs font-bold bg-brand-600 hover:bg-brand-700 text-white rounded-lg shadow-sm"><i class="fa-solid fa-plus mr-1"></i> Add Record</button>
+                        </div>
+                    </div>
+
+                    <!-- DYNAMIC FILTER BAR -->
+                    <div id="workspaceFilterBar" class="flex flex-wrap items-center gap-3 bg-white p-3.5 rounded-xl border border-slate-200/80 text-xs shadow-sm"></div>
+
+                    <!-- DATA TABLE CONTAINER FIXED WITH NO RIGHT GAP -->
+                    <div class="bg-white rounded-xl border border-slate-200/80 shadow-sm overflow-x-auto relative w-full" id="printableTableArea">
+                        <table class="cd-table w-full text-left border-collapse" id="workspaceTable">
+                            <thead class="bg-slate-100/80 text-slate-700 font-extrabold uppercase text-[10px] tracking-wider border-b"></thead>
+                            <tbody id="workspaceTableBody"></tbody>
+                        </table>
+                    </div>
+                </section>
+
+                <!-- RESOURCES TAB -->
+                <section id="tab-resources" class="tab-content hidden space-y-6">
+                    <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 bg-white p-4 rounded-2xl border border-slate-200/80 shadow-sm">
+                        <div>
+                            <h3 class="font-extrabold text-slate-800 text-sm">Team Resource Library</h3>
+                            <p class="text-xs text-slate-500">Access and add documentation, files, images, site links, and team assets.</p>
+                        </div>
+                        <button onclick="openResourceModal()" class="px-4 py-2 bg-brand-600 text-white font-bold text-xs rounded-xl shadow-sm hover:bg-brand-700 flex items-center">
+                            <i class="fa-solid fa-plus mr-1.5"></i> Add Resource
+                        </button>
+                    </div>
+
+                    <div id="resourcesGrid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"></div>
+                </section>
+
+                <!-- USERS TAB (ADMIN) -->
+                <section id="tab-users" class="tab-content hidden space-y-4">
+                    <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 bg-white p-4 rounded-xl border border-slate-200/80 shadow-sm">
+                        <h3 class="font-bold text-slate-800 text-sm">User Directory & Activation Requests</h3>
+                        <div class="flex flex-wrap items-center gap-2">
+                            <button onclick="exportUsersToPDF()" class="px-3 py-1.5 bg-rose-600 text-white font-bold text-xs rounded-lg shadow-sm hover:bg-rose-700"><i class="fa-solid fa-file-pdf mr-1"></i> PDF</button>
+                            <button onclick="exportUsersToExcel()" class="px-3 py-1.5 bg-emerald-600 text-white font-bold text-xs rounded-lg shadow-sm hover:bg-emerald-700"><i class="fa-solid fa-file-excel mr-1"></i> Excel</button>
+                            <button onclick="printTableData('usersTable')" class="px-3 py-1.5 bg-slate-700 text-white font-bold text-xs rounded-lg shadow-sm hover:bg-slate-800"><i class="fa-solid fa-print mr-1"></i> Print</button>
+                            <button onclick="openUserModal()" class="px-4 py-1.5 bg-brand-600 text-white font-bold text-xs rounded-lg shadow-sm hover:bg-brand-700">+ Create User</button>
+                        </div>
+                    </div>
+                    <div class="bg-white rounded-xl border border-slate-200/80 shadow-sm overflow-x-auto w-full">
+                        <table class="cd-table w-full text-left border-collapse" id="usersTable">
+                            <thead class="bg-slate-100/80 text-slate-600 uppercase text-[10px] font-extrabold tracking-wider border-b">
+                                <tr><th>ID</th><th>Name</th><th>Username</th><th>Phone Number</th><th>Official Email</th><th>Team</th><th>Role</th><th>Status Action</th><th class="text-right">Actions</th></tr>
+                            </thead>
+                            <tbody id="usersTableBody"></tbody>
+                        </table>
+                    </div>
+                </section>
+
+                <!-- SETTINGS TAB (ADMIN) -->
+                <section id="tab-settings" class="tab-content hidden space-y-6">
+                    <!-- WEEK RESET OPTION -->
+                    <div class="bg-white p-6 rounded-2xl border border-slate-200/80 shadow-sm space-y-4">
+                        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b pb-3">
+                            <div>
+                                <h3 class="font-extrabold text-slate-800 text-sm">System Week Counter Configuration</h3>
+                                <p class="text-xs text-slate-500">Resetting week sequence automatically calculates baseline week progression (1 Wk = 3 Hrs, 2 Wks = 6 Hrs).</p>
+                            </div>
+                            <span class="px-3 py-1 bg-brand-50 text-brand-700 font-black text-xs rounded-lg border border-brand-200 self-start sm:self-auto" id="currentCalculatedWeekBadge">Current Active Week: Week 1</span>
+                        </div>
+                        <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 text-xs max-w-md">
+                            <input type="date" id="settingWeekAnchorInput" class="border p-2.5 rounded-xl bg-slate-50 font-bold flex-1">
+                            <button onclick="saveWeekAnchorSetting()" class="px-5 py-2.5 bg-brand-600 text-white font-bold rounded-xl hover:bg-brand-700 shadow-sm">Reset Week Counter as 1</button>
+                        </div>
+                    </div>
+
+                    <!-- DROPDOWNS & STYLING -->
+                    <div class="bg-white p-6 rounded-2xl border border-slate-200/80 shadow-sm space-y-4">
+                        <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 border-b pb-3">
+                            <h3 class="font-extrabold text-slate-800 text-sm">Team Dropdown Options & Status Styling</h3>
+                            <div class="flex items-center space-x-2">
+                                <button onclick="exportSettingsToPDF()" class="px-3 py-1.5 bg-rose-600 text-white font-bold text-xs rounded-lg shadow-sm hover:bg-rose-700"><i class="fa-solid fa-file-pdf mr-1"></i> PDF</button>
+                                <button onclick="exportSettingsToExcel()" class="px-3 py-1.5 bg-emerald-600 text-white font-bold text-xs rounded-lg shadow-sm hover:bg-emerald-700"><i class="fa-solid fa-file-excel mr-1"></i> Excel</button>
+                                <button onclick="printTableData('settingsOptionsContainer')" class="px-3 py-1.5 bg-slate-700 text-white font-bold text-xs rounded-lg shadow-sm hover:bg-slate-800"><i class="fa-solid fa-print mr-1"></i> Print</button>
+                            </div>
+                        </div>
+
+                        <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-5 gap-3 text-xs">
+                            <select id="settingTeamSelect" class="border p-2.5 rounded-lg bg-slate-50">
+                                <option value="Editing">Editing Team</option>
+                                <option value="Media">Media Team</option>
+                                <option value="Video">Video Production Team</option>
+                                <option value="Outreach">Outreach Team</option>
+                            </select>
+                            <select id="settingTypeSelect" class="border p-2.5 rounded-lg bg-slate-50">
+                                <option value="Category">Category</option>
+                                <option value="Type">Type</option>
+                                <option value="Status">Status / Stage</option>
+                                <option value="Platform">Platform</option>
+                            </select>
+                            <input type="text" id="settingValueInput" placeholder="Value (e.g. Pending)" class="border p-2.5 rounded-lg">
+                            <select id="settingColorSelect" class="border p-2.5 rounded-lg bg-slate-50">
+                                <option value="yellow">Yellow Badge (Pending)</option>
+                                <option value="green">Green Badge (Completed)</option>
+                                <option value="blue">Blue Badge (In Progress)</option>
+                                <option value="gray">Gray Badge (Default)</option>
+                            </select>
+                            <button onclick="addSettingOption()" class="bg-brand-600 text-white font-bold rounded-lg p-2.5 hover:bg-brand-700">Add Option</button>
+                        </div>
+
+                        <div class="pt-4 border-t border-slate-100" id="settingsOptionsContainer">
+                            <div id="settingsOptionsList" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 text-xs"></div>
+                        </div>
+                    </div>
+
+                    <!-- WORK COUNT CONFIGURATION -->
+                    <div class="bg-white p-6 rounded-2xl border border-slate-200/80 shadow-sm space-y-4">
+                        <h3 class="font-extrabold text-slate-800 text-sm">Editor Weekly Target Work Count</h3>
+                        <p class="text-xs text-slate-500">Configure required Work Count target per team member per week (Default: 3 works/week = 3 Hours base).</p>
+                        
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs max-w-xl">
+                            <div class="p-4 border rounded-xl bg-slate-50 space-y-2">
+                                <label class="font-bold text-slate-700 block">Weekly Target Work Count</label>
+                                <input type="number" id="settingWorkCountInput" value="3" min="1" class="w-full border p-2.5 rounded-lg bg-white font-bold text-brand-700">
+                            </div>
+                            <div class="p-4 border rounded-xl bg-slate-50 space-y-2">
+                                <label class="font-bold text-slate-700 block">Standard Active Hours/Wk</label>
+                                <input type="text" id="settingAutoWorkHoursDisplay" value="Calculated from Active Weeks" readonly class="w-full border p-2.5 rounded-lg bg-slate-100 font-bold text-slate-600">
+                            </div>
+                        </div>
+                        <div class="flex justify-start pt-2">
+                            <button onclick="saveWorkCountSetting()" class="px-6 py-2.5 bg-brand-600 text-white font-bold rounded-xl hover:bg-brand-700 shadow-sm text-xs">Save Work Count Target</button>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- MEGA ANALYSIS TAB (ADMIN) -->
+                <section id="tab-mega-analysis" class="tab-content hidden space-y-6">
+                    <div class="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-sm space-y-4">
+                        <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+                            <h3 class="font-extrabold text-slate-800 text-sm">Performance Analysis & Multi-Filter Matrix</h3>
+                            <div class="flex flex-wrap items-center gap-2">
+                                <button onclick="exportAnalysisToPDF()" class="px-3.5 py-1.5 bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs rounded-xl shadow-sm transition flex items-center">
+                                    <i class="fa-solid fa-file-pdf mr-1.5"></i> Export PDF
+                                </button>
+                                <button onclick="exportAnalysisToExcel()" class="px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-xl shadow-sm transition flex items-center">
+                                    <i class="fa-solid fa-file-excel mr-1.5"></i> Export Excel
+                                </button>
+                                <button onclick="printTableData('megaAnalysisTable')" class="px-3.5 py-1.5 bg-slate-700 hover:bg-slate-800 text-white font-bold text-xs rounded-xl shadow-sm transition flex items-center">
+                                    <i class="fa-solid fa-print mr-1.5"></i> Print
+                                </button>
+                            </div>
+                        </div>
+
+                        <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3 text-xs">
+                            <div>
+                                <label class="block font-bold text-slate-600 mb-1">Week Filter</label>
+                                <select id="megaFilterWeek" onchange="renderMegaAnalysisTab()" class="w-full border p-2.5 rounded-xl bg-slate-50">
+                                    <option value="ALL">All Weeks</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block font-bold text-slate-600 mb-1">Workspace / Team</label>
+                                <select id="megaFilterWorkspace" onchange="onMegaWorkspaceFilterChange()" class="w-full border p-2.5 rounded-xl bg-slate-50">
+                                    <option value="ALL">All Workspaces</option>
+                                    <option value="Editing">Editing</option>
+                                    <option value="Media">Media</option>
+                                    <option value="Video">Video Production</option>
+                                    <option value="Outreach">Outreach</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block font-bold text-slate-600 mb-1">Assigned User</label>
+                                <select id="megaFilterUser" onchange="renderMegaAnalysisTab()" class="w-full border p-2.5 rounded-xl bg-slate-50">
+                                    <option value="ALL">All Users</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block font-bold text-slate-600 mb-1">Category / Type</label>
+                                <select id="megaFilterCategory" onchange="renderMegaAnalysisTab()" class="w-full border p-2.5 rounded-xl bg-slate-50">
+                                    <option value="ALL">All Categories</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="bg-white p-6 rounded-2xl border border-slate-200/80 shadow-sm space-y-4">
+                        <h4 class="font-extrabold text-slate-800 text-sm">User Efficiency, Work Hours & Remaining Hours Matrix</h4>
+                        <div class="overflow-x-auto w-full">
+                            <table class="cd-table w-full text-left border-collapse" id="megaAnalysisTable">
+                                <thead class="bg-slate-100/80 text-slate-600 uppercase text-[10px] font-extrabold border-b">
+                                    <tr><th>User</th><th>Team</th><th>Total Tasks</th><th>Completed</th><th>Pending</th><th>Target Work Count</th><th>Performance</th><th>Total Work Hours</th><th>Remaining Hours</th></tr>
+                                </thead>
+                                <tbody id="megaUsersMatrixBody"></tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div class="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-sm">
+                            <h4 class="font-bold text-xs text-slate-700 mb-3">Status Breakdown by Workspace</h4>
+                            <div class="h-60"><canvas id="megaStatusChart"></canvas></div>
+                        </div>
+                        <div class="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-sm">
+                            <h4 class="font-bold text-xs text-slate-700 mb-3">Team Member Distribution</h4>
+                            <div class="h-60"><canvas id="megaUserChart"></canvas></div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- PROFILE TAB -->
+                <section id="tab-profile" class="tab-content hidden max-w-4xl mx-auto space-y-6">
+                    <div class="bg-white p-6 rounded-2xl border border-slate-200/80 shadow-sm space-y-6">
+                        <div class="flex items-center space-x-5 border-b pb-5">
+                            <div class="w-16 h-16 rounded-2xl bg-gradient-to-tr from-brand-600 to-emerald-400 flex items-center justify-center text-white text-2xl font-extrabold shadow-md shadow-brand-600/30" id="profileAvatar">U</div>
+                            <div>
+                                <h3 id="profileName" class="text-xl font-bold text-slate-800">User Name</h3>
+                                <p id="profileBadge" class="text-xs font-semibold text-slate-500">Role • Team</p>
+                            </div>
+                        </div>
+
+                        <!-- PROFILE ASSIGNED WORK CARDS -->
+                        <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                            <div class="bg-slate-50 p-4 rounded-xl border border-slate-200/60 flex items-center justify-between">
+                                <div>
+                                    <div class="text-[10px] uppercase font-bold text-slate-400">Total Work Assigned</div>
+                                    <div id="profTotalAssigned" class="text-2xl font-black text-slate-800">0</div>
+                                </div>
+                                <div class="p-3 bg-blue-100 text-blue-600 rounded-lg"><i class="fa-solid fa-list-check text-lg"></i></div>
+                            </div>
+                            <div class="bg-slate-50 p-4 rounded-xl border border-slate-200/60 flex items-center justify-between">
+                                <div>
+                                    <div class="text-[10px] uppercase font-bold text-slate-400">Work Completed</div>
+                                    <div id="profCompleted" class="text-2xl font-black text-emerald-600">0</div>
+                                </div>
+                                <div class="p-3 bg-emerald-100 text-emerald-600 rounded-lg"><i class="fa-solid fa-circle-check text-lg"></i></div>
+                            </div>
+                            <div class="bg-slate-50 p-4 rounded-xl border border-slate-200/60 flex items-center justify-between">
+                                <div>
+                                    <div class="text-[10px] uppercase font-bold text-slate-400">Work Pending</div>
+                                    <div id="profPending" class="text-2xl font-black text-amber-600">0</div>
+                                </div>
+                                <div class="p-3 bg-amber-100 text-amber-600 rounded-lg"><i class="fa-solid fa-clock text-lg"></i></div>
+                            </div>
+                        </div>
+
+                        <!-- HOURS AND TARGET PERFORMANCE -->
+                        <div class="grid grid-cols-2 md:grid-cols-4 gap-3 bg-slate-50 p-4 rounded-xl border border-slate-200/60">
+                            <div>
+                                <div class="text-[10px] uppercase font-bold text-slate-400">Target Work Count</div>
+                                <div id="profTarget" class="text-lg font-black text-slate-800">3 Works/Wk</div>
+                            </div>
+                            <div>
+                                <div class="text-[10px] uppercase font-bold text-slate-400">Performance</div>
+                                <div id="profPerformance" class="text-lg font-black text-emerald-600">0%</div>
+                            </div>
+                            <div>
+                                <div class="text-[10px] uppercase font-bold text-slate-400">Total Work Hours</div>
+                                <div id="profWorkHours" class="text-lg font-black text-slate-800">0 Hours</div>
+                            </div>
+                            <div>
+                                <div class="text-[10px] uppercase font-bold text-slate-400">Remaining Hours</div>
+                                <div id="profRemainingHours" class="text-lg font-black text-amber-600">0 Hours 00 Mins</div>
+                            </div>
+                        </div>
+
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
+                            <div class="bg-slate-50 p-3.5 rounded-xl border border-slate-200/60">
+                                <span class="text-slate-400 block font-semibold text-[10px] uppercase">Username</span>
+                                <span id="profileUsername" class="font-bold text-slate-800 text-xs">-</span>
+                            </div>
+                            <div class="bg-slate-50 p-3.5 rounded-xl border border-slate-200/60">
+                                <span class="text-slate-400 block font-semibold text-[10px] uppercase">Official Email</span>
+                                <span id="profileEmail" class="font-bold text-slate-800 text-xs">-</span>
+                            </div>
+                            <div class="bg-slate-50 p-3.5 rounded-xl border border-slate-200/60">
+                                <span class="text-slate-400 block font-semibold text-[10px] uppercase">Phone Number</span>
+                                <span id="profilePhone" class="font-bold text-slate-800 text-xs">-</span>
+                            </div>
+                            <div class="bg-slate-50 p-3.5 rounded-xl border border-slate-200/60">
+                                <span class="text-slate-400 block font-semibold text-[10px] uppercase">Account Role</span>
+                                <span id="profileRole" class="font-bold text-slate-800 text-xs">-</span>
+                            </div>
+                        </div>
+
+                        <div class="pt-4 border-t border-slate-100 space-y-3">
+                            <h4 class="font-bold text-xs text-slate-800 uppercase tracking-wider">Reset Account Password</h4>
+                            <form onsubmit="handleResetPassword(event)" class="space-y-3 text-xs max-w-md">
+                                <input type="password" id="resetNewPassword" placeholder="New Password" required minlength="4" class="w-full border p-2.5 rounded-lg">
+                                <input type="password" id="resetConfirmPassword" placeholder="Confirm Password" required minlength="4" class="w-full border p-2.5 rounded-lg">
+                                <button type="submit" class="px-4 py-2 bg-brand-600 text-white font-bold rounded-lg hover:bg-brand-700">Update Password</button>
+                            </form>
+                        </div>
+                    </div>
+                </section>
+
+            </main>
+        </div>
+    </div>
+
+    <!-- MODALS -->
+    <!-- LOGIN / REGISTER MODAL -->
+    <div id="loginModal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-md z-50 flex items-center justify-center p-4">
+        <div class="bg-white w-full max-w-md rounded-2xl p-8 space-y-6 shadow-2xl border border-slate-200 relative overflow-hidden">
+            <div class="text-center space-y-2">
+                <div class="w-12 h-12 rounded-2xl bg-gradient-to-tr from-brand-600 to-emerald-400 flex items-center justify-center text-white font-black text-2xl mx-auto shadow-lg shadow-brand-600/30">C</div>
+                <h2 class="font-black text-xl text-slate-800 tracking-tight">ChromaDiaries Enterprise</h2>
+                <p class="text-xs text-slate-500">Sign in to access your team workspace portal</p>
+            </div>
+
+            <form id="loginForm" onsubmit="handleLogin(event)" class="space-y-4 text-xs">
+                <div>
+                    <label class="block font-bold text-slate-700 mb-1">Username or Official Email</label>
+                    <input type="text" id="loginUsername" placeholder="e.g. alex@chromadiaries.com" required class="w-full border border-slate-300 p-3 rounded-xl focus:ring-2 focus:ring-brand-500 outline-none">
+                </div>
+                <div>
+                    <label class="block font-bold text-slate-700 mb-1">Password</label>
+                    <input type="password" id="loginPassword" placeholder="••••••••" required class="w-full border border-slate-300 p-3 rounded-xl focus:ring-2 focus:ring-brand-500 outline-none">
+                </div>
+                <button type="submit" class="w-full py-3 bg-brand-600 hover:bg-brand-700 text-white font-bold rounded-xl shadow-lg shadow-brand-600/30 transition text-xs">Sign In to Dashboard</button>
+            </form>
+
+            <form id="registerForm" onsubmit="handleRegister(event)" class="hidden space-y-3 text-xs">
+                <input type="text" id="regName" placeholder="Full Name" required class="w-full border p-2.5 rounded-xl">
+                <input type="text" id="regUsername" placeholder="Username" required class="w-full border p-2.5 rounded-xl">
+                <input type="email" id="regEmail" placeholder="Official Email" required class="w-full border p-2.5 rounded-xl">
+                <input type="text" id="regPhone" placeholder="Phone Number" class="w-full border p-2.5 rounded-xl">
+                <input type="password" id="regPassword" placeholder="Password" required minlength="4" class="w-full border p-2.5 rounded-xl">
+                <select id="regTeam" class="w-full border p-2.5 rounded-xl bg-white">
+                    <option value="Editing">Editing Team</option>
+                    <option value="Media">Media Team</option>
+                    <option value="Video">Video Production Team</option>
+                    <option value="Outreach">Outreach Team</option>
+                </select>
+                <button type="submit" class="w-full py-3 bg-brand-600 hover:bg-brand-700 text-white font-bold rounded-xl shadow-lg transition">Submit Account Request</button>
+            </form>
+
+            <div class="text-center pt-2 border-t border-slate-100">
+                <button id="authToggleBtn" onclick="toggleAuthForms()" class="text-xs text-brand-600 font-bold hover:underline">Need an account? Request Access</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- RECORD MODAL -->
+    <div id="recordModal" class="hidden fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+        <div class="bg-white w-full max-w-2xl rounded-2xl border border-slate-200 max-h-[90vh] flex flex-col shadow-2xl overflow-hidden">
+            <div class="bg-slate-900 text-white px-6 py-4 flex justify-between items-center">
+                <h3 id="recordModalTitle" class="font-bold text-sm">Record Details</h3>
+                <button onclick="closeRecordModal()" class="text-slate-400 hover:text-white"><i class="fa-solid fa-xmark text-base"></i></button>
+            </div>
+            <form id="recordForm" onsubmit="saveRecordForm(event)" class="p-6 overflow-y-auto space-y-4 text-xs flex-1">
+                <input type="hidden" id="formRecordId">
+                <input type="hidden" id="formTeamName">
+                <div id="formDynamicFields" class="grid grid-cols-1 md:grid-cols-2 gap-4"></div>
+                <div id="recordModalButtons" class="pt-4 border-t flex justify-end space-x-2">
+                    <button type="button" onclick="closeRecordModal()" class="px-4 py-2 bg-slate-100 text-slate-700 font-bold rounded-xl">Cancel</button>
+                    <button type="submit" id="saveRecordBtn" class="px-5 py-2 bg-brand-600 text-white font-bold rounded-xl shadow-sm hover:bg-brand-700">Save Record</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- RESOURCE MODAL -->
+    <div id="resourceModal" class="hidden fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+        <div class="bg-white w-full max-w-md rounded-2xl p-6 space-y-4 text-xs shadow-2xl border border-slate-200">
+            <div class="flex justify-between items-center border-b pb-2">
+                <h3 class="font-bold text-slate-800 text-sm">Add New Resource</h3>
+                <button onclick="closeResourceModal()" class="text-slate-400 hover:text-slate-600"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <form onsubmit="saveResourceForm(event)" class="space-y-3">
+                <div>
+                    <label class="block font-bold text-slate-700 mb-1">Resource Name / Text</label>
+                    <input type="text" id="resFormName" placeholder="e.g. Design Assets Folder" required class="w-full border p-2.5 rounded-xl">
+                </div>
+                <div>
+                    <label class="block font-bold text-slate-700 mb-1">Resource URL / Link</label>
+                    <input type="url" id="resFormLink" placeholder="https://..." required class="w-full border p-2.5 rounded-xl">
+                </div>
+                <div>
+                    <label class="block font-bold text-slate-700 mb-1">Resource Type</label>
+                    <select id="resFormType" class="w-full border p-2.5 rounded-xl bg-white font-semibold">
+                        <option value="Site">Site Link</option>
+                        <option value="File">Document / File</option>
+                        <option value="Images">Images / Graphics</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block font-bold text-slate-700 mb-1">Target Team</label>
+                    <select id="resFormTeam" class="w-full border p-2.5 rounded-xl bg-white font-semibold">
+                        <option value="All">All Teams</option>
+                        <option value="Editing">Editing</option>
+                        <option value="Media">Media</option>
+                        <option value="Video">Video Production</option>
+                        <option value="Outreach">Outreach</option>
+                    </select>
+                </div>
+                <div class="flex justify-end space-x-2 pt-3 border-t">
+                    <button type="button" onclick="closeResourceModal()" class="px-4 py-2 bg-slate-100 rounded-xl font-bold text-slate-600">Cancel</button>
+                    <button type="submit" class="px-5 py-2 bg-brand-600 text-white font-bold rounded-xl hover:bg-brand-700">Save Resource</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- USER MODAL -->
+    <div id="userModal" class="hidden fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+        <div class="bg-white w-full max-w-md rounded-2xl p-6 space-y-4 text-xs shadow-2xl border border-slate-200">
+            <h3 id="userModalTitle" class="font-bold text-slate-800 text-sm border-b pb-2">User Details</h3>
+            <form onsubmit="saveUserForm(event)" class="space-y-3">
+                <input type="hidden" id="userFormId">
+                <input type="text" id="userFormName" placeholder="Full Name" required class="w-full border p-2.5 rounded-xl">
+                <input type="text" id="userFormUsername" placeholder="Username" required class="w-full border p-2.5 rounded-xl">
+                <input type="password" id="userFormPassword" placeholder="Password (Leave blank to keep current)" class="w-full border p-2.5 rounded-xl">
+                <input type="text" id="userFormPhone" placeholder="Phone Number" class="w-full border p-2.5 rounded-xl">
+                <input type="email" id="userFormEmail" placeholder="Official Mail" required class="w-full border p-2.5 rounded-xl">
+                <div class="grid grid-cols-2 gap-2">
+                    <select id="userFormTeam" class="border p-2.5 rounded-xl bg-white">
+                        <option value="Editing">Editing</option>
+                        <option value="Media">Media</option>
+                        <option value="Video">Video Production</option>
+                        <option value="Outreach">Outreach</option>
+                    </select>
+                    <select id="userFormRole" class="border p-2.5 rounded-xl bg-white">
+                        <option value="Member">Member</option>
+                        <option value="Admin">Admin</option>
+                    </select>
+                </div>
+                <div class="flex justify-end space-x-2 pt-2">
+                    <button type="button" onclick="closeUserModal()" class="px-4 py-2 bg-slate-100 rounded-xl font-bold">Cancel</button>
+                    <button type="submit" class="px-5 py-2 bg-brand-600 text-white font-bold rounded-xl hover:bg-brand-700">Save User</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- SCRIPT APPLICATION -->
+    <script>
+        const SUPABASE_URL = 'https://akapsoghszlbporamrwf.supabase.co';
+        const SUPABASE_ANON_KEY = 'sb_publishable_sWEGh2iqOJDwTd2bp_q8fA_L-bCVxiq';
+
+        let state = {
+            currentUser: null,
+            activeTab: 'home',
+            workspaceTeam: 'Editing',
+            filters: { category: 'ALL', status: 'ALL', week: 'ALL' },
+            users: [], writings: [], media: [], video: [], outreach: [], settings: [], resources: [],
+            supabaseClient: null,
+            homeChartInstance: null,
+            megaStatusChartInstance: null,
+            megaUserChartInstance: null
+        };
+
+        const TEAM_TABLES = { 'Editing': 'cd_writings', 'Media': 'cd_media', 'Video': 'cd_video', 'Outreach': 'cd_outreach' };
+
+        const TEAM_COLUMNS = {
+            'Editing': [
+                { key: 'custom_id', label: 'ID', type: 'readonly' },
+                { key: 'title', label: 'Title', type: 'text', required: true },
+                { key: 'author', label: 'Author', type: 'text' },
+                { key: 'profile_link', label: 'Profile Link', type: 'url' },
+                { key: 'category', label: 'Category', type: 'select', settingType: 'Category' },
+                { key: 'status', label: 'Status', type: 'select', settingType: 'Status' },
+                { key: 'date_received', label: 'Date Received', type: 'date' },
+                { key: 'assigned_editor', label: 'Assigned Editor', type: 'user', teamFilter: 'Editing' },
+                { key: 'date_assigned', label: 'Date Assigned', type: 'date' },
+                { key: 'date_deadline', label: 'Date Deadline', type: 'date' },
+                { key: 'date_completed', label: 'Date Completed', type: 'date' },
+                { key: 'date_finaled', label: 'Date Finaled', type: 'date' },
+                { key: 'date_published', label: 'Date Published', type: 'date' }
+            ],
+            'Media': [
+                { key: 'custom_id', label: 'ID', type: 'readonly' },
+                { key: 'type', label: 'Type', type: 'select_fixed', options: ['Poster', 'Video'], required: true },
+                { key: 'title', label: 'Item Name', type: 'text', required: true },
+                { key: 'location_url', label: 'Location URL', type: 'url' },
+                { key: 'category', label: 'Category', type: 'select', settingType: 'Category' },
+                { key: 'status', label: 'Status', type: 'select', settingType: 'Status' },
+                { key: 'assigned_designer', label: 'Assigned Designer', type: 'user', teamFilter: 'Media' },
+                { key: 'date_assigned', label: 'Date Assigned', type: 'date' },
+                { key: 'date_deadline', label: 'Date Deadline', type: 'date' },
+                { key: 'date_completed', label: 'Date Completed', type: 'date' },
+                { key: 'date_finaled', label: 'Date Finaled', type: 'date' },
+                { key: 'date_published', label: 'Date Published', type: 'date' }
+            ],
+            'Video': [
+                { key: 'custom_id', label: 'ID', type: 'readonly' },
+                { key: 'title', label: 'Video Item', type: 'text', required: true },
+                { key: 'location_url', label: 'Location URL', type: 'url' },
+                { key: 'type', label: 'Type', type: 'select', settingType: 'Type' },
+                { key: 'status', label: 'Status', type: 'select', settingType: 'Status' },
+                { key: 'assigned_coordinator', label: 'Assigned Coordinator', type: 'user', teamFilter: 'Video' },
+                { key: 'date_assigned', label: 'Date Assigned', type: 'date' },
+                { key: 'date_deadline', label: 'Date Deadline', type: 'date' },
+                { key: 'date_completed', label: 'Date Completed', type: 'date' },
+                { key: 'date_finaled', label: 'Date Finaled', type: 'date' },
+                { key: 'date_published', label: 'Date Published', type: 'date' }
+            ],
+            'Outreach': [
+                { key: 'custom_id', label: 'ID', type: 'readonly' },
+                { key: 'title', label: 'Lead or College Name', type: 'text', required: true },
+                { key: 'number', label: 'Number', type: 'text' },
+                { key: 'incharge_name', label: 'Incharge Name', type: 'text' },
+                { key: 'incharge_number', label: 'Incharge Number', type: 'text' },
+                { key: 'status', label: 'Status', type: 'select', settingType: 'Status' },
+                { key: 'date_received', label: 'Date Received', type: 'date' },
+                { key: 'platform', label: 'Platform', type: 'select', settingType: 'Platform' }
+            ]
+        };
+
+        window.onload = function() {
+            if (window.supabase) {
+                state.supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+            }
+            checkSession();
+        };
+
+        // TOGGLE MOBILE SIDEBAR
+        function toggleMobileSidebar() {
+            const sidebar = document.getElementById('sidebar');
+            const backdrop = document.getElementById('mobileBackdrop');
+            if (sidebar.classList.contains('-translate-x-full')) {
+                sidebar.classList.remove('-translate-x-full');
+                backdrop.classList.remove('hidden');
+            } else {
+                sidebar.classList.add('-translate-x-full');
+                backdrop.classList.add('hidden');
+            }
+        }
+
+        // WEEK NUMBER COMPUTATION
+        function getCalculatedWeekNumber(targetDate = new Date()) {
+            const anchorSetting = state.settings.find(s => s.type === 'WeekAnchor');
+            const anchorDateStr = anchorSetting ? anchorSetting.value : null;
+
+            let anchorDate = anchorDateStr ? new Date(anchorDateStr) : new Date();
+            if (isNaN(anchorDate.getTime())) anchorDate = new Date();
+
+            anchorDate.setHours(0, 0, 0, 0);
+            const refDate = new Date(targetDate);
+            refDate.setHours(0, 0, 0, 0);
+
+            const diffTime = refDate - anchorDate;
+            const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+            
+            if (diffDays < 0) return 1;
+            return Math.floor(diffDays / 7) + 1;
+        }
+
+        function getItemWeekNumber(item) {
+            const dateStr = item.date_assigned || item.date_received || item.created_at;
+            if (!dateStr) return 1;
+            return getCalculatedWeekNumber(new Date(dateStr));
+        }
+
+        function getWorkCountTarget() {
+            const setting = state.settings.find(s => s.type === 'WorkCountTarget');
+            return setting ? parseInt(setting.value, 10) : 3;
+        }
+
+        function getTeamWorkHoursBase(teamName) {
+            const setting = state.settings.find(s => s.type === 'WorkHours' && (s.team === teamName || s.team === 'Global'));
+            return setting ? parseFloat(setting.value) : 1;
+        }
+
+        // DYNAMIC WORK HOURS & REMAINING TIME FORMATTER (1 Week = 3 Hours, 2 Weeks = 6 Hours)
+        function getUserWorkHoursData(userObj) {
+            const currentWeek = getCalculatedWeekNumber();
+            const hoursPerWeek = 3; 
+            const totalAllocatedHours = currentWeek * hoursPerWeek; // Dynamic progression: 1 Wk = 3 Hrs, 2 Wks = 6 Hrs
+
+            const teamWorks = getTeamDataset(userObj.team);
+            const workHoursPerTask = getTeamWorkHoursBase(userObj.team);
+            
+            const userWorks = teamWorks.filter(w => 
+                (w.assigned_editor === userObj.name || w.assigned_designer === userObj.name || w.assigned_coordinator === userObj.name)
+            );
+
+            const completedWorksCount = userWorks.filter(w => (w.status || '').toLowerCase().includes('completed')).length;
+
+            const hoursEarned = completedWorksCount * workHoursPerTask;
+            const remainingFractionHours = Math.max(0, totalAllocatedHours - hoursEarned);
+            
+            const remHours = Math.floor(remainingFractionHours);
+            const remMins = Math.round((remainingFractionHours - remHours) * 60);
+
+            return {
+                totalHours: totalAllocatedHours,
+                remainingHours: remHours,
+                remainingMins: remMins,
+                remainingFormatted: `${remHours} Hours ${String(remMins).padStart(2, '0')} Mins`
+            };
+        }
+
+        function renderLiveDate() {
+            const now = new Date();
+            const options = { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' };
+            const dateStr = now.toLocaleDateString('en-US', options);
+            const weekNum = getCalculatedWeekNumber(now);
+
+            document.getElementById('liveDateBadge').textContent = `${dateStr} • Week ${weekNum}`;
+            const badge = document.getElementById('currentCalculatedWeekBadge');
+            if (badge) badge.textContent = `Current Active Week: Week ${weekNum}`;
+            
+            const hoursDisplay = document.getElementById('settingAutoWorkHoursDisplay');
+            if (hoursDisplay) {
+                const activeHours = weekNum * 3;
+                hoursDisplay.value = `${activeHours} Hours (${weekNum} Weeks × 3 Hours/Wk)`;
+            }
+        }
+
+        function checkSession() {
+            const savedUser = sessionStorage.getItem('cd_session');
+            if (savedUser) {
+                state.currentUser = JSON.parse(savedUser);
+                document.getElementById('loginModal').classList.add('hidden');
+                setupUIPermissions();
+                fetchLatestData();
+            } else {
+                document.getElementById('loginModal').classList.remove('hidden');
+            }
+        }
+
+        function toggleAuthForms() {
+            const loginF = document.getElementById('loginForm');
+            const regF = document.getElementById('registerForm');
+            const btn = document.getElementById('authToggleBtn');
+
+            if (loginF.classList.contains('hidden')) {
+                loginF.classList.remove('hidden');
+                regF.classList.add('hidden');
+                btn.textContent = 'Need an account? Request Access';
+            } else {
+                loginF.classList.add('hidden');
+                regF.classList.remove('hidden');
+                btn.textContent = 'Already registered? Back to Login';
+            }
+        }
+
+        async function handleLogin(e) {
+            e.preventDefault();
+            const u = document.getElementById('loginUsername').value.trim();
+            const p = document.getElementById('loginPassword').value.trim();
+
+            const { data, error } = await state.supabaseClient
+                .from('cd_users')
+                .select('*')
+                .or(`username.eq.${u},email.eq.${u}`)
+                .eq('password', p);
+
+            if (data && data.length > 0) {
+                const user = data[0];
+                if (user.status === 'Inactive') {
+                    alert('Your registration request is pending Admin approval.');
+                    return;
+                }
+                state.currentUser = user;
+                sessionStorage.setItem('cd_session', JSON.stringify(user));
+                document.getElementById('loginModal').classList.add('hidden');
+                setupUIPermissions();
+                fetchLatestData();
+            } else {
+                alert('Invalid Credentials.');
+            }
+        }
+
+        async function handleRegister(e) {
+            e.preventDefault();
+            const payload = {
+                name: document.getElementById('regName').value.trim(),
+                username: document.getElementById('regUsername').value.trim(),
+                email: document.getElementById('regEmail').value.trim(),
+                phone: document.getElementById('regPhone').value.trim() || null,
+                password: document.getElementById('regPassword').value.trim(),
+                team: document.getElementById('regTeam').value,
+                role: 'Member',
+                status: 'Inactive'
+            };
+
+            const res = await state.supabaseClient.from('cd_users').insert([payload]);
+            if (res.error) alert('Registration failed: ' + res.error.message);
+            else {
+                alert('Registration request submitted! Your account is inactive until approved by an Admin.');
+                toggleAuthForms();
+            }
+        }
+
+        function logout() {
+            sessionStorage.removeItem('cd_session');
+            location.reload();
+        }
+
+        function setupUIPermissions() {
+            const u = state.currentUser;
+            document.getElementById('navUserName').textContent = u.name;
+            document.getElementById('navUserRole').textContent = `${u.role} (${u.team})`;
+            document.getElementById('homeWelcomeName').textContent = u.name;
+            document.getElementById('sideUserAvatar').textContent = u.name.charAt(0).toUpperCase();
+
+            document.querySelectorAll('.admin-only').forEach(el => {
+                if (u.role === 'Admin') el.classList.remove('hidden');
+                else el.classList.add('hidden');
+            });
+
+            const teamSwitcher = document.getElementById('workspaceTeamSwitcher');
+            if (u.role !== 'Admin') {
+                state.workspaceTeam = u.team;
+                teamSwitcher.querySelectorAll('button').forEach(btn => {
+                    if (btn.id === `wsTab-${u.team}`) btn.classList.remove('hidden');
+                    else btn.classList.add('hidden');
+                });
+            } else {
+                teamSwitcher.querySelectorAll('button').forEach(btn => btn.classList.remove('hidden'));
+            }
+        }
+
+        async function fetchLatestData() {
+            const [u, w, m, v, o, s, r] = await Promise.all([
+                state.supabaseClient.from('cd_users').select('*'),
+                state.supabaseClient.from('cd_writings').select('*'),
+                state.supabaseClient.from('cd_media').select('*'),
+                state.supabaseClient.from('cd_video').select('*'),
+                state.supabaseClient.from('cd_outreach').select('*'),
+                state.supabaseClient.from('cd_settings').select('*'),
+                state.supabaseClient.from('cd_resources').select('*')
+            ]);
+
+            if (u.data) state.users = u.data;
+            if (w.data) state.writings = w.data;
+            if (m.data) state.media = m.data;
+            if (v.data) state.video = v.data;
+            if (o.data) state.outreach = o.data;
+            if (s.data) state.settings = s.data;
+            if (r.data) state.resources = r.data;
+
+            renderLiveDate();
+            renderAllViews();
+        }
+
+        function generateCustomId(team, row, dataset, itemType = '') {
+            if (row && row.custom_id) return row.custom_id;
+            
+            let prefix = 'CD-W-';
+            if (team === 'Editing') prefix = 'CD-W-';
+            else if (team === 'Media') {
+                const typeToUse = itemType || (row ? row.type : '') || 'Poster';
+                prefix = (typeToUse === 'Video') ? 'CD-V-' : 'CD-P-';
+            }
+            else if (team === 'Video') prefix = 'CD-VD-';
+            else if (team === 'Outreach') prefix = 'CD-O-';
+
+            const count = dataset.filter(r => (r.custom_id || '').startsWith(prefix)).length + 1;
+            return `${prefix}${String(count).padStart(3, '0')}`;
+        }
+
+        function switchTab(tab) {
+            if (['users', 'settings', 'mega-analysis'].includes(tab) && state.currentUser.role !== 'Admin') {
+                alert('Access restricted to Administrators.');
+                return;
+            }
+
+            state.activeTab = tab;
+            document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
+            document.getElementById(`tab-${tab}`).classList.remove('hidden');
+            document.querySelectorAll('.sidebar-item').forEach(el => el.classList.remove('sidebar-item-active'));
+            document.getElementById(`nav-${tab}`)?.classList.add('sidebar-item-active');
+
+            // Hide mobile sidebar on tab selection
+            const sidebar = document.getElementById('sidebar');
+            if (!sidebar.classList.contains('-translate-x-full')) {
+                toggleMobileSidebar();
+            }
+
+            renderAllViews();
+        }
+
+        function setWorkspaceTeam(team) {
+            if (state.currentUser.role !== 'Admin' && state.currentUser.team !== team) {
+                alert('You can only view your assigned team.');
+                return;
+            }
+
+            state.workspaceTeam = team;
+            state.filters.category = 'ALL';
+            state.filters.status = 'ALL';
+            state.filters.week = 'ALL';
+
+            ['Editing', 'Media', 'Video', 'Outreach'].forEach(t => {
+                const btn = document.getElementById(`wsTab-${t}`);
+                if (btn) btn.className = t === team ? "px-3.5 py-2 text-xs font-bold rounded-lg bg-brand-600 text-white shadow-sm" : "px-3.5 py-2 text-xs font-bold rounded-lg text-slate-600 hover:bg-slate-100";
+            });
+
+            renderWorkspaceTab();
+        }
+
+        function renderAllViews() {
+            if (state.activeTab === 'home') renderHomeTab();
+            if (state.activeTab === 'workspace') renderWorkspaceTab();
+            if (state.activeTab === 'resources') renderResourcesTab();
+            if (state.activeTab === 'profile') renderProfileTab();
+            if (state.activeTab === 'users') renderUsersTab();
+            if (state.activeTab === 'settings') renderSettingsTab();
+            if (state.activeTab === 'mega-analysis') { populateMegaFilterDropdowns(); renderMegaAnalysisTab(); }
+        }
+
+        function getStatusBadgeHTML(status) {
+            if (!status) return `<span class="status-badge status-badge-default">Unassigned</span>`;
+            const stLower = status.toLowerCase();
+            const config = state.settings.find(s => s.type === 'Status' && s.value.toLowerCase() === stLower);
+            const color = config ? config.color : 'gray';
+
+            if (color === 'yellow' || stLower.includes('pending')) {
+                return `<span class="status-badge status-badge-pending"><i class="fa-solid fa-clock"></i> ${status}</span>`;
+            } else if (color === 'green' || stLower.includes('completed')) {
+                return `<span class="status-badge status-badge-completed"><i class="fa-solid fa-check"></i> ${status}</span>`;
+            } else if (color === 'blue' || stLower.includes('progress') || stLower.includes('production')) {
+                return `<span class="status-badge status-badge-progress"><i class="fa-solid fa-spinner"></i> ${status}</span>`;
+            }
+            return `<span class="status-badge status-badge-default">${status}</span>`;
+        }
+
+        function renderHomeTab() {
+            document.getElementById('homeStatWritings').textContent = state.writings.length;
+            document.getElementById('homeStatMedia').textContent = state.media.length;
+            document.getElementById('homeStatVideo').textContent = state.video.length;
+            document.getElementById('homeStatOutreach').textContent = state.outreach.length;
+
+            const allItems = [...state.writings, ...state.media, ...state.video, ...state.outreach];
+            const statusCounts = {};
+            allItems.forEach(i => {
+                const s = i.status || 'Unspecified';
+                statusCounts[s] = (statusCounts[s] || 0) + 1;
+            });
+
+            const grid = document.getElementById('homeStatusCountsGrid');
+            grid.innerHTML = Object.entries(statusCounts).map(([st, val]) => `
+                <div class="p-3 bg-slate-50 rounded-xl border border-slate-200/60 flex justify-between items-center">
+                    <div>${getStatusBadgeHTML(st)}</div>
+                    <span class="text-sm font-black text-slate-800">${val}</span>
+                </div>
+            `).join('') || '<div class="text-xs text-slate-400">No active statuses available.</div>';
+
+            const ctx = document.getElementById('homeMainChart')?.getContext('2d');
+            if (ctx) {
+                if (state.homeChartInstance) state.homeChartInstance.destroy();
+                state.homeChartInstance = new Chart(ctx, {
+                    type: 'bar',
+                    data: {
+                        labels: ['Editing Tasks', 'Media Designs', 'Video Projects', 'Outreach Leads'],
+                        datasets: [{
+                            label: 'Total Output Records',
+                            data: [state.writings.length, state.media.length, state.video.length, state.outreach.length],
+                            backgroundColor: ['#10b981', '#0284c7', '#f59e0b', '#f43f5e'],
+                            borderRadius: 8
+                        }]
+                    },
+                    options: { responsive: true, maintainAspectRatio: false }
+                });
+            }
+        }
+
+        function getTeamDataset(team) {
+            if (team === 'Editing') return state.writings;
+            if (team === 'Media') return state.media;
+            if (team === 'Video') return state.video;
+            if (team === 'Outreach') return state.outreach;
+            return [];
+        }
+
+        function renderWorkspaceTab() {
+            const cols = TEAM_COLUMNS[state.workspaceTeam] || [];
+            let dataset = getTeamDataset(state.workspaceTeam);
+
+            document.getElementById('wsSummaryTotal').textContent = dataset.length;
+            const statusCounts = {};
+            dataset.forEach(r => { if(r.status) statusCounts[r.status] = (statusCounts[r.status] || 0) + 1; });
+            document.getElementById('wsSummaryStatus').textContent = Object.entries(statusCounts).map(([k,v]) => `${k}: ${v}`).join(' | ') || 'None';
+            document.getElementById('wsSummaryUsers').textContent = state.users.filter(u => u.team === state.workspaceTeam && u.status === 'Active').length;
+            document.getElementById('wsSummaryOptions').textContent = state.settings.filter(s => s.team === state.workspaceTeam).length;
+
+            const filterBar = document.getElementById('workspaceFilterBar');
+            const cats = getSettingsOptions(state.workspaceTeam, 'Category');
+            const statuses = getSettingsOptions(state.workspaceTeam, 'Status');
+
+            const activeWeekCount = getCalculatedWeekNumber();
+            let weekOptionsHTML = '<option value="ALL">All Weeks</option>';
+            for (let w = 1; w <= activeWeekCount; w++) {
+                weekOptionsHTML += `<option value="${w}" ${state.filters.week == w ? 'selected' : ''}>Week ${w}</option>`;
+            }
+
+            filterBar.innerHTML = `
+                <span class="font-bold text-slate-700">Filters:</span>
+                <select onchange="state.filters.week=this.value; renderWorkspaceTab();" class="border p-2 rounded-lg bg-slate-50 font-bold text-brand-700">
+                    ${weekOptionsHTML}
+                </select>
+                <select onchange="state.filters.category=this.value; renderWorkspaceTab();" class="border p-2 rounded-lg bg-slate-50">
+                    <option value="ALL">All Categories</option>
+                    ${cats.map(c => `<option value="${c}" ${state.filters.category === c ? 'selected' : ''}>${c}</option>`).join('')}
+                </select>
+                <select onchange="state.filters.status=this.value; renderWorkspaceTab();" class="border p-2 rounded-lg bg-slate-50">
+                    <option value="ALL">All Statuses</option>
+                    ${statuses.map(s => `<option value="${s}" ${state.filters.status === s ? 'selected' : ''}>${s}</option>`).join('')}
+                </select>
+            `;
+
+            if (state.filters.week !== 'ALL') {
+                dataset = dataset.filter(r => getItemWeekNumber(r) === parseInt(state.filters.week));
+            }
+            if (state.filters.category !== 'ALL') {
+                dataset = dataset.filter(r => r.category === state.filters.category || r.type === state.filters.category);
+            }
+            if (state.filters.status !== 'ALL') {
+                dataset = dataset.filter(r => r.status === state.filters.status);
+            }
+
+            const thead = document.querySelector('#workspaceTable thead');
+            thead.innerHTML = `<tr>${cols.map(c => `<th>${c.label}</th>`).join('')}<th class="text-right sticky-action-col">Actions</th></tr>`;
+
+            const tbody = document.getElementById('workspaceTableBody');
+            tbody.innerHTML = dataset.map(row => {
+                const formattedId = generateCustomId(state.workspaceTeam, row, getTeamDataset(state.workspaceTeam));
+                return `<tr>
+                    ${cols.map(col => {
+                        if (col.key === 'custom_id') return `<td class="font-bold text-brand-700">${formattedId}</td>`;
+                        if (col.key === 'status') return `<td>${getStatusBadgeHTML(row[col.key])}</td>`;
+                        let val = row[col.key] || '-';
+                        return `<td>${val}</td>`;
+                    }).join('')}
+                    <td class="text-right space-x-2 sticky-action-col">
+                        <button onclick="openViewModal(${row.id})" title="View" class="text-slate-500 hover:text-emerald-600"><i class="fa-solid fa-eye"></i></button>
+                        <button onclick="openEditModal(${row.id})" title="Edit" class="text-slate-600 hover:text-brand-600"><i class="fa-solid fa-pen-to-square"></i></button>
+                        <button onclick="deleteRecord(${row.id})" title="Delete" class="text-slate-400 hover:text-rose-600"><i class="fa-solid fa-trash"></i></button>
+                    </td>
+                </tr>`;
+            }).join('') || `<tr><td colspan="${cols.length + 1}" class="text-center py-6 text-slate-400">No records found for active filters.</td></tr>`;
+        }
+
+        function getSettingsOptions(team, type) {
+            return state.settings
+                .filter(s => s.team === team && s.type.toLowerCase() === type.toLowerCase())
+                .map(s => s.value);
+        }
+
+        function openAddModal() {
+            document.getElementById('recordModalTitle').textContent = `Add ${state.workspaceTeam} Record`;
+            document.getElementById('formRecordId').value = '';
+            document.getElementById('formTeamName').value = state.workspaceTeam;
+            document.getElementById('saveRecordBtn').classList.remove('hidden');
+            renderDynamicModalFields({}, false);
+            document.getElementById('recordModal').classList.remove('hidden');
+        }
+
+        function openEditModal(id) {
+            const dataset = getTeamDataset(state.workspaceTeam);
+            const record = dataset.find(r => r.id === id);
+            if (!record) return;
+
+            document.getElementById('recordModalTitle').textContent = `Edit Record (#${id})`;
+            document.getElementById('formRecordId').value = id;
+            document.getElementById('formTeamName').value = state.workspaceTeam;
+            document.getElementById('saveRecordBtn').classList.remove('hidden');
+            renderDynamicModalFields(record, false);
+            document.getElementById('recordModal').classList.remove('hidden');
+        }
+
+        function openViewModal(id) {
+            const dataset = getTeamDataset(state.workspaceTeam);
+            const record = dataset.find(r => r.id === id);
+            if (!record) return;
+
+            document.getElementById('recordModalTitle').textContent = `View Record (#${id})`;
+            document.getElementById('formRecordId').value = id;
+            document.getElementById('formTeamName').value = state.workspaceTeam;
+            document.getElementById('saveRecordBtn').classList.add('hidden');
+            renderDynamicModalFields(record, true);
+            document.getElementById('recordModal').classList.remove('hidden');
+        }
+
+        function updateMediaIDPreview(e) {
+            const newType = e.value;
+            const cidField = document.getElementById('modalCustomIdInput');
+            if (cidField) {
+                cidField.value = generateCustomId('Media', null, getTeamDataset('Media'), newType);
+            }
+        }
+
+        function renderDynamicModalFields(data, isReadOnly = false) {
+            const cols = TEAM_COLUMNS[state.workspaceTeam] || [];
+            const container = document.getElementById('formDynamicFields');
+            const disabledAttr = isReadOnly ? 'disabled' : '';
+
+            container.innerHTML = cols.map(col => {
+                if (col.type === 'readonly') {
+                    const cid = generateCustomId(state.workspaceTeam, data, getTeamDataset(state.workspaceTeam));
+                    return `<div>
+                        <label class="block font-semibold mb-1 text-slate-700">${col.label}</label>
+                        <input type="text" id="modalCustomIdInput" value="${cid}" readonly class="w-full border p-2.5 rounded-xl bg-slate-100 font-bold text-brand-700">
+                    </div>`;
+                }
+
+                const val = data[col.key] || '';
+
+                if (col.type === 'select_fixed') {
+                    return `<div>
+                        <label class="block font-semibold mb-1 text-slate-700">${col.label}</label>
+                        <select name="${col.key}" ${disabledAttr} ${col.key === 'type' && state.workspaceTeam === 'Media' ? 'onchange="updateMediaIDPreview(this)"' : ''} ${col.required ? 'required' : ''} class="w-full border p-2.5 rounded-xl bg-slate-50 font-semibold">
+                            ${col.options.map(o => `<option value="${o}" ${val === o ? 'selected' : ''}>${o}</option>`).join('')}
+                        </select>
+                    </div>`;
+                }
+
+                if (col.type === 'select') {
+                    const opts = getSettingsOptions(state.workspaceTeam, col.settingType);
+                    return `<div>
+                        <label class="block font-semibold mb-1 text-slate-700">${col.label}</label>
+                        <select name="${col.key}" ${disabledAttr} ${col.required ? 'required' : ''} class="w-full border p-2.5 rounded-xl bg-slate-50">
+                            <option value="">-- Select ${col.label} --</option>
+                            ${opts.map(o => `<option value="${o}" ${val === o ? 'selected' : ''}>${o}</option>`).join('')}
+                        </select>
+                    </div>`;
+                }
+
+                if (col.type === 'user') {
+                    const teamUsers = state.users.filter(u => (u.team === (col.teamFilter || state.workspaceTeam) || u.role === 'Admin') && u.status === 'Active');
+                    return `<div>
+                        <label class="block font-semibold mb-1 text-slate-700">${col.label}</label>
+                        <select name="${col.key}" ${disabledAttr} class="w-full border p-2.5 rounded-xl bg-slate-50">
+                            <option value="">-- Select Member --</option>
+                            ${teamUsers.map(u => `<option value="${u.name}" ${val === u.name ? 'selected' : ''}>${u.name}</option>`).join('')}
+                        </select>
+                    </div>`;
+                }
+
+                return `<div>
+                    <label class="block font-semibold mb-1 text-slate-700">${col.label}</label>
+                    <input type="${col.type || 'text'}" name="${col.key}" value="${val}" ${disabledAttr} ${col.required ? 'required' : ''} class="w-full border p-2.5 rounded-xl">
+                </div>`;
+            }).join('');
+        }
+
+        function closeRecordModal() { document.getElementById('recordModal').classList.add('hidden'); }
+
+        async function saveRecordForm(e) {
+            e.preventDefault();
+            const id = document.getElementById('formRecordId').value;
+            const team = document.getElementById('formTeamName').value;
+            const tableName = TEAM_TABLES[team];
+            const formData = new FormData(e.target);
+            const payload = {};
+            
+            formData.forEach((value, key) => {
+                const trimmed = typeof value === 'string' ? value.trim() : value;
+                payload[key] = trimmed === '' ? null : trimmed;
+            });
+
+            delete payload.id;
+            const dataset = getTeamDataset(team);
+            payload.custom_id = generateCustomId(team, id ? dataset.find(r => r.id == id) : {}, dataset, payload.type);
+
+            let res;
+            if (id) res = await state.supabaseClient.from(tableName).update(payload).eq('id', id);
+            else res = await state.supabaseClient.from(tableName).insert([payload]);
+
+            if (res.error) alert('Save Failed: ' + res.error.message);
+            else {
+                closeRecordModal();
+                fetchLatestData();
+            }
+        }
+
+        async function deleteRecord(id) {
+            if (!confirm(`CONFIRMATION REQUIRED:\nAre you sure you want to permanently delete record #${id}?`)) return;
+            const tableName = TEAM_TABLES[state.workspaceTeam];
+            const res = await state.supabaseClient.from(tableName).delete().eq('id', id);
+            if (res.error) alert('Error: ' + res.error.message);
+            else fetchLatestData();
+        }
+
+        // RESOURCE MANAGEMENT
+        function openResourceModal() {
+            document.getElementById('resFormName').value = '';
+            document.getElementById('resFormLink').value = '';
+            document.getElementById('resFormType').value = 'Site';
+            document.getElementById('resFormTeam').value = 'All';
+            document.getElementById('resourceModal').classList.remove('hidden');
+        }
+
+        function closeResourceModal() {
+            document.getElementById('resourceModal').classList.add('hidden');
+        }
+
+        async function saveResourceForm(e) {
+            e.preventDefault();
+            const payload = {
+                name: document.getElementById('resFormName').value.trim(),
+                link: document.getElementById('resFormLink').value.trim(),
+                type: document.getElementById('resFormType').value,
+                team: document.getElementById('resFormTeam').value
+            };
+
+            const res = await state.supabaseClient.from('cd_resources').insert([payload]);
+            if (res.error) alert('Error adding resource: ' + res.error.message);
+            else {
+                closeResourceModal();
+                fetchLatestData();
+            }
+        }
+
+        async function deleteResource(id) {
+            if (!confirm('Are you sure you want to delete this resource link?')) return;
+            const res = await state.supabaseClient.from('cd_resources').delete().eq('id', id);
+            if (res.error) alert('Error deleting resource: ' + res.error.message);
+            else fetchLatestData();
+        }
+
+        function renderResourcesTab() {
+            const container = document.getElementById('resourcesGrid');
+            const u = state.currentUser;
+            const userRes = state.resources.filter(r => r.team === 'All' || r.team === u.team || u.role === 'Admin');
+
+            const getIcon = (type) => {
+                if (type === 'File') return 'fa-file-pdf text-rose-500';
+                if (type === 'Images') return 'fa-image text-purple-500';
+                return 'fa-globe text-sky-500';
+            };
+
+            container.innerHTML = userRes.map(r => `
+                <div class="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-sm flex flex-col justify-between space-y-4 hover:shadow-md transition">
+                    <div class="space-y-2">
+                        <div class="flex justify-between items-start">
+                            <span class="px-2.5 py-1 bg-slate-100 text-slate-700 font-bold text-[10px] rounded-lg uppercase tracking-wider flex items-center">
+                                <i class="fa-solid ${getIcon(r.type)} mr-1.5"></i> ${r.type}
+                            </span>
+                            <span class="text-[10px] font-bold text-brand-600 bg-brand-50 px-2 py-0.5 rounded">${r.team}</span>
+                        </div>
+                        <h4 class="font-bold text-slate-800 text-sm">${r.name}</h4>
+                    </div>
+                    <div class="pt-3 border-t border-slate-100 flex justify-between items-center">
+                        <a href="${r.link}" target="_blank" class="text-xs font-bold text-brand-600 hover:underline flex items-center">
+                            Open Link <i class="fa-solid fa-arrow-up-right-from-square ml-1.5 text-[10px]"></i>
+                        </a>
+                        ${u.role === 'Admin' ? `
+                            <button onclick="deleteResource(${r.id})" class="text-slate-400 hover:text-rose-600 text-xs"><i class="fa-solid fa-trash"></i></button>
+                        ` : ''}
+                    </div>
+                </div>
+            `).join('') || '<div class="col-span-3 text-slate-400 py-6 text-xs text-center">No resources available yet.</div>';
+        }
+
+        // RENDER PROFILE TAB WITH DYNAMIC WORK HOUR CALCULATION
+        function renderProfileTab() {
+            const u = state.currentUser;
+            if (!u) return;
+
+            document.getElementById('profileAvatar').textContent = u.name.charAt(0).toUpperCase();
+            document.getElementById('profileName').textContent = u.name;
+            document.getElementById('profileBadge').textContent = `${u.role} • ${u.team} Team`;
+            document.getElementById('profileUsername').textContent = u.username;
+            document.getElementById('profileEmail').textContent = u.email || 'N/A';
+            document.getElementById('profilePhone').textContent = u.phone || 'N/A';
+            document.getElementById('profileRole').textContent = u.role;
+
+            const target = getWorkCountTarget();
+            const hoursData = getUserWorkHoursData(u);
+            const teamWorks = getTeamDataset(u.team);
+            
+            const userWorks = teamWorks.filter(w => (w.assigned_editor === u.name || w.assigned_designer === u.name || w.assigned_coordinator === u.name));
+            const totalAssigned = userWorks.length;
+            const completedWorks = userWorks.filter(w => (w.status || '').toLowerCase().includes('completed')).length;
+            const pendingWorks = userWorks.filter(w => (w.status || '').toLowerCase().includes('pending') || (w.status || '').toLowerCase().includes('progress')).length;
+            
+            const perf = Math.min(100, Math.round((completedWorks / target) * 100));
+
+            document.getElementById('profTotalAssigned').textContent = totalAssigned;
+            document.getElementById('profCompleted').textContent = completedWorks;
+            document.getElementById('profPending').textContent = pendingWorks;
+
+            document.getElementById('profTarget').textContent = `${target} Works/Wk`;
+            document.getElementById('profPerformance').textContent = `${perf}%`;
+            document.getElementById('profWorkHours').textContent = `${hoursData.totalHours} Hours`;
+            document.getElementById('profRemainingHours').textContent = hoursData.remainingFormatted;
+        }
+
+        async function handleResetPassword(e) {
+            e.preventDefault();
+            const p1 = document.getElementById('resetNewPassword').value;
+            const p2 = document.getElementById('resetConfirmPassword').value;
+            if (p1 !== p2) { alert('Passwords do not match.'); return; }
+
+            const res = await state.supabaseClient.from('cd_users').update({ password: p1 }).eq('id', state.currentUser.id);
+            if (res.error) alert('Failed: ' + res.error.message);
+            else { alert('Password updated successfully!'); e.target.reset(); }
+        }
+
+        function renderUsersTab() {
+            const tbody = document.getElementById('usersTableBody');
+            tbody.innerHTML = state.users.map(u => `
+                <tr>
+                    <td>${u.id}</td>
+                    <td class="font-bold text-slate-800">${u.name}</td>
+                    <td>${u.username}</td>
+                    <td>${u.phone || '-'}</td>
+                    <td>${u.email || '-'}</td>
+                    <td>${u.team}</td>
+                    <td><span class="px-2 py-0.5 text-[10px] font-bold rounded ${u.role === 'Admin' ? 'bg-amber-100 text-amber-700' : 'bg-slate-100 text-slate-700'}">${u.role}</span></td>
+                    <td>
+                        <button onclick="toggleUserStatus(${u.id}, '${u.status}')" class="px-2.5 py-1 rounded-lg text-xs font-bold transition ${u.status === 'Active' ? 'bg-emerald-100 text-emerald-700 hover:bg-emerald-200' : 'bg-rose-100 text-rose-700 hover:bg-rose-200'}">
+                            ${u.status === 'Active' ? 'Active' : 'Activate User'}
+                        </button>
+                    </td>
+                    <td class="text-right space-x-2">
+                        <button onclick="openEditUserModal(${u.id})" title="Edit User" class="text-slate-600 hover:text-blue-600"><i class="fa-solid fa-user-pen"></i></button>
+                        <button onclick="deleteUser(${u.id})" title="Delete User" class="text-slate-400 hover:text-rose-600"><i class="fa-solid fa-trash"></i></button>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        function openUserModal() {
+            document.getElementById('userModalTitle').textContent = 'Create New User';
+            document.getElementById('userFormId').value = '';
+            document.getElementById('userFormName').value = '';
+            document.getElementById('userFormUsername').value = '';
+            document.getElementById('userFormPassword').value = '';
+            document.getElementById('userFormPhone').value = '';
+            document.getElementById('userFormEmail').value = '';
+            document.getElementById('userModal').classList.remove('hidden');
+        }
+
+        function openEditUserModal(id) {
+            const u = state.users.find(x => x.id === id);
+            if (!u) return;
+            document.getElementById('userModalTitle').textContent = `Edit User (#${id})`;
+            document.getElementById('userFormId').value = u.id;
+            document.getElementById('userFormName').value = u.name;
+            document.getElementById('userFormUsername').value = u.username;
+            document.getElementById('userFormPassword').value = '';
+            document.getElementById('userFormPhone').value = u.phone || '';
+            document.getElementById('userFormEmail').value = u.email || '';
+            document.getElementById('userFormTeam').value = u.team;
+            document.getElementById('userFormRole').value = u.role;
+            document.getElementById('userModal').classList.remove('hidden');
+        }
+
+        function closeUserModal() { document.getElementById('userModal').classList.add('hidden'); }
+
+        async function saveUserForm(e) {
+            e.preventDefault();
+            const id = document.getElementById('userFormId').value;
+            const passwordVal = document.getElementById('userFormPassword').value.trim();
+
+            const payload = {
+                name: document.getElementById('userFormName').value.trim(),
+                username: document.getElementById('userFormUsername').value.trim(),
+                phone: document.getElementById('userFormPhone').value.trim() || null,
+                email: document.getElementById('userFormEmail').value.trim() || null,
+                team: document.getElementById('userFormTeam').value,
+                role: document.getElementById('userFormRole').value,
+                status: 'Active'
+            };
+
+            if (passwordVal) payload.password = passwordVal;
+
+            let res;
+            if (id) res = await state.supabaseClient.from('cd_users').update(payload).eq('id', id);
+            else {
+                if (!passwordVal) { alert('Password required for new users.'); return; }
+                res = await state.supabaseClient.from('cd_users').insert([payload]);
+            }
+
+            if (res.error) alert('Error: ' + res.error.message);
+            else {
+                closeUserModal();
+                fetchLatestData();
+            }
+        }
+
+        async function toggleUserStatus(id, currentStatus) {
+            const newStatus = currentStatus === 'Active' ? 'Inactive' : 'Active';
+            const res = await state.supabaseClient.from('cd_users').update({ status: newStatus }).eq('id', id);
+            if (res.error) alert('Error: ' + res.error.message);
+            else fetchLatestData();
+        }
+
+        async function deleteUser(id) {
+            if (!confirm(`CONFIRMATION REQUIRED:\nAre you sure you want to delete user #${id}? This action cannot be undone.`)) return;
+            const res = await state.supabaseClient.from('cd_users').delete().eq('id', id);
+            if (res.error) alert('Error deleting user: ' + res.error.message);
+            else fetchLatestData();
+        }
+
+        function renderSettingsTab() {
+            const container = document.getElementById('settingsOptionsList');
+            const dropOptions = state.settings.filter(s => !['WorkHours', 'WeekAnchor', 'WorkCountTarget'].includes(s.type));
+
+            container.innerHTML = dropOptions.map(s => `
+                <div class="bg-slate-50 border p-3.5 rounded-xl flex justify-between items-center">
+                    <div>
+                        <div class="font-bold text-slate-800">${s.value}</div>
+                        <div class="text-[10px] text-slate-400 uppercase font-bold">${s.team} • ${s.type} • Color: ${s.color || 'gray'}</div>
+                    </div>
+                    <button onclick="deleteSettingOption(${s.id})" class="text-slate-400 hover:text-rose-600"><i class="fa-solid fa-xmark"></i></button>
+                </div>
+            `).join('') || '<div class="col-span-3 text-slate-400 py-4">No dropdown options found.</div>';
+
+            const anchorSetting = state.settings.find(s => s.type === 'WeekAnchor');
+            const weekDateInput = document.getElementById('settingWeekAnchorInput');
+            if (weekDateInput && anchorSetting) {
+                weekDateInput.value = anchorSetting.value;
+            }
+
+            const targetInput = document.getElementById('settingWorkCountInput');
+            if (targetInput) {
+                targetInput.value = getWorkCountTarget();
+            }
+        }
+
+        async function saveWeekAnchorSetting() {
+            const dtVal = document.getElementById('settingWeekAnchorInput').value;
+            if (!dtVal) { alert('Please choose a valid date for Week 1 anchor.'); return; }
+
+            const existing = state.settings.find(s => s.type === 'WeekAnchor');
+            let res;
+            if (existing) {
+                res = await state.supabaseClient.from('cd_settings').update({ value: dtVal }).eq('id', existing.id);
+            } else {
+                res = await state.supabaseClient.from('cd_settings').insert([{ team: 'Global', type: 'WeekAnchor', value: dtVal, color: 'gray' }]);
+            }
+
+            if (res.error) alert('Error: ' + res.error.message);
+            else {
+                alert('Week sequence reset successfully!');
+                fetchLatestData();
+            }
+        }
+
+        async function saveWorkCountSetting() {
+            const val = document.getElementById('settingWorkCountInput').value;
+            if (!val || val < 1) { alert('Please enter a valid work count target.'); return; }
+
+            const existing = state.settings.find(s => s.type === 'WorkCountTarget');
+            let res;
+            if (existing) {
+                res = await state.supabaseClient.from('cd_settings').update({ value: String(val) }).eq('id', existing.id);
+            } else {
+                res = await state.supabaseClient.from('cd_settings').insert([{ team: 'Global', type: 'WorkCountTarget', value: String(val), color: 'gray' }]);
+            }
+
+            if (res.error) alert('Error: ' + res.error.message);
+            else {
+                alert('Editor weekly work count target saved successfully!');
+                fetchLatestData();
+            }
+        }
+
+        async function addSettingOption() {
+            const team = document.getElementById('settingTeamSelect').value;
+            const type = document.getElementById('settingTypeSelect').value;
+            const value = document.getElementById('settingValueInput').value.trim();
+            const color = document.getElementById('settingColorSelect').value;
+
+            if (!value) { alert('Please enter option value.'); return; }
+
+            const res = await state.supabaseClient.from('cd_settings').insert([{ team, type, value, color }]);
+            if (res.error) alert('Error: ' + res.error.message);
+            else {
+                document.getElementById('settingValueInput').value = '';
+                fetchLatestData();
+            }
+        }
+
+        async function deleteSettingOption(id) {
+            if (!confirm(`CONFIRMATION REQUIRED:\nAre you sure you want to remove this setting option?`)) return;
+            const res = await state.supabaseClient.from('cd_settings').delete().eq('id', id);
+            if (res.error) alert('Error: ' + res.error.message);
+            else fetchLatestData();
+        }
+
+        function populateMegaFilterDropdowns() {
+            const weekSelect = document.getElementById('megaFilterWeek');
+            const userSelect = document.getElementById('megaFilterUser');
+            const catSelect = document.getElementById('megaFilterCategory');
+
+            const currentWk = getCalculatedWeekNumber();
+            let wkHTML = '<option value="ALL">All Weeks</option>';
+            for (let i = 1; i <= currentWk; i++) {
+                wkHTML += `<option value="${i}">Week ${i}</option>`;
+            }
+            weekSelect.innerHTML = wkHTML;
+
+            const activeWorkspace = document.getElementById('megaFilterWorkspace').value;
+            let filteredUsers = state.users;
+            if (activeWorkspace !== 'ALL') {
+                filteredUsers = filteredUsers.filter(u => u.team === activeWorkspace);
+            }
+            userSelect.innerHTML = '<option value="ALL">All Users</option>' + 
+                filteredUsers.map(u => `<option value="${u.name}">${u.name} (${u.team})</option>`).join('');
+
+            let catOptions = state.settings.filter(s => s.type === 'Category' || s.type === 'Type');
+            if (activeWorkspace !== 'ALL') {
+                catOptions = catOptions.filter(s => s.team === activeWorkspace);
+            }
+            const uniqueCats = [...new Set(catOptions.map(c => c.value))];
+            catSelect.innerHTML = '<option value="ALL">All Categories</option>' + 
+                uniqueCats.map(c => `<option value="${c}">${c}</option>`).join('');
+        }
+
+        function onMegaWorkspaceFilterChange() {
+            populateMegaFilterDropdowns();
+            renderMegaAnalysisTab();
+        }
+
+        function renderMegaAnalysisTab() {
+            const selectedWk = document.getElementById('megaFilterWeek').value;
+            const selectedWorkspace = document.getElementById('megaFilterWorkspace').value;
+            const selectedUser = document.getElementById('megaFilterUser').value;
+            const selectedCategory = document.getElementById('megaFilterCategory').value;
+
+            let usersToDisplay = state.users;
+            if (selectedWorkspace !== 'ALL') usersToDisplay = usersToDisplay.filter(u => u.team === selectedWorkspace);
+            if (selectedUser !== 'ALL') usersToDisplay = usersToDisplay.filter(u => u.name === selectedUser);
+
+            const targetWorkCount = getWorkCountTarget();
+
+            const tbody = document.getElementById('megaUsersMatrixBody');
+            tbody.innerHTML = usersToDisplay.map(u => {
+                let userWorks = getTeamDataset(u.team).filter(w => 
+                    (w.assigned_editor === u.name || w.assigned_designer === u.name || w.assigned_coordinator === u.name)
+                );
+
+                if (selectedWk !== 'ALL') {
+                    userWorks = userWorks.filter(w => getItemWeekNumber(w) === parseInt(selectedWk));
+                }
+
+                if (selectedCategory !== 'ALL') {
+                    userWorks = userWorks.filter(w => w.category === selectedCategory || w.type === selectedCategory);
+                }
+
+                const completed = userWorks.filter(w => (w.status || '').toLowerCase().includes('completed')).length;
+                const pending = userWorks.filter(w => (w.status || '').toLowerCase().includes('pending')).length;
+                const perf = Math.min(100, Math.round((completed / targetWorkCount) * 100));
+
+                const hoursData = getUserWorkHoursData(u);
+
+                return `<tr>
+                    <td class="font-bold text-slate-800">${u.name}</td>
+                    <td>${u.team}</td>
+                    <td class="font-bold">${userWorks.length}</td>
+                    <td class="text-emerald-600 font-bold">${completed}</td>
+                    <td class="text-amber-600 font-bold">${pending}</td>
+                    <td class="font-bold">${targetWorkCount} Works/Wk</td>
+                    <td><span class="px-2 py-0.5 text-[10px] font-bold rounded ${perf >= 100 ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'}">${perf}%</span></td>
+                    <td class="font-bold text-sky-600">${hoursData.totalHours} Hours</td>
+                    <td class="font-bold text-amber-600">${hoursData.remainingFormatted}</td>
+                </tr>`;
+            }).join('') || `<tr><td colspan="9" class="text-center py-6 text-slate-400">No user data matches selected filters.</td></tr>`;
+
+            const teams = ['Editing', 'Media', 'Video', 'Outreach'];
+            const ctxStatus = document.getElementById('megaStatusChart')?.getContext('2d');
+            if (ctxStatus) {
+                if (state.megaStatusChartInstance) state.megaStatusChartInstance.destroy();
+                state.megaStatusChartInstance = new Chart(ctxStatus, {
+                    type: 'doughnut',
+                    data: {
+                        labels: teams,
+                        datasets: [{
+                            data: [state.writings.length, state.media.length, state.video.length, state.outreach.length],
+                            backgroundColor: ['#10b981', '#0284c7', '#f59e0b', '#f43f5e']
+                        }]
+                    },
+                    options: { responsive: true, maintainAspectRatio: false }
+                });
+            }
+
+            const ctxUser = document.getElementById('megaUserChart')?.getContext('2d');
+            if (ctxUser) {
+                if (state.megaUserChartInstance) state.megaUserChartInstance.destroy();
+                const userTeamCounts = teams.map(t => state.users.filter(u => u.team === t).length);
+
+                state.megaUserChartInstance = new Chart(ctxUser, {
+                    type: 'pie',
+                    data: {
+                        labels: teams,
+                        datasets: [{
+                            data: userTeamCounts,
+                            backgroundColor: ['#6366f1', '#ec4899', '#8b5cf6', '#14b8a6']
+                        }]
+                    },
+                    options: { responsive: true, maintainAspectRatio: false }
+                });
+            }
+        }
+
+        // UNIVERSAL PRINT FUNCTION
+        function printTableData(tableId) {
+            const elementToPrint = document.getElementById(tableId);
+            const win = window.open('', '', 'height=700,width=900');
+            win.document.write('<html><head><title>Print Report</title>');
+            win.document.write('<style>table { width:100%; border-collapse:collapse; font-family:sans-serif; } th, td { border:1px solid #ccc; padding:8px; text-align:left; font-size:12px; }</style>');
+            win.document.write('</head><body>');
+            win.document.write(elementToPrint.outerHTML);
+            win.document.write('</body></html>');
+            win.document.close();
+            win.print();
+        }
+
+        // EXPORT WORKSPACE TO PDF / EXCEL
+        function exportWorkspaceToPDF() {
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF();
+            doc.setFontSize(14);
+            doc.text(`${state.workspaceTeam} Team Workspace Report`, 14, 15);
+            doc.autoTable({ html: '#workspaceTable', startY: 22, styles: { fontSize: 7 } });
+            doc.save(`${state.workspaceTeam}_Workspace.pdf`);
+        }
+
+        function exportWorkspaceToExcel() {
+            const table = document.getElementById("workspaceTable");
+            const wb = XLSX.utils.table_to_book(table, { sheet: state.workspaceTeam });
+            XLSX.writeFile(wb, `${state.workspaceTeam}_Workspace.xlsx`);
+        }
+
+        // EXPORT USERS TO PDF / EXCEL
+        function exportUsersToPDF() {
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF();
+            doc.setFontSize(14);
+            doc.text("User Directory Report", 14, 15);
+            doc.autoTable({ html: '#usersTable', startY: 22, styles: { fontSize: 8 } });
+            doc.save(`User_Directory.pdf`);
+        }
+
+        function exportUsersToExcel() {
+            const table = document.getElementById("usersTable");
+            const wb = XLSX.utils.table_to_book(table, { sheet: "Users" });
+            XLSX.writeFile(wb, `User_Directory.xlsx`);
+        }
+
+        // EXPORT SETTINGS TO PDF / EXCEL
+        function exportSettingsToPDF() {
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF();
+            doc.setFontSize(14);
+            doc.text("System Options & Dropdown Settings Report", 14, 15);
+            
+            const dropOptions = state.settings.filter(s => !['WorkHours', 'WeekAnchor', 'WorkCountTarget'].includes(s.type));
+            const tableData = dropOptions.map(s => [s.id, s.team, s.type, s.value, s.color || 'gray']);
+            
+            doc.autoTable({
+                head: [['ID', 'Team', 'Type', 'Value Option', 'Color Badge']],
+                body: tableData,
+                startY: 22,
+                styles: { fontSize: 8 }
+            });
+            doc.save(`Dropdown_Settings.pdf`);
+        }
+
+        function exportSettingsToExcel() {
+            const dropOptions = state.settings.filter(s => !['WorkHours', 'WeekAnchor', 'WorkCountTarget'].includes(s.type));
+            const exportData = dropOptions.map(s => ({ ID: s.id, Team: s.team, Type: s.type, Value: s.value, Color: s.color || 'gray' }));
+            const ws = XLSX.utils.json_to_sheet(exportData);
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, "Dropdown Options");
+            XLSX.writeFile(wb, `Dropdown_Settings.xlsx`);
+        }
+
+        // MEGA ANALYSIS PDF & EXCEL
+        function exportAnalysisToPDF() {
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF();
+            doc.setFontSize(14);
+            doc.text("ChromaDiaries Enterprise - Performance Matrix", 14, 15);
+            doc.autoTable({ html: '#megaAnalysisTable', startY: 22, styles: { fontSize: 8 } });
+            doc.save(`Performance_Matrix_Report.pdf`);
+        }
+
+        function exportAnalysisToExcel() {
+            const table = document.getElementById("megaAnalysisTable");
+            const wb = XLSX.utils.table_to_book(table, { sheet: "Mega Analysis" });
+            XLSX.writeFile(wb, `Performance_Matrix_Report.xlsx`);
+        }
+    </script>
+</body>
+</html>

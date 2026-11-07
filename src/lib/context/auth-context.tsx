@@ -99,16 +99,28 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (isSupabaseConfigured()) {
       const supabase = createClient();
       if (supabase) {
-        supabase.from('profiles').select('*').then(({ data }) => {
-          if (data && data.length > 0) {
+        Promise.all([
+          supabase.from('profiles').select('*'),
+          supabase.from('department_members').select('*'),
+        ]).then(([{ data: profData, error: profErr }, { data: memberData }]) => {
+          if (!profErr && profData && profData.length > 0) {
+            const memberDeptMap = new Map<string, { deptId: string; role: string }>();
+            if (memberData) {
+              memberData.forEach((m: any) => {
+                memberDeptMap.set(m.user_id, { deptId: m.department_id, role: m.role });
+              });
+            }
+
             setProfiles((prev) => {
               const map = new Map<string, UserAccount>();
               prev.forEach((p) => map.set(p.email.toLowerCase(), p));
-              data.forEach((p: any) => {
+              profData.forEach((p: any) => {
                 const existing = map.get(p.email.toLowerCase());
+                const deptInfo = memberDeptMap.get(p.id);
                 map.set(p.email.toLowerCase(), {
                   ...p,
-                  password: existing?.password || 'admin@123',
+                  department_id: deptInfo ? deptInfo.deptId : (existing?.department_id || null),
+                  password: existing?.password || 'member@123',
                 });
               });
               return Array.from(map.values());

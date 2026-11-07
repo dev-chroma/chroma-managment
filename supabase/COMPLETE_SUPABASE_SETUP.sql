@@ -183,6 +183,11 @@ CREATE TABLE IF NOT EXISTS public.role_requests (
     decision_date TIMESTAMPTZ
 );
 
+-- Ensure schema updates apply even if table already existed from earlier schema
+ALTER TABLE public.role_requests ALTER COLUMN user_id DROP NOT NULL;
+ALTER TABLE public.role_requests ADD COLUMN IF NOT EXISTS applicant_name TEXT;
+ALTER TABLE public.role_requests ADD COLUMN IF NOT EXISTS applicant_email TEXT;
+
 -- -----------------------------------------------------------------------------
 -- 9. Resources, Announcements, Meetings & Audit Logs
 -- -----------------------------------------------------------------------------

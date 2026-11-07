@@ -27,6 +27,17 @@ import { useAuth } from './auth-context';
 import { isTaskQualifyingFinished } from '@/lib/services/workload-engine';
 import { createClient, isSupabaseConfigured } from '@/lib/supabase/client';
 
+const generateUUID = (): string => {
+  if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+    return crypto.randomUUID();
+  }
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
+    const r = (Math.random() * 16) | 0;
+    const v = c === 'x' ? r : (r & 0x3) | 0x8;
+    return v.toString(16);
+  });
+};
+
 interface DataContextType {
   departments: Department[];
   statuses: TaskStatus[];
@@ -177,8 +188,30 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
         }
 
         const { data: resData, error: resError } = await supabase.from('resources').select('*');
-        if (!resError && resData && resData.length > 0) {
+        if (!resError && resData) {
           setResources(resData as ResourceItem[]);
+        }
+
+        const { data: reqData, error: reqError } = await supabase.from('role_requests').select('*');
+        if (!reqError && reqData) {
+          setRoleRequests(reqData as RoleRequest[]);
+        }
+
+        const { data: targetData, error: targetError } = await supabase.from('weekly_targets').select('*');
+        if (!targetError && targetData && targetData.length > 0) {
+          const tMap: Record<string, number> = {};
+          targetData.forEach((t: any) => {
+            tMap[t.department_id] = t.target_per_member;
+          });
+          setWeeklyTargets((prev) => ({ ...prev, ...tMap }));
+        }
+
+        const { data: logsData, error: logsError } = await supabase
+          .from('task_activity_logs')
+          .select('*')
+          .order('created_at', { ascending: false });
+        if (!logsError && logsData) {
+          setActivityLogs(logsData as TaskActivityLog[]);
         }
       } catch (err) {
         // Fall back gracefully to initialized state
@@ -213,7 +246,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
     const initialStatus = deptStatuses[0]?.id || '';
 
     const newTask: Task = {
-      id: `task-${Date.now()}`,
+      id: generateUUID(),
       auto_id,
       department_id: data.department_id,
       title: data.title,
@@ -235,7 +268,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
 
     // Create activity log
     const log: TaskActivityLog = {
-      id: `log-${Date.now()}`,
+      id: generateUUID(),
       task_id: newTask.id,
       action: 'created',
       new_status_id: newTask.status_id,
@@ -249,7 +282,13 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
     if (isSupabaseConfigured()) {
       const supabase = createClient();
       if (supabase) {
-        supabase.from('tasks').insert([newTask]).then();
+        const { department: _d, status: _s, assignee: _a, ...dbPayload } = newTask;
+        supabase.from('tasks').insert([dbPayload]).then(({ error }) => {
+          if (error) console.error('Supabase task insert error:', error);
+        });
+        supabase.from('task_activity_logs').insert([log]).then(({ error }) => {
+          if (error) console.error('Supabase task_activity_logs insert error:', error);
+        });
       }
     }
 
@@ -285,7 +324,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
 
     // Record activity log
     const log: TaskActivityLog = {
-      id: `log-${Date.now()}`,
+      id: generateUUID(),
       task_id: taskId,
       action: 'status_changed',
       previous_status_id: previousStatusId,
@@ -309,7 +348,12 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
             rejection_reason: remarks || task.rejection_reason,
           })
           .eq('id', taskId)
-          .then();
+          .then(({ error }) => {
+            if (error) console.error('Supabase updateTaskStatus error:', error);
+          });
+        supabase.from('task_activity_logs').insert([log]).then(({ error }) => {
+          if (error) console.error('Supabase log insert error:', error);
+        });
       }
     }
 
@@ -323,7 +367,10 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
     if (isSupabaseConfigured()) {
       const supabase = createClient();
       if (supabase) {
-        supabase.from('tasks').update(updates).eq('id', taskId).then();
+        const { department: _d, status: _s, assignee: _a, ...dbUpdates } = updates;
+        supabase.from('tasks').update(dbUpdates).eq('id', taskId).then(({ error }) => {
+          if (error) console.error('Supabase updateTask error:', error);
+        });
       }
     }
     return true;
@@ -362,7 +409,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
   ): Promise<TaskStatus> => {
     const newStatus: TaskStatus = {
       ...statusData,
-      id: `status-${Date.now()}`,
+      id: generateUUID(),
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
     };
@@ -371,7 +418,10 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
     if (isSupabaseConfigured()) {
       const supabase = createClient();
       if (supabase) {
-        supabase.from('task_statuses').insert([newStatus]).then();
+        const { department: _d, ...dbPayload } = newStatus;
+        supabase.from('task_statuses').insert([dbPayload]).then(({ error }) => {
+          if (error) console.error('Supabase addStatus error:', error);
+        });
       }
     }
     return newStatus;
@@ -384,7 +434,10 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
     if (isSupabaseConfigured()) {
       const supabase = createClient();
       if (supabase) {
-        supabase.from('task_statuses').update(updates).eq('id', statusId).then();
+        const { department: _d, ...dbUpdates } = updates;
+        supabase.from('task_statuses').update(dbUpdates).eq('id', statusId).then(({ error }) => {
+          if (error) console.error('Supabase updateStatus error:', error);
+        });
       }
     }
     return true;
@@ -398,7 +451,9 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
     if (isSupabaseConfigured()) {
       const supabase = createClient();
       if (supabase) {
-        supabase.from('task_statuses').update({ is_active: false }).eq('id', statusId).then();
+        supabase.from('task_statuses').update({ is_active: false }).eq('id', statusId).then(({ error }) => {
+          if (error) console.error('Supabase deactivateStatus error:', error);
+        });
       }
     }
     return true;
@@ -409,7 +464,9 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
     if (isSupabaseConfigured()) {
       const supabase = createClient();
       if (supabase) {
-        supabase.from('weekly_targets').upsert([{ department_id: departmentId, target_per_member: newTarget }]).then();
+        supabase.from('weekly_targets').upsert([{ department_id: departmentId, target_per_member: newTarget }]).then(({ error }) => {
+          if (error) console.error('Supabase updateWeeklyTarget error:', error);
+        });
       }
     }
     return true;
@@ -418,10 +475,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
   const createRoleRequest = async (
     data: Omit<RoleRequest, 'id' | 'status' | 'created_at'>
   ): Promise<RoleRequest> => {
-    // Generate valid UUID for compatibility with Supabase UUID primary key
-    const generatedId = typeof crypto !== 'undefined' && crypto.randomUUID 
-      ? crypto.randomUUID() 
-      : 'f0000000-0000-0000-0000-' + Math.floor(100000000000 + Math.random() * 900000000000).toString(16).padStart(12, '0');
+    const generatedId = generateUUID();
 
     const req: RoleRequest = {
       ...data,
@@ -474,7 +528,9 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
             decision_date: new Date().toISOString(),
           })
           .eq('id', requestId)
-          .then();
+          .then(({ error }) => {
+            if (error) console.error('Supabase reviewRoleRequest error:', error);
+          });
       }
     }
     return true;
@@ -483,14 +539,17 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
   const addAnnouncement = async (data: Omit<Announcement, 'id' | 'created_at'>): Promise<Announcement> => {
     const ann: Announcement = {
       ...data,
-      id: `ann-${Date.now()}`,
+      id: generateUUID(),
       created_at: new Date().toISOString(),
     };
     setAnnouncements((prev) => [ann, ...prev]);
     if (isSupabaseConfigured()) {
       const supabase = createClient();
       if (supabase) {
-        supabase.from('announcements').insert([ann]).then();
+        const { department: _d, author: _a, ...dbPayload } = ann;
+        supabase.from('announcements').insert([dbPayload]).then(({ error }) => {
+          if (error) console.error('Supabase addAnnouncement error:', error);
+        });
       }
     }
     return ann;
@@ -499,14 +558,17 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
   const addMeeting = async (data: Omit<Meeting, 'id' | 'created_at'>): Promise<Meeting> => {
     const mtg: Meeting = {
       ...data,
-      id: `mtg-${Date.now()}`,
+      id: generateUUID(),
       created_at: new Date().toISOString(),
     };
     setMeetings((prev) => [mtg, ...prev]);
     if (isSupabaseConfigured()) {
       const supabase = createClient();
       if (supabase) {
-        supabase.from('meetings').insert([mtg]).then();
+        const { department: _d, creator: _c, ...dbPayload } = mtg;
+        supabase.from('meetings').insert([dbPayload]).then(({ error }) => {
+          if (error) console.error('Supabase addMeeting error:', error);
+        });
       }
     }
     return mtg;
@@ -515,14 +577,17 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
   const addResource = async (data: Omit<ResourceItem, 'id' | 'created_at'>): Promise<ResourceItem> => {
     const res: ResourceItem = {
       ...data,
-      id: `res-${Date.now()}`,
+      id: generateUUID(),
       created_at: new Date().toISOString(),
     };
     setResources((prev) => [res, ...prev]);
     if (isSupabaseConfigured()) {
       const supabase = createClient();
       if (supabase) {
-        supabase.from('resources').insert([res]).then();
+        const { department: _d, uploader: _u, ...dbPayload } = res;
+        supabase.from('resources').insert([dbPayload]).then(({ error }) => {
+          if (error) console.error('Supabase addResource error:', error);
+        });
       }
     }
     return res;
@@ -533,7 +598,9 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
     if (isSupabaseConfigured()) {
       const supabase = createClient();
       if (supabase) {
-        supabase.from('resources').delete().eq('id', id).then();
+        supabase.from('resources').delete().eq('id', id).then(({ error }) => {
+          if (error) console.error('Supabase deleteResource error:', error);
+        });
       }
     }
     return true;

@@ -418,8 +418,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
     if (isSupabaseConfigured()) {
       const supabase = createClient();
       if (supabase) {
-        const { department: _d, ...dbPayload } = newStatus;
-        supabase.from('task_statuses').insert([dbPayload]).then(({ error }) => {
+        supabase.from('task_statuses').insert([newStatus]).then(({ error }) => {
           if (error) console.error('Supabase addStatus error:', error);
         });
       }
@@ -434,8 +433,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
     if (isSupabaseConfigured()) {
       const supabase = createClient();
       if (supabase) {
-        const { department: _d, ...dbUpdates } = updates;
-        supabase.from('task_statuses').update(dbUpdates).eq('id', statusId).then(({ error }) => {
+        supabase.from('task_statuses').update(updates).eq('id', statusId).then(({ error }) => {
           if (error) console.error('Supabase updateStatus error:', error);
         });
       }

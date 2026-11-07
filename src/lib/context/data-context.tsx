@@ -56,6 +56,7 @@ interface DataContextType {
   getStatusesForDepartment: (departmentId: string) => TaskStatus[];
   getTasksForDepartment: (departmentId: string) => Task[];
   createTask: (data: Partial<Task> & { department_id: string; title: string }) => Promise<Task>;
+  bulkCreateTasks: (tasksData: Array<Partial<Task> & { department_id: string; title: string }>) => Promise<Task[]>;
   updateTaskStatus: (taskId: string, newStatusId: string, remarks?: string) => Promise<boolean>;
   updateTask: (taskId: string, updates: Partial<Task>) => Promise<boolean>;
   archiveTask: (taskId: string) => Promise<boolean>;
@@ -293,6 +294,85 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
     }
 
     return newTask;
+  };
+
+  const bulkCreateTasks = async (
+    tasksData: Array<Partial<Task> & { department_id: string; title: string }>
+  ): Promise<Task[]> => {
+    if (tasksData.length === 0) return [];
+
+    const now = new Date().toISOString();
+    const deptCountMap: Record<string, number> = {};
+    const createdTasks: Task[] = [];
+    const createdLogs: TaskActivityLog[] = [];
+
+    for (const data of tasksData) {
+      const deptId = data.department_id;
+      if (deptCountMap[deptId] === undefined) {
+        const existingCount = tasks.filter((t) => t.department_id === deptId).length;
+        deptCountMap[deptId] = existingCount;
+      }
+      deptCountMap[deptId] += 1;
+      const count = deptCountMap[deptId];
+
+      const dept = departments.find((d) => d.id === deptId);
+      const deptSlug = dept?.slug || 'editing';
+      const prefix = deptSlug === 'editing' ? 'CD-W' : deptSlug === 'media' ? 'CD-M' : deptSlug === 'video' ? 'CD-V' : 'CD-O';
+      const auto_id = `${prefix}-${String(count).padStart(3, '0')}`;
+
+      const deptStatuses = getStatusesForDepartment(deptId);
+      const initialStatus = deptStatuses[0]?.id || '';
+
+      const newTask: Task = {
+        id: generateUUID(),
+        auto_id,
+        department_id: deptId,
+        title: data.title.trim(),
+        description: data.description?.trim() || '',
+        status_id: data.status_id || initialStatus,
+        category: data.category?.trim() || 'General',
+        assigned_to: data.assigned_to || null,
+        deadline: data.deadline || null,
+        author_name: data.author_name?.trim() || '',
+        profile_link: data.profile_link?.trim() || '',
+        custom_fields: data.custom_fields || {},
+        is_archived: false,
+        created_by: user?.id || null,
+        created_at: now,
+        updated_at: now,
+      };
+
+      createdTasks.push(newTask);
+
+      createdLogs.push({
+        id: generateUUID(),
+        task_id: newTask.id,
+        action: 'created',
+        new_status_id: newTask.status_id,
+        changed_by: user?.id || null,
+        remarks: 'Bulk imported from Excel file',
+        created_at: now,
+      });
+    }
+
+    setTasks((prev) => [...createdTasks, ...prev]);
+    setActivityLogs((prev) => [...createdLogs, ...prev]);
+
+    // Sync to Supabase if live
+    if (isSupabaseConfigured()) {
+      const supabase = createClient();
+      if (supabase) {
+        const payloads = createdTasks.map(({ department: _d, status: _s, assignee: _a, ...dbPayload }) => dbPayload);
+        supabase.from('tasks').insert(payloads).then(({ error }) => {
+          if (error) console.error('Supabase bulk task insert error:', error);
+        });
+        supabase.from('task_activity_logs').insert(createdLogs).then(({ error }) => {
+          if (error) console.error('Supabase bulk activity logs error:', error);
+        });
+      }
+    }
+
+    return createdTasks;
   };
 
   const updateTaskStatus = async (taskId: string, newStatusId: string, remarks?: string): Promise<boolean> => {
@@ -624,6 +704,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
         getStatusesForDepartment,
         getTasksForDepartment,
         createTask,
+        bulkCreateTasks,
         updateTaskStatus,
         updateTask,
         archiveTask,

@@ -12,6 +12,7 @@ import {
 import { getStatusBadgeClasses } from '@/lib/services/status-engine';
 import { EditTaskModal } from '@/components/tasks/edit-task-modal';
 import { DeleteTaskModal } from '@/components/tasks/delete-task-modal';
+import { BulkImportModal } from '@/components/tasks/bulk-import-modal';
 import { UserAvatar } from '@/components/common/user-avatar';
 import { exportTasksToCSV, downloadExcelCsv } from '@/lib/services/export-service';
 import {
@@ -60,6 +61,7 @@ export default function TasksOversightPage() {
   // Modals state
   const [editingTask, setEditingTask] = useState<Task | null>(null);
   const [deletingTask, setDeletingTask] = useState<Task | null>(null);
+  const [isBulkImportOpen, setIsBulkImportOpen] = useState(false);
 
   // Filter scoped departments
   const availableDepts = role === 'admin'
@@ -361,8 +363,17 @@ export default function TasksOversightPage() {
           </p>
         </div>
 
-        {/* Export Buttons */}
+        {/* Export & Action Buttons */}
         <div className="flex items-center gap-2 self-start md:self-auto flex-wrap">
+          <button
+            onClick={() => setIsBulkImportOpen(true)}
+            className="px-3.5 py-2 rounded-xl bg-card border border-border hover:bg-muted text-foreground text-xs font-bold flex items-center gap-1.5 shadow-xs transition-all cursor-pointer"
+            title="Bulk import tasks from Excel / CSV spreadsheet"
+          >
+            <FileSpreadsheet className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400" />
+            <span>Bulk Add via Excel</span>
+          </button>
+
           <button
             onClick={handleExportPdf}
             className="px-3.5 py-2 rounded-xl border border-border bg-card hover:bg-muted text-foreground text-xs font-bold flex items-center gap-1.5 shadow-xs transition-all cursor-pointer"
@@ -777,6 +788,13 @@ export default function TasksOversightPage() {
           }}
         />
       )}
+
+      {/* Bulk Import Excel Modal */}
+      <BulkImportModal
+        isOpen={isBulkImportOpen}
+        onClose={() => setIsBulkImportOpen(false)}
+        department={selectedDeptId !== 'all' ? departments.find((d) => d.id === selectedDeptId) : undefined}
+      />
     </div>
   );
 }

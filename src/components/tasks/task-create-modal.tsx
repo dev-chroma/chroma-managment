@@ -3,7 +3,7 @@
 import React, { useState } from 'react';
 import { Department, TaskStatus, Profile } from '@/types/database';
 import { useData } from '@/lib/context/data-context';
-import { X, Sparkles, AlertCircle } from 'lucide-react';
+import { X, Sparkles, AlertCircle, FileSpreadsheet } from 'lucide-react';
 
 interface TaskCreateModalProps {
   department: Department;
@@ -11,6 +11,7 @@ interface TaskCreateModalProps {
   members: Profile[];
   isOpen: boolean;
   onClose: () => void;
+  onOpenBulkImport?: () => void;
 }
 
 export function TaskCreateModal({
@@ -19,6 +20,7 @@ export function TaskCreateModal({
   members,
   isOpen,
   onClose,
+  onOpenBulkImport,
 }: TaskCreateModalProps) {
   const { createTask, getCategoriesForDepartment } = useData();
 
@@ -118,6 +120,26 @@ export function TaskCreateModal({
             <X className="h-5 w-5" />
           </button>
         </div>
+
+        {onOpenBulkImport && (
+          <div className="mt-3 p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-between gap-3 text-xs">
+            <div className="flex items-center gap-2 text-emerald-800 dark:text-emerald-300 font-medium">
+              <FileSpreadsheet className="h-4 w-4 shrink-0 text-emerald-600 dark:text-emerald-400" />
+              <span>Need to add multiple tasks simultaneously?</span>
+            </div>
+            <button
+              type="button"
+              onClick={() => {
+                onClose();
+                onOpenBulkImport();
+              }}
+              className="text-xs font-bold text-emerald-700 dark:text-emerald-300 hover:underline cursor-pointer flex items-center gap-1 shrink-0"
+            >
+              <span>Bulk Add via Excel</span>
+              <span>→</span>
+            </button>
+          </div>
+        )}
 
         <form onSubmit={handleSubmit} className="mt-4 space-y-4 text-xs">
           {/* Title */}

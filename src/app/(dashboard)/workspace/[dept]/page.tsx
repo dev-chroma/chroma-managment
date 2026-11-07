@@ -13,11 +13,13 @@ import { getStatusBadgeClasses } from '@/lib/services/status-engine';
 import { isTaskQualifyingFinished, classifyTaskStatus } from '@/lib/services/workload-engine';
 import { EditTaskModal } from '@/components/tasks/edit-task-modal';
 import { DeleteTaskModal } from '@/components/tasks/delete-task-modal';
+import { BulkImportModal } from '@/components/tasks/bulk-import-modal';
 import { UserAvatar } from '@/components/common/user-avatar';
 import {
   Plus,
   Download,
   Printer,
+  FileSpreadsheet,
   Search,
   Filter,
   CheckCircle2,
@@ -57,6 +59,7 @@ export default function DepartmentWorkspacePage() {
 
   // Modals state
   const [isCreateOpen, setIsCreateOpen] = useState(false);
+  const [isBulkImportOpen, setIsBulkImportOpen] = useState(false);
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
   const [taskToEdit, setTaskToEdit] = useState<Task | null>(null);
   const [taskToDelete, setTaskToDelete] = useState<Task | null>(null);
@@ -225,13 +228,23 @@ export default function DepartmentWorkspacePage() {
           </button>
 
           {(role === 'owner' || role === 'admin') && (
-            <button
-              onClick={() => setIsCreateOpen(true)}
-              className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-primary text-primary-foreground text-xs font-semibold hover:bg-primary/90 transition-colors cursor-pointer"
-            >
-              <Plus className="h-4 w-4" />
-              <span>New Task</span>
-            </button>
+            <>
+              <button
+                onClick={() => setIsBulkImportOpen(true)}
+                className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-card border border-border text-foreground hover:bg-muted text-xs font-semibold shadow-xs transition-colors cursor-pointer"
+                title="Bulk import tasks from Excel / CSV"
+              >
+                <FileSpreadsheet className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
+                <span>Bulk Import</span>
+              </button>
+              <button
+                onClick={() => setIsCreateOpen(true)}
+                className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-primary text-primary-foreground text-xs font-semibold hover:bg-primary/90 transition-colors cursor-pointer"
+              >
+                <Plus className="h-4 w-4" />
+                <span>New Task</span>
+              </button>
+            </>
           )}
         </div>
       </div>
@@ -682,6 +695,14 @@ export default function DepartmentWorkspacePage() {
         members={allProfiles}
         isOpen={isCreateOpen}
         onClose={() => setIsCreateOpen(false)}
+        onOpenBulkImport={() => setIsBulkImportOpen(true)}
+      />
+
+      {/* Bulk Import Excel Modal */}
+      <BulkImportModal
+        isOpen={isBulkImportOpen}
+        onClose={() => setIsBulkImportOpen(false)}
+        department={department}
       />
 
       {/* Task Details Modal */}

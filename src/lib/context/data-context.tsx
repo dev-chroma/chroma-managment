@@ -1,0 +1,588 @@
+'use client';
+
+import React, { createContext, useContext, useState, useEffect } from 'react';
+import {
+  Department,
+  TaskStatus,
+  Task,
+  TaskActivityLog,
+  Announcement,
+  Meeting,
+  ResourceItem,
+  RoleRequest,
+  WeeklyTarget,
+  DepartmentSlug,
+} from '@/types/database';
+import {
+  INITIAL_DEPARTMENTS,
+  INITIAL_STATUSES,
+  INITIAL_TASKS,
+  INITIAL_ANNOUNCEMENTS,
+  INITIAL_MEETINGS,
+  INITIAL_RESOURCES,
+  INITIAL_ROLE_REQUESTS,
+  DEFAULT_DEPARTMENT_CATEGORIES,
+} from '@/lib/mock/initial-data';
+import { useAuth } from './auth-context';
+import { isTaskQualifyingFinished } from '@/lib/services/workload-engine';
+import { createClient, isSupabaseConfigured } from '@/lib/supabase/client';
+
+interface DataContextType {
+  departments: Department[];
+  statuses: TaskStatus[];
+  tasks: Task[];
+  activityLogs: TaskActivityLog[];
+  announcements: Announcement[];
+  meetings: Meeting[];
+  resources: ResourceItem[];
+  roleRequests: RoleRequest[];
+  weeklyTargets: Record<string, number>;
+  departmentCategories: Record<string, string[]>;
+  getCategoriesForDepartment: (deptSlugOrId: string) => string[];
+  addCategoryToDepartment: (deptSlugOrId: string, category: string) => Promise<boolean>;
+  removeCategoryFromDepartment: (deptSlugOrId: string, category: string) => Promise<boolean>; // departmentId -> target
+  getDepartmentBySlug: (slug: string) => Department | undefined;
+  getStatusesForDepartment: (departmentId: string) => TaskStatus[];
+  getTasksForDepartment: (departmentId: string) => Task[];
+  createTask: (data: Partial<Task> & { department_id: string; title: string }) => Promise<Task>;
+  updateTaskStatus: (taskId: string, newStatusId: string, remarks?: string) => Promise<boolean>;
+  updateTask: (taskId: string, updates: Partial<Task>) => Promise<boolean>;
+  archiveTask: (taskId: string) => Promise<boolean>;
+  deleteTask: (taskId: string) => Promise<boolean>;
+  toggleTaskPause: (taskId: string) => Promise<boolean>;
+  addStatus: (statusData: Omit<TaskStatus, 'id' | 'created_at' | 'updated_at'>) => Promise<TaskStatus>;
+  updateStatus: (statusId: string, updates: Partial<TaskStatus>) => Promise<boolean>;
+  deactivateStatus: (statusId: string) => Promise<boolean>;
+  updateWeeklyTarget: (departmentId: string, newTarget: number) => Promise<boolean>;
+  createRoleRequest: (data: Omit<RoleRequest, 'id' | 'status' | 'created_at'>) => Promise<RoleRequest>;
+  reviewRoleRequest: (requestId: string, decision: 'approved' | 'rejected', remarks?: string) => Promise<boolean>;
+  addAnnouncement: (data: Omit<Announcement, 'id' | 'created_at'>) => Promise<Announcement>;
+  addMeeting: (data: Omit<Meeting, 'id' | 'created_at'>) => Promise<Meeting>;
+  addResource: (data: Omit<ResourceItem, 'id' | 'created_at'>) => Promise<ResourceItem>;
+  deleteResource: (id: string) => Promise<boolean>;
+}
+
+const DataContext = createContext<DataContextType | undefined>(undefined);
+
+export function DataProvider({ children }: { children: React.ReactNode }) {
+  const { user } = useAuth();
+  const [departments, setDepartments] = useState<Department[]>(INITIAL_DEPARTMENTS);
+  const [statuses, setStatuses] = useState<TaskStatus[]>(INITIAL_STATUSES);
+  const [tasks, setTasks] = useState<Task[]>(INITIAL_TASKS);
+  const [activityLogs, setActivityLogs] = useState<TaskActivityLog[]>([]);
+  const [announcements, setAnnouncements] = useState<Announcement[]>(INITIAL_ANNOUNCEMENTS);
+  const [meetings, setMeetings] = useState<Meeting[]>(INITIAL_MEETINGS);
+  const [resources, setResources] = useState<ResourceItem[]>(INITIAL_RESOURCES);
+  const [roleRequests, setRoleRequests] = useState<RoleRequest[]>(INITIAL_ROLE_REQUESTS);
+  const [weeklyTargets, setWeeklyTargets] = useState<Record<string, number>>({
+    'd1111111-1111-1111-1111-111111111111': 3, // Editing
+    'd2222222-2222-2222-2222-222222222222': 3, // Media
+    'd3333333-3333-3333-3333-333333333333': 2, // Video
+    'd4444444-4444-4444-4444-444444444444': 3, // Outreach
+  });
+
+  const [departmentCategories, setDepartmentCategories] = useState<Record<string, string[]>>(() => {
+    if (typeof window !== 'undefined') {
+      const stored = localStorage.getItem('chromadiaries_dept_categories');
+      if (stored) {
+        try {
+          return JSON.parse(stored);
+        } catch {}
+      }
+    }
+    return DEFAULT_DEPARTMENT_CATEGORIES;
+  });
+
+  const getCategoriesForDepartment = (deptSlugOrId: string): string[] => {
+    const slug = deptSlugOrId.startsWith('d1') ? 'editing' :
+                 deptSlugOrId.startsWith('d2') ? 'media' :
+                 deptSlugOrId.startsWith('d3') ? 'video' :
+                 deptSlugOrId.startsWith('d4') ? 'outreach' :
+                 deptSlugOrId.toLowerCase();
+
+    return departmentCategories[slug] || DEFAULT_DEPARTMENT_CATEGORIES[slug as DepartmentSlug] || [];
+  };
+
+  const addCategoryToDepartment = async (deptSlugOrId: string, category: string): Promise<boolean> => {
+    const slug = deptSlugOrId.startsWith('d1') ? 'editing' :
+                 deptSlugOrId.startsWith('d2') ? 'media' :
+                 deptSlugOrId.startsWith('d3') ? 'video' :
+                 deptSlugOrId.startsWith('d4') ? 'outreach' :
+                 deptSlugOrId.toLowerCase();
+
+    const cleanCat = category.trim();
+    if (!cleanCat) return false;
+
+    setDepartmentCategories((prev) => {
+      const current = prev[slug] || DEFAULT_DEPARTMENT_CATEGORIES[slug as DepartmentSlug] || [];
+      if (current.includes(cleanCat)) return prev;
+      const updated = { ...prev, [slug]: [...current, cleanCat] };
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('chromadiaries_dept_categories', JSON.stringify(updated));
+      }
+      return updated;
+    });
+    return true;
+  };
+
+  const removeCategoryFromDepartment = async (deptSlugOrId: string, category: string): Promise<boolean> => {
+    const slug = deptSlugOrId.startsWith('d1') ? 'editing' :
+                 deptSlugOrId.startsWith('d2') ? 'media' :
+                 deptSlugOrId.startsWith('d3') ? 'video' :
+                 deptSlugOrId.startsWith('d4') ? 'outreach' :
+                 deptSlugOrId.toLowerCase();
+
+    setDepartmentCategories((prev) => {
+      const current = prev[slug] || DEFAULT_DEPARTMENT_CATEGORIES[slug as DepartmentSlug] || [];
+      const updated = { ...prev, [slug]: current.filter((c) => c !== category) };
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('chromadiaries_dept_categories', JSON.stringify(updated));
+      }
+      return updated;
+    });
+    return true;
+  };
+
+  // Fetch live Supabase data on mount if tables exist
+  useEffect(() => {
+    if (!isSupabaseConfigured()) return;
+    const supabase = createClient();
+    if (!supabase) return;
+
+    const loadLive = async () => {
+      try {
+        const { data: deptData, error: deptError } = await supabase.from('departments').select('*');
+        if (!deptError && deptData && deptData.length > 0) {
+          setDepartments(deptData as Department[]);
+        }
+
+        const { data: statusData, error: statusError } = await supabase.from('task_statuses').select('*');
+        if (!statusError && statusData && statusData.length > 0) {
+          setStatuses(statusData as TaskStatus[]);
+        }
+
+        const { data: taskData, error: taskError } = await supabase.from('tasks').select('*');
+        if (!taskError && taskData && taskData.length > 0) {
+          setTasks(taskData as Task[]);
+        }
+
+        const { data: annData, error: annError } = await supabase.from('announcements').select('*');
+        if (!annError && annData && annData.length > 0) {
+          setAnnouncements(annData as Announcement[]);
+        }
+
+        const { data: mtgData, error: mtgError } = await supabase.from('meetings').select('*');
+        if (!mtgError && mtgData && mtgData.length > 0) {
+          setMeetings(mtgData as Meeting[]);
+        }
+
+        const { data: resData, error: resError } = await supabase.from('resources').select('*');
+        if (!resError && resData && resData.length > 0) {
+          setResources(resData as ResourceItem[]);
+        }
+      } catch (err) {
+        // Fall back gracefully to initialized state
+        console.warn('Supabase fetch notice: using local state fallback.', err);
+      }
+    };
+
+    loadLive();
+  }, []);
+
+  const getDepartmentBySlug = (slug: string) => departments.find((d) => d.slug === slug);
+
+  const getStatusesForDepartment = (departmentId: string) =>
+    statuses
+      .filter((s) => s.department_id === departmentId && s.is_active)
+      .sort((a, b) => a.display_order - b.display_order);
+
+  const getTasksForDepartment = (departmentId: string) =>
+    tasks.filter((t) => t.department_id === departmentId);
+
+  const createTask = async (data: Partial<Task> & { department_id: string; title: string }): Promise<Task> => {
+    const dept = departments.find((d) => d.id === data.department_id);
+    const deptSlug = dept?.slug || 'editing';
+    const prefix = deptSlug === 'editing' ? 'CD-W' : deptSlug === 'media' ? 'CD-M' : deptSlug === 'video' ? 'CD-V' : 'CD-O';
+
+    // Auto generate ID (e.g. CD-W-001, CD-M-001, CD-V-001, CD-O-001)
+    const count = tasks.filter((t) => t.department_id === data.department_id).length + 1;
+    const auto_id = `${prefix}-${String(count).padStart(3, '0')}`;
+
+    // Get default initial status if not supplied
+    const deptStatuses = getStatusesForDepartment(data.department_id);
+    const initialStatus = deptStatuses[0]?.id || '';
+
+    const newTask: Task = {
+      id: `task-${Date.now()}`,
+      auto_id,
+      department_id: data.department_id,
+      title: data.title,
+      description: data.description || '',
+      status_id: data.status_id || initialStatus,
+      category: data.category || 'General',
+      assigned_to: data.assigned_to || null,
+      deadline: data.deadline || null,
+      author_name: data.author_name || '',
+      profile_link: data.profile_link || '',
+      custom_fields: data.custom_fields || {},
+      is_archived: false,
+      created_by: user?.id || null,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    };
+
+    setTasks((prev) => [newTask, ...prev]);
+
+    // Create activity log
+    const log: TaskActivityLog = {
+      id: `log-${Date.now()}`,
+      task_id: newTask.id,
+      action: 'created',
+      new_status_id: newTask.status_id,
+      changed_by: user?.id || null,
+      remarks: 'Task created',
+      created_at: new Date().toISOString(),
+    };
+    setActivityLogs((prev) => [log, ...prev]);
+
+    // Try sync to Supabase if live
+    if (isSupabaseConfigured()) {
+      const supabase = createClient();
+      if (supabase) {
+        supabase.from('tasks').insert([newTask]).then();
+      }
+    }
+
+    return newTask;
+  };
+
+  const updateTaskStatus = async (taskId: string, newStatusId: string, remarks?: string): Promise<boolean> => {
+    const task = tasks.find((t) => t.id === taskId);
+    if (!task) return false;
+
+    const previousStatusId = task.status_id;
+    const dept = departments.find((d) => d.id === task.department_id);
+    const deptSlug = (dept?.slug || 'editing') as DepartmentSlug;
+
+    const tempUpdatedTask: Task = { ...task, status_id: newStatusId };
+    const { isFinished } = isTaskQualifyingFinished(tempUpdatedTask, statuses, deptSlug);
+
+    const now = new Date().toISOString();
+    setTasks((prev) =>
+      prev.map((t) => {
+        if (t.id === taskId) {
+          return {
+            ...t,
+            status_id: newStatusId,
+            updated_at: now,
+            completed_at: isFinished ? (t.completed_at || now) : null,
+            rejection_reason: remarks && newStatusId.includes('rejected') ? remarks : t.rejection_reason,
+          };
+        }
+        return t;
+      })
+    );
+
+    // Record activity log
+    const log: TaskActivityLog = {
+      id: `log-${Date.now()}`,
+      task_id: taskId,
+      action: 'status_changed',
+      previous_status_id: previousStatusId,
+      new_status_id: newStatusId,
+      changed_by: user?.id || null,
+      remarks: remarks || '',
+      created_at: now,
+    };
+    setActivityLogs((prev) => [log, ...prev]);
+
+    // Try sync to Supabase if live
+    if (isSupabaseConfigured()) {
+      const supabase = createClient();
+      if (supabase) {
+        supabase
+          .from('tasks')
+          .update({
+            status_id: newStatusId,
+            updated_at: now,
+            completed_at: isFinished ? now : null,
+            rejection_reason: remarks || task.rejection_reason,
+          })
+          .eq('id', taskId)
+          .then();
+      }
+    }
+
+    return true;
+  };
+
+  const updateTask = async (taskId: string, updates: Partial<Task>): Promise<boolean> => {
+    setTasks((prev) =>
+      prev.map((t) => (t.id === taskId ? { ...t, ...updates, updated_at: new Date().toISOString() } : t))
+    );
+    if (isSupabaseConfigured()) {
+      const supabase = createClient();
+      if (supabase) {
+        supabase.from('tasks').update(updates).eq('id', taskId).then();
+      }
+    }
+    return true;
+  };
+
+  const archiveTask = async (taskId: string): Promise<boolean> => {
+    setTasks((prev) =>
+      prev.map((t) => (t.id === taskId ? { ...t, is_archived: true, updated_at: new Date().toISOString() } : t))
+    );
+    if (isSupabaseConfigured()) {
+      const supabase = createClient();
+      if (supabase) {
+        supabase.from('tasks').update({ is_archived: true }).eq('id', taskId).then();
+      }
+    }
+    return true;
+  };
+
+  const deleteTask = async (taskId: string): Promise<boolean> => {
+    return archiveTask(taskId);
+  };
+
+  const toggleTaskPause = async (taskId: string): Promise<boolean> => {
+    const task = tasks.find((t) => t.id === taskId);
+    if (!task) return false;
+    const isPaused = Boolean(task.is_paused || task.custom_fields?.is_paused);
+    return updateTask(taskId, {
+      is_paused: !isPaused,
+      custom_fields: { ...task.custom_fields, is_paused: !isPaused },
+    });
+  };
+
+  // Section 7.3: Dynamic status addition updates entire system automatically
+  const addStatus = async (
+    statusData: Omit<TaskStatus, 'id' | 'created_at' | 'updated_at'>
+  ): Promise<TaskStatus> => {
+    const newStatus: TaskStatus = {
+      ...statusData,
+      id: `status-${Date.now()}`,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    };
+    setStatuses((prev) => [...prev, newStatus]);
+
+    if (isSupabaseConfigured()) {
+      const supabase = createClient();
+      if (supabase) {
+        supabase.from('task_statuses').insert([newStatus]).then();
+      }
+    }
+    return newStatus;
+  };
+
+  const updateStatus = async (statusId: string, updates: Partial<TaskStatus>): Promise<boolean> => {
+    setStatuses((prev) =>
+      prev.map((s) => (s.id === statusId ? { ...s, ...updates, updated_at: new Date().toISOString() } : s))
+    );
+    if (isSupabaseConfigured()) {
+      const supabase = createClient();
+      if (supabase) {
+        supabase.from('task_statuses').update(updates).eq('id', statusId).then();
+      }
+    }
+    return true;
+  };
+
+  const deactivateStatus = async (statusId: string): Promise<boolean> => {
+    // Preserve existing task records while deactivating from dropdown
+    setStatuses((prev) =>
+      prev.map((s) => (s.id === statusId ? { ...s, is_active: false, updated_at: new Date().toISOString() } : s))
+    );
+    if (isSupabaseConfigured()) {
+      const supabase = createClient();
+      if (supabase) {
+        supabase.from('task_statuses').update({ is_active: false }).eq('id', statusId).then();
+      }
+    }
+    return true;
+  };
+
+  const updateWeeklyTarget = async (departmentId: string, newTarget: number): Promise<boolean> => {
+    setWeeklyTargets((prev) => ({ ...prev, [departmentId]: newTarget }));
+    if (isSupabaseConfigured()) {
+      const supabase = createClient();
+      if (supabase) {
+        supabase.from('weekly_targets').upsert([{ department_id: departmentId, target_per_member: newTarget }]).then();
+      }
+    }
+    return true;
+  };
+
+  const createRoleRequest = async (
+    data: Omit<RoleRequest, 'id' | 'status' | 'created_at'>
+  ): Promise<RoleRequest> => {
+    // Generate valid UUID for compatibility with Supabase UUID primary key
+    const generatedId = typeof crypto !== 'undefined' && crypto.randomUUID 
+      ? crypto.randomUUID() 
+      : 'f0000000-0000-0000-0000-' + Math.floor(100000000000 + Math.random() * 900000000000).toString(16).padStart(12, '0');
+
+    const req: RoleRequest = {
+      ...data,
+      id: generatedId,
+      status: 'submitted',
+      created_at: new Date().toISOString(),
+    };
+    setRoleRequests((prev) => [req, ...prev]);
+
+    if (isSupabaseConfigured()) {
+      const supabase = createClient();
+      if (supabase) {
+        // Strip nested relation fields if any before inserting to SQL table
+        const { user: _u, requested_department: _d, requested_password: _rp, ...dbPayload } = req;
+        supabase.from('role_requests').insert([dbPayload]).then(({ error }) => {
+          if (error) console.error('Supabase role_request insert error:', error);
+        });
+      }
+    }
+    return req;
+  };
+
+  const reviewRoleRequest = async (
+    requestId: string,
+    decision: 'approved' | 'rejected',
+    remarks?: string
+  ): Promise<boolean> => {
+    setRoleRequests((prev) =>
+      prev.map((r) =>
+        r.id === requestId
+          ? {
+              ...r,
+              status: decision,
+              reviewed_by: user?.id || null,
+              reviewer_remarks: remarks || '',
+              decision_date: new Date().toISOString(),
+            }
+          : r
+      )
+    );
+    if (isSupabaseConfigured()) {
+      const supabase = createClient();
+      if (supabase) {
+        supabase
+          .from('role_requests')
+          .update({
+            status: decision,
+            reviewed_by: user?.id || null,
+            reviewer_remarks: remarks || '',
+            decision_date: new Date().toISOString(),
+          })
+          .eq('id', requestId)
+          .then();
+      }
+    }
+    return true;
+  };
+
+  const addAnnouncement = async (data: Omit<Announcement, 'id' | 'created_at'>): Promise<Announcement> => {
+    const ann: Announcement = {
+      ...data,
+      id: `ann-${Date.now()}`,
+      created_at: new Date().toISOString(),
+    };
+    setAnnouncements((prev) => [ann, ...prev]);
+    if (isSupabaseConfigured()) {
+      const supabase = createClient();
+      if (supabase) {
+        supabase.from('announcements').insert([ann]).then();
+      }
+    }
+    return ann;
+  };
+
+  const addMeeting = async (data: Omit<Meeting, 'id' | 'created_at'>): Promise<Meeting> => {
+    const mtg: Meeting = {
+      ...data,
+      id: `mtg-${Date.now()}`,
+      created_at: new Date().toISOString(),
+    };
+    setMeetings((prev) => [mtg, ...prev]);
+    if (isSupabaseConfigured()) {
+      const supabase = createClient();
+      if (supabase) {
+        supabase.from('meetings').insert([mtg]).then();
+      }
+    }
+    return mtg;
+  };
+
+  const addResource = async (data: Omit<ResourceItem, 'id' | 'created_at'>): Promise<ResourceItem> => {
+    const res: ResourceItem = {
+      ...data,
+      id: `res-${Date.now()}`,
+      created_at: new Date().toISOString(),
+    };
+    setResources((prev) => [res, ...prev]);
+    if (isSupabaseConfigured()) {
+      const supabase = createClient();
+      if (supabase) {
+        supabase.from('resources').insert([res]).then();
+      }
+    }
+    return res;
+  };
+
+  const deleteResource = async (id: string): Promise<boolean> => {
+    setResources((prev) => prev.filter((r) => r.id !== id));
+    if (isSupabaseConfigured()) {
+      const supabase = createClient();
+      if (supabase) {
+        supabase.from('resources').delete().eq('id', id).then();
+      }
+    }
+    return true;
+  };
+
+  return (
+    <DataContext.Provider
+      value={{
+        departments,
+        statuses,
+        tasks,
+        activityLogs,
+        announcements,
+        meetings,
+        resources,
+        roleRequests,
+        weeklyTargets,
+        departmentCategories,
+        getCategoriesForDepartment,
+        addCategoryToDepartment,
+        removeCategoryFromDepartment,
+        getDepartmentBySlug,
+        getStatusesForDepartment,
+        getTasksForDepartment,
+        createTask,
+        updateTaskStatus,
+        updateTask,
+        archiveTask,
+        deleteTask,
+        toggleTaskPause,
+        addStatus,
+        updateStatus,
+        deactivateStatus,
+        updateWeeklyTarget,
+        createRoleRequest,
+        reviewRoleRequest,
+        addAnnouncement,
+        addMeeting,
+        addResource,
+        deleteResource,
+      }}
+    >
+      {children}
+    </DataContext.Provider>
+  );
+}
+
+export function useData() {
+  const context = useContext(DataContext);
+  if (!context) throw new Error('useData must be used within DataProvider');
+  return context;
+}

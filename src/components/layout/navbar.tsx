@@ -94,10 +94,10 @@ export function Navbar({ onToggleMobileMenu }: NavbarProps) {
   }, []);
 
   const pendingRequestsCount = role === 'owner' 
-    ? roleRequests.filter((r) => r.status === 'submitted').length 
+    ? roleRequests.filter((r) => !r.is_deleted && r.status === 'submitted').length 
     : role === 'admin'
       ? roleRequests.filter((r) => {
-          if (r.status !== 'submitted') return false;
+          if (r.is_deleted || r.status !== 'submitted') return false;
           if (r.user_id === user?.id) return false;
           if (r.requested_role !== 'member') return false;
           if (r.requested_department_id === user?.department_id || r.current_department_id === user?.department_id) return true;

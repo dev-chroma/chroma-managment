@@ -108,6 +108,8 @@ interface DataContextType {
   updateWeeklyTarget: (departmentId: string, newTarget: number) => Promise<boolean>;
   createRoleRequest: (data: Omit<RoleRequest, 'id' | 'status' | 'created_at'>) => Promise<RoleRequest>;
   reviewRoleRequest: (requestId: string, decision: 'approved' | 'rejected', remarks?: string) => Promise<boolean>;
+  deleteRoleRequest: (requestId: string, permanent?: boolean) => Promise<boolean>;
+  restoreRoleRequest: (requestId: string) => Promise<boolean>;
   addAnnouncement: (data: Omit<Announcement, 'id' | 'created_at'>) => Promise<Announcement>;
   updateAnnouncement: (id: string, updates: Partial<Announcement>) => Promise<boolean>;
   deleteAnnouncement: (id: string) => Promise<boolean>;
@@ -1257,6 +1259,98 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
           if (error) console.error('Supabase reviewRoleRequest error:', error);
         } catch (err) {
           console.error('Supabase reviewRoleRequest exception:', err);
+        }
+      }
+    }
+    return true;
+  };
+
+  const deleteRoleRequest = async (
+    requestId: string,
+    permanent: boolean = false
+  ): Promise<boolean> => {
+    if (permanent) {
+      setRoleRequests((prev) => {
+        const updated = prev.filter((r) => r.id !== requestId);
+        if (typeof window !== 'undefined') {
+          localStorage.setItem('chromadiaries_role_requests', JSON.stringify(updated));
+        }
+        return updated;
+      });
+      if (isSupabaseConfigured()) {
+        const supabase = createClient();
+        if (supabase) {
+          try {
+            const { error } = await supabase.from('role_requests').delete().eq('id', requestId);
+            if (error) console.error('Supabase deleteRoleRequest (permanent) error:', error);
+          } catch (err) {
+            console.error('Supabase deleteRoleRequest exception:', err);
+          }
+        }
+      }
+    } else {
+      setRoleRequests((prev) => {
+        const updated = prev.map((r) => (r.id === requestId ? { ...r, is_deleted: true } : r));
+        if (typeof window !== 'undefined') {
+          localStorage.setItem('chromadiaries_role_requests', JSON.stringify(updated));
+        }
+        return updated;
+      });
+      if (isSupabaseConfigured()) {
+        const supabase = createClient();
+        if (supabase) {
+          try {
+            const { error } = await supabase
+              .from('role_requests')
+              .update({ is_deleted: true })
+              .eq('id', requestId);
+            if (error) console.error('Supabase deleteRoleRequest (soft) error:', error);
+          } catch (err) {
+            console.error('Supabase deleteRoleRequest exception:', err);
+          }
+        }
+      }
+    }
+    return true;
+  };
+
+  const restoreRoleRequest = async (requestId: string): Promise<boolean> => {
+    setRoleRequests((prev) => {
+      const updated = prev.map((r) =>
+        r.id === requestId
+          ? {
+              ...r,
+              is_deleted: false,
+              status: 'submitted' as const,
+              reviewed_by: null,
+              reviewer_remarks: null,
+              decision_date: null,
+            }
+          : r
+      );
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('chromadiaries_role_requests', JSON.stringify(updated));
+      }
+      return updated;
+    });
+
+    if (isSupabaseConfigured()) {
+      const supabase = createClient();
+      if (supabase) {
+        try {
+          const { error } = await supabase
+            .from('role_requests')
+            .update({
+              is_deleted: false,
+              status: 'submitted',
+              reviewed_by: null,
+              reviewer_remarks: null,
+              decision_date: null,
+            })
+            .eq('id', requestId);
+          if (error) console.error('Supabase restoreRoleRequest error:', error);
+        } catch (err) {
+          console.error('Supabase restoreRoleRequest exception:', err);
         }
       }
     }
@@ -2529,6 +2623,8 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
         updateWeeklyTarget,
         createRoleRequest,
         reviewRoleRequest,
+        deleteRoleRequest,
+        restoreRoleRequest,
         addAnnouncement,
         updateAnnouncement,
         deleteAnnouncement,

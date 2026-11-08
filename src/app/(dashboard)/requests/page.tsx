@@ -18,14 +18,18 @@ import {
   Eye,
   EyeOff,
   KeyRound,
+  RotateCcw,
+  Trash2,
+  Archive,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { format, parseISO } from 'date-fns';
 import { UserAvatar } from '@/components/common/user-avatar';
+import { TwoStepDeleteModal } from '@/components/common/two-step-delete-modal';
 
 export default function RoleRequestsPage() {
   const { user, role, allProfiles, createAccount, updateAccount } = useAuth();
-  const { roleRequests, departments, createRoleRequest, reviewRoleRequest } = useData();
+  const { roleRequests, departments, createRoleRequest, reviewRoleRequest, deleteRoleRequest, restoreRoleRequest } = useData();
 
   const [isSubmitOpen, setIsSubmitOpen] = useState(false);
   const [requestedRole, setRequestedRole] = useState<string>('admin');
@@ -36,6 +40,9 @@ export default function RoleRequestsPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [activeReviewId, setActiveReviewId] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
+  const [selectedStatusTab, setSelectedStatusTab] = useState<'all' | 'submitted' | 'approved' | 'rejected' | 'deleted'>('all');
+  const [requestToDelete, setRequestToDelete] = useState<RoleRequest | null>(null);
+  const [requestToPermanentDelete, setRequestToPermanentDelete] = useState<RoleRequest | null>(null);
 
   const isDeptMatch = (reqDeptId?: string | null, userDeptId?: string | null) => {
     if (!reqDeptId || !userDeptId) return false;
@@ -49,7 +56,7 @@ export default function RoleRequestsPage() {
   // - Owner gets all requests (from login or in-app)
   // - Department Admin / Head gets requests specifically for their department members
   // - Members only see their own submissions
-  const visibleRequests = roleRequests.filter((req) => {
+  const accessibleRequests = roleRequests.filter((req) => {
     let matchesRole = false;
     if (role === 'owner') {
       matchesRole = true;
@@ -72,8 +79,23 @@ export default function RoleRequestsPage() {
         (req.applicant_email && user?.email && req.applicant_email.toLowerCase() === user.email.toLowerCase())
       );
     }
+    return matchesRole;
+  });
 
-    if (!matchesRole) return false;
+  // Telemetry counts for status tabs
+  const allCount = accessibleRequests.filter((r) => !r.is_deleted).length;
+  const pendingCount = accessibleRequests.filter((r) => !r.is_deleted && r.status === 'submitted').length;
+  const approvedCount = accessibleRequests.filter((r) => !r.is_deleted && r.status === 'approved').length;
+  const rejectedCount = accessibleRequests.filter((r) => !r.is_deleted && r.status === 'rejected').length;
+  const trashCount = accessibleRequests.filter((r) => r.is_deleted).length;
+
+  const visibleRequests = accessibleRequests.filter((req) => {
+    if (selectedStatusTab === 'deleted') {
+      if (!req.is_deleted) return false;
+    } else {
+      if (req.is_deleted) return false;
+      if (selectedStatusTab !== 'all' && req.status !== selectedStatusTab) return false;
+    }
 
     if (searchQuery.trim()) {
       const q = searchQuery.toLowerCase();
@@ -145,6 +167,10 @@ export default function RoleRequestsPage() {
     setReviewerRemarks('');
   };
 
+  const handleRestore = async (id: string) => {
+    await restoreRoleRequest(id);
+  };
+
   return (
     <div className="p-6 md:p-8 space-y-6 max-w-6xl mx-auto">
       {/* Header */}
@@ -197,6 +223,71 @@ export default function RoleRequestsPage() {
         <div className="text-xs text-muted-foreground font-mono self-end sm:self-auto">
           Showing {visibleRequests.length} of {roleRequests.length} requests
         </div>
+      </div>
+
+      {/* Status Filter Tabs */}
+      <div className="flex items-center gap-1.5 overflow-x-auto pb-1 text-xs">
+        <button
+          onClick={() => setSelectedStatusTab('all')}
+          className={cn(
+            'px-3 py-1.5 rounded-xl font-medium transition-all cursor-pointer whitespace-nowrap',
+            selectedStatusTab === 'all'
+              ? 'bg-primary text-primary-foreground font-semibold shadow-xs'
+              : 'bg-card hover:bg-muted text-muted-foreground border border-border'
+          )}
+        >
+          All ({allCount})
+        </button>
+        <button
+          onClick={() => setSelectedStatusTab('submitted')}
+          className={cn(
+            'px-3 py-1.5 rounded-xl font-medium transition-all cursor-pointer whitespace-nowrap flex items-center gap-1.5',
+            selectedStatusTab === 'submitted'
+              ? 'bg-amber-500 text-white font-semibold shadow-xs'
+              : 'bg-card hover:bg-muted text-muted-foreground border border-border'
+          )}
+        >
+          <Clock className="h-3 w-3" />
+          <span>Pending ({pendingCount})</span>
+        </button>
+        <button
+          onClick={() => setSelectedStatusTab('approved')}
+          className={cn(
+            'px-3 py-1.5 rounded-xl font-medium transition-all cursor-pointer whitespace-nowrap flex items-center gap-1.5',
+            selectedStatusTab === 'approved'
+              ? 'bg-emerald-600 text-white font-semibold shadow-xs'
+              : 'bg-card hover:bg-muted text-muted-foreground border border-border'
+          )}
+        >
+          <CheckCircle2 className="h-3 w-3" />
+          <span>Approved ({approvedCount})</span>
+        </button>
+        <button
+          onClick={() => setSelectedStatusTab('rejected')}
+          className={cn(
+            'px-3 py-1.5 rounded-xl font-medium transition-all cursor-pointer whitespace-nowrap flex items-center gap-1.5',
+            selectedStatusTab === 'rejected'
+              ? 'bg-rose-600 text-white font-semibold shadow-xs'
+              : 'bg-card hover:bg-muted text-muted-foreground border border-border'
+          )}
+        >
+          <XCircle className="h-3 w-3" />
+          <span>Rejected ({rejectedCount})</span>
+        </button>
+        {(trashCount > 0 || isPrivileged) && (
+          <button
+            onClick={() => setSelectedStatusTab('deleted')}
+            className={cn(
+              'px-3 py-1.5 rounded-xl font-medium transition-all cursor-pointer whitespace-nowrap flex items-center gap-1.5',
+              selectedStatusTab === 'deleted'
+                ? 'bg-slate-700 text-white font-semibold shadow-xs'
+                : 'bg-card hover:bg-muted text-muted-foreground border border-border'
+            )}
+          >
+            <Trash2 className="h-3 w-3" />
+            <span>Trash ({trashCount})</span>
+          </button>
+        )}
       </div>
 
       {/* Requests List */}
@@ -411,6 +502,62 @@ export default function RoleRequestsPage() {
                       )}
                     </div>
                   )}
+
+                  {/* Actions for Rejected Requests: Restore & Delete */}
+                  {req.status === 'rejected' && !req.is_deleted && canReview && (
+                    <div className="pt-2 flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-t border-border/40 mt-1">
+                      <span className="text-[11px] text-rose-500 font-medium flex items-center gap-1">
+                        <XCircle className="h-3.5 w-3.5" />
+                        <span>Request Rejected</span>
+                      </span>
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={() => handleRestore(req.id)}
+                          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-primary/40 bg-primary/10 text-primary hover:bg-primary/20 text-xs font-semibold transition-colors cursor-pointer shadow-2xs"
+                          title="Restore request back to Pending status so it can be re-evaluated"
+                        >
+                          <RotateCcw className="h-3.5 w-3.5" />
+                          <span>Restore to Pending</span>
+                        </button>
+                        <button
+                          onClick={() => setRequestToDelete(req)}
+                          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-rose-300 dark:border-rose-800 bg-rose-500/10 text-rose-600 dark:text-rose-400 hover:bg-rose-500/20 text-xs font-semibold transition-colors cursor-pointer shadow-2xs"
+                          title="Delete Rejected Request"
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                          <span>Delete Request</span>
+                        </button>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Actions for Deleted Requests in Trash: Restore & Permanent Delete */}
+                  {req.is_deleted && canReview && (
+                    <div className="pt-2 flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-t border-border/40 mt-1">
+                      <span className="text-[11px] text-muted-foreground font-medium flex items-center gap-1 bg-muted px-2 py-0.5 rounded-md border border-border w-fit">
+                        <Archive className="h-3 w-3" />
+                        <span>In Trash (Deleted)</span>
+                      </span>
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={() => handleRestore(req.id)}
+                          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-primary/40 bg-primary/10 text-primary hover:bg-primary/20 text-xs font-semibold transition-colors cursor-pointer shadow-2xs"
+                          title="Restore request from trash back to Pending queue"
+                        >
+                          <RotateCcw className="h-3.5 w-3.5" />
+                          <span>Restore Request</span>
+                        </button>
+                        <button
+                          onClick={() => setRequestToPermanentDelete(req)}
+                          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-rose-500 bg-rose-600 text-white hover:bg-rose-700 text-xs font-semibold transition-colors cursor-pointer shadow-2xs"
+                          title="Permanently remove from database"
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                          <span>Permanent Delete</span>
+                        </button>
+                      </div>
+                    </div>
+                  )}
                 </div>
               );
             })
@@ -528,6 +675,36 @@ export default function RoleRequestsPage() {
             </form>
           </div>
         </div>
+      )}
+
+      {/* Delete (Soft) Modal */}
+      {requestToDelete && (
+        <TwoStepDeleteModal
+          isOpen={Boolean(requestToDelete)}
+          title="Delete Rejected Role Request"
+          itemTitle={`${requestToDelete.applicant_name || 'Applicant'} - ${requestToDelete.requested_role.toUpperCase()}`}
+          itemDetails={`Reason: "${requestToDelete.reason}" · Status: ${requestToDelete.status.toUpperCase()}`}
+          onClose={() => setRequestToDelete(null)}
+          onConfirmDelete={async () => {
+            await deleteRoleRequest(requestToDelete.id, false);
+            setRequestToDelete(null);
+          }}
+        />
+      )}
+
+      {/* Permanent Delete Modal */}
+      {requestToPermanentDelete && (
+        <TwoStepDeleteModal
+          isOpen={Boolean(requestToPermanentDelete)}
+          title="Permanently Delete Role Request"
+          itemTitle={`${requestToPermanentDelete.applicant_name || 'Applicant'} - ${requestToPermanentDelete.requested_role.toUpperCase()}`}
+          itemDetails="This will permanently delete this application record from the database and cannot be undone."
+          onClose={() => setRequestToPermanentDelete(null)}
+          onConfirmDelete={async () => {
+            await deleteRoleRequest(requestToPermanentDelete.id, true);
+            setRequestToPermanentDelete(null);
+          }}
+        />
       )}
     </div>
   );

@@ -135,6 +135,7 @@ export interface RoleRequest {
   reviewer_remarks?: string | null;
   created_at: string;
   decision_date?: string | null;
+  is_deleted?: boolean;
   user?: Profile;
   requested_department?: Department;
 }

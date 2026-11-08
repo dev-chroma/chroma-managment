@@ -46,17 +46,18 @@ export default function RoleRequestsPage() {
   };
 
   // Strict Request Routing:
-  // - Owner gets all requests (from login or in-app)
-  // - Department Admin / Head gets requests specifically for their department
-  // - Members only see their own submissions
+  // - Role requests ONLY go to the respective Department Admin (Head).
+  // - Requests do NOT go to the Owner, nor to other department admins.
+  // - Members only see their own submissions.
   const visibleRequests = roleRequests.filter((req) => {
     let matchesRole = false;
-    if (role === 'owner') {
-      matchesRole = true;
-    } else if (role === 'admin') {
+    if (role === 'admin') {
       matchesRole =
         isDeptMatch(req.requested_department_id, user?.department_id) ||
         isDeptMatch(req.current_department_id, user?.department_id);
+    } else if (role === 'owner') {
+      // Owner does not receive department role requests; only sees any request they submitted personally
+      matchesRole = req.user_id === user?.id;
     } else {
       matchesRole = (
         req.user_id === user?.id ||
@@ -85,7 +86,7 @@ export default function RoleRequestsPage() {
     return true;
   });
 
-  const isPrivileged = role === 'owner' || role === 'admin';
+  const isPrivileged = role === 'admin';
 
   const handleSubmitRequest = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -150,7 +151,7 @@ export default function RoleRequestsPage() {
             <span>Role & Department Requests</span>
           </h1>
           <p className="text-xs text-muted-foreground mt-0.5">
-            Submit elevation requests or department transfers for Owner and Admin review.
+            Submit elevation requests or department transfers for Department Admin review.
           </p>
         </div>
 
@@ -262,8 +263,8 @@ export default function RoleRequestsPage() {
                     </div>
                   )}
 
-                  {/* Action buttons for Approvers (Owner / Department Admin for their dept) */}
-                  {isPrivileged && (role === 'owner' || isDeptMatch(req.requested_department_id, user?.department_id) || isDeptMatch(req.current_department_id, user?.department_id)) && req.status === 'submitted' && (
+                  {/* Action buttons: Department Admin only for their respective department */}
+                  {isPrivileged && (isDeptMatch(req.requested_department_id, user?.department_id) || isDeptMatch(req.current_department_id, user?.department_id)) && req.status === 'submitted' && (
                     <div className="pt-2">
                       {activeReviewId === req.id ? (
                         <div className="p-4 rounded-xl border border-primary/30 bg-primary/5 space-y-3">

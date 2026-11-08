@@ -575,7 +575,7 @@ export function ExecutiveTelemetry({
 
           const targetDept = departments.find((d) => d.slug === targetSlug);
           const deptMembers = members.filter((m) => {
-            return (m.system_role === 'member' || m.system_role === 'admin' || m.system_role === 'general_member') &&
+            return (m.system_role === 'member' || m.system_role === 'general_member') &&
                    (m.department_id === targetDept?.id || m.system_role === 'general_member');
           });
 

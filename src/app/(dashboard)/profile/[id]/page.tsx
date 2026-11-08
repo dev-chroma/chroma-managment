@@ -398,8 +398,9 @@ export default function MemberProfilePage() {
                       </div>
 
                       <div className="text-right shrink-0">
-                        <span className={cn('text-[10px] font-semibold px-2.5 py-0.5 rounded-full border', badge.bg, badge.text, badge.border)}>
-                          {statusObj?.name}
+                        <span className={cn('inline-flex items-center gap-1.5 text-[10px] font-semibold px-2.5 py-0.5 rounded-full border shadow-2xs', badge.bg, badge.text, badge.border)}>
+                          <span className={cn('h-1.5 w-1.5 rounded-full shrink-0', badge.dotBg)} />
+                          <span>{statusObj?.name || 'Pending'}</span>
                         </span>
                         {t.deadline && (
                           <div className="text-[10px] text-muted-foreground mt-0.5 font-mono">

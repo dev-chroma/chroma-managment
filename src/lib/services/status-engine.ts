@@ -62,12 +62,14 @@ export function getStatusBadgeClasses(status: TaskStatus | undefined): {
   bg: string;
   text: string;
   border: string;
+  dotBg: string;
 } {
   if (!status) {
     return {
-      bg: 'bg-slate-100 dark:bg-slate-800',
-      text: 'text-slate-700 dark:text-slate-300',
-      border: 'border-slate-200 dark:border-slate-700',
+      bg: 'bg-amber-500/15 dark:bg-amber-500/25',
+      text: 'text-amber-800 dark:text-amber-300',
+      border: 'border-amber-500/35 dark:border-amber-500/40',
+      dotBg: 'bg-amber-500',
     };
   }
 
@@ -75,71 +77,81 @@ export function getStatusBadgeClasses(status: TaskStatus | undefined): {
 
   if (slug === 'rejected') {
     return {
-      bg: 'bg-rose-50 dark:bg-rose-950/40',
-      text: 'text-rose-700 dark:text-rose-300',
-      border: 'border-rose-200 dark:border-rose-800',
+      bg: 'bg-destructive/15 dark:bg-destructive/25',
+      text: 'text-destructive dark:text-rose-400',
+      border: 'border-destructive/35 dark:border-destructive/40',
+      dotBg: 'bg-destructive',
     };
   }
   if (slug === 'published') {
     return {
-      bg: 'bg-emerald-50 dark:bg-emerald-950/40',
-      text: 'text-emerald-700 dark:text-emerald-300',
-      border: 'border-emerald-200 dark:border-emerald-800',
+      bg: 'bg-emerald-500/15 dark:bg-emerald-500/25',
+      text: 'text-emerald-800 dark:text-emerald-300',
+      border: 'border-emerald-500/35 dark:border-emerald-500/40',
+      dotBg: 'bg-emerald-500',
     };
   }
   if (slug === 'completed') {
     return {
-      bg: 'bg-teal-50 dark:bg-teal-950/40',
-      text: 'text-teal-700 dark:text-teal-300',
-      border: 'border-teal-200 dark:border-teal-800',
+      bg: 'bg-teal-500/15 dark:bg-teal-500/25',
+      text: 'text-teal-800 dark:text-teal-300',
+      border: 'border-teal-500/35 dark:border-teal-500/40',
+      dotBg: 'bg-teal-500',
     };
   }
   if (slug === 'final' || slug === 'finaled' || slug === 'final-stage') {
     return {
-      bg: 'bg-purple-50 dark:bg-purple-950/40',
-      text: 'text-purple-700 dark:text-purple-300',
-      border: 'border-purple-200 dark:border-purple-800',
+      bg: 'bg-purple-500/15 dark:bg-purple-500/25',
+      text: 'text-purple-800 dark:text-purple-300',
+      border: 'border-purple-500/35 dark:border-purple-500/40',
+      dotBg: 'bg-purple-500',
     };
   }
-  if (slug === 'editing' || slug === 'progress') {
+  if (slug === 'editing' || slug === 'progress' || slug === 'in-progress' || slug === 'planned') {
     return {
-      bg: 'bg-amber-50 dark:bg-amber-950/40',
-      text: 'text-amber-700 dark:text-amber-300',
-      border: 'border-amber-200 dark:border-amber-800',
+      bg: 'bg-indigo-500/15 dark:bg-indigo-500/25',
+      text: 'text-indigo-800 dark:text-indigo-300',
+      border: 'border-indigo-500/35 dark:border-indigo-500/40',
+      dotBg: 'bg-indigo-500',
     };
   }
-  if (slug === 'reviewed' || slug === 'well-progressed') {
+  if (slug === 'reviewed' || slug === 'well-progressed' || slug === 'sheduled' || slug === 'scheduled') {
     return {
-      bg: 'bg-sky-50 dark:bg-sky-950/40',
-      text: 'text-sky-700 dark:text-sky-300',
-      border: 'border-sky-200 dark:border-sky-800',
+      bg: 'bg-sky-500/15 dark:bg-sky-500/25',
+      text: 'text-sky-800 dark:text-sky-300',
+      border: 'border-sky-500/35 dark:border-sky-500/40',
+      dotBg: 'bg-sky-500',
     };
   }
   if (slug === 'edited') {
     return {
-      bg: 'bg-indigo-50 dark:bg-indigo-950/40',
-      text: 'text-indigo-700 dark:text-indigo-300',
-      border: 'border-indigo-200 dark:border-indigo-800',
+      bg: 'bg-blue-500/15 dark:bg-blue-500/25',
+      text: 'text-blue-800 dark:text-blue-300',
+      border: 'border-blue-500/35 dark:border-blue-500/40',
+      dotBg: 'bg-blue-500',
     };
   }
   if (slug === 'paused' || slug === 'ended') {
     return {
-      bg: 'bg-orange-50 dark:bg-orange-950/40',
-      text: 'text-orange-700 dark:text-orange-300',
-      border: 'border-orange-200 dark:border-orange-800',
+      bg: 'bg-orange-500/15 dark:bg-orange-500/25',
+      text: 'text-orange-800 dark:text-orange-300',
+      border: 'border-orange-500/35 dark:border-orange-500/40',
+      dotBg: 'bg-orange-500',
     };
   }
   if (slug === 'pending') {
     return {
-      bg: 'bg-slate-100 dark:bg-slate-800/80',
-      text: 'text-slate-700 dark:text-slate-300',
-      border: 'border-slate-200 dark:border-slate-700',
+      bg: 'bg-amber-500/15 dark:bg-amber-500/25',
+      text: 'text-amber-800 dark:text-amber-300',
+      border: 'border-amber-500/35 dark:border-amber-500/40',
+      dotBg: 'bg-amber-500',
     };
   }
 
   return {
-    bg: 'bg-slate-50 dark:bg-slate-900',
-    text: 'text-slate-700 dark:text-slate-300',
-    border: 'border-slate-200 dark:border-slate-800',
+    bg: 'bg-muted/80 dark:bg-muted/60',
+    text: 'text-foreground',
+    border: 'border-border',
+    dotBg: 'bg-muted-foreground',
   };
 }

@@ -521,9 +521,10 @@ export default function DepartmentWorkspacePage() {
                       </span>
                     )}
 
-                    <div className="flex items-center gap-1">
-                      <span className={cn('text-[11px] font-bold px-2.5 py-0.5 rounded-full border', badge.bg, badge.text, badge.border)}>
-                        {statusObj?.name || 'Status'}
+                    <div className="flex items-center gap-1.5">
+                      <span className={cn('inline-flex items-center gap-1.5 text-[11px] font-semibold px-2.5 py-0.5 rounded-full border shadow-2xs transition-colors', badge.bg, badge.text, badge.border)}>
+                        <span className={cn('h-1.5 w-1.5 rounded-full shrink-0', badge.dotBg)} />
+                        <span>{statusObj?.name || 'Pending'}</span>
                       </span>
                       {isProgrameInProg && (
                         <span className="text-[9px] font-mono font-bold px-1.5 py-0.2 rounded bg-sky-500/15 text-sky-700 dark:text-sky-300 border border-sky-500/30" title="Counts as In-Progress Telemetry">
@@ -797,9 +798,10 @@ export default function DepartmentWorkspacePage() {
 
                       {/* STATUS */}
                       <td className="py-3.5 px-4 whitespace-nowrap">
-                        <div className="flex items-center gap-1">
-                          <span className={cn('text-[11px] font-semibold px-2.5 py-0.5 rounded-full border', badge.bg, badge.text, badge.border)}>
-                            {statusObj?.name}
+                        <div className="flex items-center gap-1.5">
+                          <span className={cn('inline-flex items-center gap-1.5 text-[11px] font-semibold px-2.5 py-0.5 rounded-full border shadow-2xs transition-colors', badge.bg, badge.text, badge.border)}>
+                            <span className={cn('h-1.5 w-1.5 rounded-full shrink-0', badge.dotBg)} />
+                            <span>{statusObj?.name || 'Pending'}</span>
                           </span>
                           {isProgrameInProg && (
                             <span className="text-[9px] font-mono font-bold px-1.5 py-0.2 rounded bg-sky-500/15 text-sky-700 dark:text-sky-300 border border-sky-500/30" title="Telemetry: Planned, Progress, Sheduled = Progress">

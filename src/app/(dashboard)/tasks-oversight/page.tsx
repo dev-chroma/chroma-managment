@@ -699,8 +699,9 @@ export default function TasksOversightPage() {
 
                     {/* Timing & Deadline */}
                     <div className="text-right min-w-[110px]">
-                      <span className={cn('text-[10px] font-semibold px-2 py-0.5 rounded-full border inline-block', badge.bg, badge.text, badge.border)}>
-                        {statusObj?.name}
+                      <span className={cn('inline-flex items-center gap-1.5 text-[10px] font-semibold px-2 py-0.5 rounded-full border shadow-2xs', badge.bg, badge.text, badge.border)}>
+                        <span className={cn('h-1.5 w-1.5 rounded-full shrink-0', badge.dotBg)} />
+                        <span>{statusObj?.name || 'Pending'}</span>
                       </span>
                       {t.deadline ? (
                         <div className="text-[10px] mt-0.5 font-mono">

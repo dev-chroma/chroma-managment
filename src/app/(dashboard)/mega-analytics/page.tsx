@@ -78,10 +78,10 @@ export default function MegaAnalyticsPage() {
   // Filter tasks to operational departments (excluding finance)
   const analysisTasks = tasks.filter((t) => analysisDeptIds.has(t.department_id));
 
-  // Include members, general_members, and department administrators (excluding finance)
+  // Include members and general_members only for member operational analysis (excluding admin/owner)
   const qualifyingMembers = allProfiles.filter(
     (m) =>
-      (m.system_role === 'member' || m.system_role === 'general_member' || m.system_role === 'admin') &&
+      (m.system_role === 'member' || m.system_role === 'general_member') &&
       (!m.department_id || analysisDeptIds.has(m.department_id) || m.system_role === 'general_member')
   );
 

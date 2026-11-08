@@ -24,6 +24,7 @@ import {
   X,
   Globe,
   ExternalLink,
+  Landmark,
 } from 'lucide-react';
 import { useAuth } from '@/lib/context/auth-context';
 import { useData } from '@/lib/context/data-context';
@@ -64,6 +65,7 @@ export function Sidebar({ isOpen = false, onClose }: SidebarProps) {
     { slug: 'media', name: 'Media Workspace', href: '/workspace/media', icon: Palette, color: 'text-amber-500' },
     { slug: 'video', name: 'Video Workspace', href: '/workspace/video', icon: Video, color: 'text-indigo-500' },
     { slug: 'outreach', name: 'Outreach Workspace', href: '/workspace/outreach', icon: Send, color: 'text-cyan-500' },
+    { slug: 'finance', name: 'Financial Workspace', href: '/finance', icon: Landmark, color: 'text-emerald-500' },
   ];
 
   const departmentLinks = (role === 'owner' || role === 'general_member')
@@ -266,6 +268,20 @@ export function Sidebar({ isOpen = false, onClose }: SidebarProps) {
                   >
                     <Layers className="h-4 w-4" />
                     <span>Task Management & Oversight</span>
+                  </Link>
+
+                  <Link
+                    href="/finance"
+                    onClick={onClose}
+                    className={cn(
+                      'flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-semibold transition-colors',
+                      pathname === '/finance'
+                        ? 'bg-primary text-primary-foreground'
+                        : 'text-muted-foreground hover:bg-muted hover:text-foreground'
+                    )}
+                  >
+                    <Landmark className="h-4 w-4 text-emerald-500" />
+                    <span>Financial Workspace</span>
                   </Link>
 
                   <Link
@@ -588,6 +604,20 @@ export function Sidebar({ isOpen = false, onClose }: SidebarProps) {
                   >
                     <Layers className="h-4 w-4" />
                     <span>Task Management & Oversight</span>
+                  </Link>
+
+                  <Link
+                    href="/finance"
+                    onClick={onClose}
+                    className={cn(
+                      'flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-semibold transition-colors',
+                      pathname === '/finance'
+                        ? 'bg-primary text-primary-foreground'
+                        : 'text-muted-foreground hover:bg-muted hover:text-foreground'
+                    )}
+                  >
+                    <Landmark className="h-4 w-4 text-emerald-500" />
+                    <span>Financial Workspace</span>
                   </Link>
 
                   <Link

@@ -189,3 +189,57 @@ export interface AuditLog {
   created_at: string;
   user?: Profile;
 }
+
+
+// =============================================================================
+// FINANCIAL WORKSPACE TYPES
+// =============================================================================
+
+export interface LedgerEntry {
+  id: string;
+  serial_no?: number | null;
+  date: string;
+  item: string;
+  credit?: number | null;
+  debit?: number | null;
+  remark?: string | null;
+  category?: string | null;
+  payment_mode?: 'Cash' | 'Fampay' | 'Bank' | 'UPI' | 'Other';
+  created_at: string;
+  updated_at: string;
+}
+
+export interface StudentDonation {
+  id: string;
+  student_name: string;
+  student_id?: string | null;
+  batch_or_class?: string | null;
+  phone?: string | null;
+  pledged_amount: number;
+  collected_amount: number;
+  status: 'paid' | 'partial' | 'pending';
+  payment_mode?: 'Cash' | 'UPI' | 'Fampay' | 'Bank Transfer' | 'Other';
+  receipt_no?: string | null;
+  date: string;
+  remarks?: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface MoneyHolding {
+  id: string;
+  account_name: string;
+  account_type: 'bank' | 'cash_in_hand' | 'debt' | 'wallet' | 'other';
+  balance: number;
+  custodian_name?: string | null;
+  notes?: string | null;
+  updated_at: string;
+}
+
+export interface FinanceSheetConfig {
+  google_sheet_url?: string;
+  google_sheet_csv_url?: string;
+  apps_script_url?: string;
+  auto_sync: boolean;
+  last_synced_at?: string | null;
+}

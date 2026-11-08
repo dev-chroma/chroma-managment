@@ -3,7 +3,7 @@
 // Authoritative reporting for Executive Dashboard, Analysis & Auditing
 // =============================================================================
 
-import { Task, TaskStatus, Department, Profile, WeeklyTarget, ActivityLog } from '@/types/database';
+import { Task, TaskStatus, Department, Profile, WeeklyTarget, ActivityLog, LedgerEntry, StudentDonation, MoneyHolding } from '@/types/database';
 import { isTaskQualifyingFinished, classifyTaskStatus, evaluateTaskTiming } from './workload-engine';
 import { format, parseISO } from 'date-fns';
 
@@ -670,6 +670,318 @@ export function exportAuditLogsToPdf(logs: ActivityLog[]) {
 
         <div class="footer">
           ChromaDiaries Workspace Governance • www.chromadiaries.in
+        </div>
+
+        <script>
+          window.onload = function() {
+            window.print();
+          };
+        </script>
+      </body>
+    </html>
+  `;
+
+  printWindow.document.open();
+  printWindow.document.write(htmlContent);
+  printWindow.document.close();
+}
+
+
+// =============================================================================
+// FINANCIAL WORKSPACE EXPORTS (LEDGER, DONATIONS, WHERE MONEY IS)
+// =============================================================================
+
+export function exportLedgerToExcel(entries: LedgerEntry[]) {
+  const rows: (string | number)[][] = [
+    ['CHROMADIARIES FINANCIAL WORKSPACE - CASH LEDGER (INCOME & EXPENSE)'],
+    ['Official Organization Ledger', 'www.chromadiaries.in'],
+    ['Exported On', format(new Date(), 'yyyy-MM-dd HH:mm')],
+    [],
+    ['N.o', 'Date', 'Item', 'Credit (Income)', 'Debit (Expense)', 'Remark', 'Category', 'Payment Mode'],
+  ];
+
+  let totalCredit = 0;
+  let totalDebit = 0;
+
+  for (const e of entries) {
+    if (e.credit) totalCredit += e.credit;
+    if (e.debit) totalDebit += e.debit;
+
+    rows.push([
+      e.serial_no || '',
+      e.date,
+      e.item,
+      e.credit !== null && e.credit !== undefined ? e.credit : '',
+      e.debit !== null && e.debit !== undefined ? e.debit : '',
+      e.remark || '',
+      e.category || '',
+      e.payment_mode || '',
+    ]);
+  }
+
+  rows.push([]);
+  rows.push(['', '', 'TOTAL CREDIT (INCOME)', totalCredit, '', '', '', '']);
+  rows.push(['', '', 'TOTAL DEBIT (EXPENSES)', '', totalDebit, '', '', '']);
+  rows.push(['', '', 'NET CASH BALANCE', totalCredit - totalDebit, '', '', '', '']);
+
+  downloadExcelCsv(`ChromaDiaries_Ledger_${format(new Date(), 'yyyy-MM-dd')}`, rows);
+}
+
+export function exportLedgerToPdf(
+  entries: LedgerEntry[],
+  totalCredit: number,
+  totalDebit: number,
+  netBalance: number
+) {
+  const printWindow = window.open('', '_blank');
+  if (!printWindow) {
+    alert('Please allow popups to export the PDF report.');
+    return;
+  }
+
+  const rowsHtml = entries
+    .map(
+      (e) => `
+      <tr>
+        <td style="padding: 6px 8px; border-bottom: 1px solid #e2e8f0; font-family: monospace; font-weight: 700;">${e.serial_no || '—'}</td>
+        <td style="padding: 6px 8px; border-bottom: 1px solid #e2e8f0; font-family: monospace;">${e.date}</td>
+        <td style="padding: 6px 8px; border-bottom: 1px solid #e2e8f0; font-weight: 600;">${e.item}</td>
+        <td style="padding: 6px 8px; border-bottom: 1px solid #e2e8f0; text-align: right; color: #059669; font-weight: 700;">${e.credit ? '₹' + e.credit.toLocaleString('en-IN') : '—'}</td>
+        <td style="padding: 6px 8px; border-bottom: 1px solid #e2e8f0; text-align: right; color: #e11d48; font-weight: 700;">${e.debit ? '₹' + e.debit.toLocaleString('en-IN') : '—'}</td>
+        <td style="padding: 6px 8px; border-bottom: 1px solid #e2e8f0; color: #475569;">${e.remark || ''}</td>
+        <td style="padding: 6px 8px; border-bottom: 1px solid #e2e8f0; color: #64748b;">${e.payment_mode || 'Cash'}</td>
+      </tr>
+    `
+    )
+    .join('');
+
+  const htmlContent = `
+    <!DOCTYPE html>
+    <html>
+      <head>
+        <title>ChromaDiaries Income & Expense Ledger</title>
+        <style>
+          @page { size: A4 portrait; margin: 12mm; }
+          body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; color: #1e293b; margin: 0; padding: 15px; font-size: 11px; }
+          .header { border-bottom: 3px solid #059669; padding-bottom: 10px; margin-bottom: 16px; display: flex; justify-content: space-between; align-items: center; }
+          .title { font-size: 20px; font-weight: 800; color: #059669; }
+          .summary-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 16px; }
+          .summary-card { background: #f8fafc; border: 1px solid #cbd5e1; border-radius: 8px; padding: 10px 14px; text-align: center; }
+          .summary-card-val { font-size: 18px; font-weight: 800; margin-top: 3px; }
+          .summary-card-lbl { font-size: 9px; font-weight: 700; text-transform: uppercase; color: #64748b; }
+          table { width: 100%; border-collapse: collapse; margin-top: 8px; }
+          th { background: #059669; color: #ffffff; padding: 7px 8px; text-align: left; font-size: 10px; font-weight: 700; text-transform: uppercase; }
+          th.right { text-align: right; }
+          .footer { margin-top: 24px; padding-top: 10px; border-top: 1px solid #cbd5e1; font-size: 9px; color: #94a3b8; display: flex; justify-content: space-between; }
+        </style>
+      </head>
+      <body>
+        <div class="header">
+          <div>
+            <div class="title">ChromaDiaries • Income and Expense Ledger</div>
+            <div style="font-size: 11px; color: #64748b; margin-top: 2px;">Official Financial Records & General Journal</div>
+          </div>
+          <div style="text-align: right; font-size: 10px; color: #64748b;">
+            <div>Generated: <strong>${format(new Date(), 'EEEE, MMMM dd, yyyy HH:mm')}</strong></div>
+            <div>www.chromadiaries.in</div>
+          </div>
+        </div>
+
+        <div class="summary-grid">
+          <div class="summary-card">
+            <div class="summary-card-lbl">Total Credit (Income)</div>
+            <div class="summary-card-val" style="color: #059669;">₹${totalCredit.toLocaleString('en-IN')}</div>
+          </div>
+          <div class="summary-card">
+            <div class="summary-card-lbl">Total Debit (Expense)</div>
+            <div class="summary-card-val" style="color: #e11d48;">₹${totalDebit.toLocaleString('en-IN')}</div>
+          </div>
+          <div class="summary-card">
+            <div class="summary-card-lbl">Net Book Balance</div>
+            <div class="summary-card-val" style="color: #0f172a;">₹${netBalance.toLocaleString('en-IN')}</div>
+          </div>
+        </div>
+
+        <table>
+          <thead>
+            <tr>
+              <th>N.o</th>
+              <th>Date</th>
+              <th>Item / Particulars</th>
+              <th class="right">Credit (₹)</th>
+              <th class="right">Debit (₹)</th>
+              <th>Remark</th>
+              <th>Mode</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${rowsHtml}
+          </tbody>
+        </table>
+
+        <div class="footer">
+          <span>ChromaDiaries Studio Operations • Official Financial Ledger</span>
+          <span>Confidential Internal Document</span>
+        </div>
+
+        <script>
+          window.onload = function() {
+            window.print();
+          };
+        </script>
+      </body>
+    </html>
+  `;
+
+  printWindow.document.open();
+  printWindow.document.write(htmlContent);
+  printWindow.document.close();
+}
+
+export function exportStudentDonationsToExcel(donations: StudentDonation[]) {
+  const rows: (string | number)[][] = [
+    ['CHROMADIARIES FINANCIAL WORKSPACE - STUDENT DONATIONS CONTROL'],
+    ['Exported On', format(new Date(), 'yyyy-MM-dd HH:mm')],
+    [],
+    ['Student ID', 'Student Name', 'Class / Batch', 'Phone', 'Pledged (₹)', 'Collected (₹)', 'Remaining Due (₹)', 'Status', 'Payment Mode', 'Receipt No', 'Date', 'Remarks'],
+  ];
+
+  let totalPledged = 0;
+  let totalCollected = 0;
+
+  for (const d of donations) {
+    totalPledged += d.pledged_amount;
+    totalCollected += d.collected_amount;
+    const due = Math.max(0, d.pledged_amount - d.collected_amount);
+
+    rows.push([
+      d.student_id || '',
+      d.student_name,
+      d.batch_or_class || '',
+      d.phone || '',
+      d.pledged_amount,
+      d.collected_amount,
+      due,
+      d.status.toUpperCase(),
+      d.payment_mode || '',
+      d.receipt_no || '',
+      d.date,
+      d.remarks || '',
+    ]);
+  }
+
+  rows.push([]);
+  rows.push(['', '', '', 'TOTAL PLEDGED', totalPledged, '', '', '', '', '', '', '']);
+  rows.push(['', '', '', 'TOTAL COLLECTED', '', totalCollected, '', '', '', '', '', '']);
+  rows.push(['', '', '', 'OUTSTANDING DUE', '', '', totalPledged - totalCollected, '', '', '', '', '']);
+
+  downloadExcelCsv(`ChromaDiaries_Student_Donations_${format(new Date(), 'yyyy-MM-dd')}`, rows);
+}
+
+export function exportStudentDonationsToPdf(donations: StudentDonation[]) {
+  const printWindow = window.open('', '_blank');
+  if (!printWindow) {
+    alert('Please allow popups to export the PDF report.');
+    return;
+  }
+
+  let totalPledged = 0;
+  let totalCollected = 0;
+  for (const d of donations) {
+    totalPledged += d.pledged_amount;
+    totalCollected += d.collected_amount;
+  }
+  const outstanding = Math.max(0, totalPledged - totalCollected);
+
+  const rowsHtml = donations
+    .map((d) => {
+      const due = Math.max(0, d.pledged_amount - d.collected_amount);
+      const statusColor = d.status === 'paid' ? '#059669' : d.status === 'partial' ? '#d97706' : '#e11d48';
+      return `
+        <tr>
+          <td style="padding: 6px 8px; border-bottom: 1px solid #e2e8f0; font-family: monospace; font-weight: 700;">${d.student_id || '—'}</td>
+          <td style="padding: 6px 8px; border-bottom: 1px solid #e2e8f0; font-weight: 600;">${d.student_name}</td>
+          <td style="padding: 6px 8px; border-bottom: 1px solid #e2e8f0;">${d.batch_or_class || '—'}</td>
+          <td style="padding: 6px 8px; border-bottom: 1px solid #e2e8f0; text-align: right;">₹${d.pledged_amount.toLocaleString('en-IN')}</td>
+          <td style="padding: 6px 8px; border-bottom: 1px solid #e2e8f0; text-align: right; font-weight: 700; color: #059669;">₹${d.collected_amount.toLocaleString('en-IN')}</td>
+          <td style="padding: 6px 8px; border-bottom: 1px solid #e2e8f0; text-align: right; color: ${due > 0 ? '#e11d48' : '#64748b'}; font-weight: 700;">${due > 0 ? '₹' + due.toLocaleString('en-IN') : 'Cleared'}</td>
+          <td style="padding: 6px 8px; border-bottom: 1px solid #e2e8f0; font-weight: 700; color: ${statusColor}; text-transform: uppercase;">${d.status}</td>
+          <td style="padding: 6px 8px; border-bottom: 1px solid #e2e8f0;">${d.payment_mode || 'Cash'}</td>
+          <td style="padding: 6px 8px; border-bottom: 1px solid #e2e8f0; font-family: monospace;">${d.receipt_no || '—'}</td>
+        </tr>
+      `;
+    })
+    .join('');
+
+  const htmlContent = `
+    <!DOCTYPE html>
+    <html>
+      <head>
+        <title>ChromaDiaries Student Donations Control</title>
+        <style>
+          @page { size: A4 portrait; margin: 12mm; }
+          body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; color: #1e293b; margin: 0; padding: 15px; font-size: 11px; }
+          .header { border-bottom: 3px solid #0284c7; padding-bottom: 10px; margin-bottom: 16px; display: flex; justify-content: space-between; align-items: center; }
+          .title { font-size: 20px; font-weight: 800; color: #0284c7; }
+          .summary-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 16px; }
+          .summary-card { background: #f8fafc; border: 1px solid #cbd5e1; border-radius: 8px; padding: 10px 14px; text-align: center; }
+          .summary-card-val { font-size: 18px; font-weight: 800; margin-top: 3px; }
+          .summary-card-lbl { font-size: 9px; font-weight: 700; text-transform: uppercase; color: #64748b; }
+          table { width: 100%; border-collapse: collapse; margin-top: 8px; }
+          th { background: #0284c7; color: #ffffff; padding: 7px 8px; text-align: left; font-size: 10px; font-weight: 700; text-transform: uppercase; }
+          th.right { text-align: right; }
+          .footer { margin-top: 24px; padding-top: 10px; border-top: 1px solid #cbd5e1; font-size: 9px; color: #94a3b8; display: flex; justify-content: space-between; }
+        </style>
+      </head>
+      <body>
+        <div class="header">
+          <div>
+            <div class="title">ChromaDiaries • Student Donations Control Report</div>
+            <div style="font-size: 11px; color: #64748b; margin-top: 2px;">Fundraising Accountability & Contributor Ledger</div>
+          </div>
+          <div style="text-align: right; font-size: 10px; color: #64748b;">
+            <div>Generated: <strong>${format(new Date(), 'EEEE, MMMM dd, yyyy HH:mm')}</strong></div>
+            <div>www.chromadiaries.in</div>
+          </div>
+        </div>
+
+        <div class="summary-grid">
+          <div class="summary-card">
+            <div class="summary-card-lbl">Total Pledged</div>
+            <div class="summary-card-val" style="color: #0284c7;">₹${totalPledged.toLocaleString('en-IN')}</div>
+          </div>
+          <div class="summary-card">
+            <div class="summary-card-lbl">Total Collected</div>
+            <div class="summary-card-val" style="color: #059669;">₹${totalCollected.toLocaleString('en-IN')}</div>
+          </div>
+          <div class="summary-card">
+            <div class="summary-card-lbl">Outstanding Due</div>
+            <div class="summary-card-val" style="color: #e11d48;">₹${outstanding.toLocaleString('en-IN')}</div>
+          </div>
+        </div>
+
+        <table>
+          <thead>
+            <tr>
+              <th>ID</th>
+              <th>Student Name</th>
+              <th>Batch / Class</th>
+              <th class="right">Pledged (₹)</th>
+              <th class="right">Collected (₹)</th>
+              <th class="right">Due (₹)</th>
+              <th>Status</th>
+              <th>Mode</th>
+              <th>Receipt</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${rowsHtml}
+          </tbody>
+        </table>
+
+        <div class="footer">
+          <span>ChromaDiaries Student Campaign Oversight</span>
+          <span>Confidential Internal Document</span>
         </div>
 
         <script>

@@ -3,7 +3,7 @@
 // Only Owner (Admin) and empty workspaces
 // =============================================================================
 
-import { Department, TaskStatus, Profile, Task, WeeklyTarget, Announcement, ResourceItem, Meeting, RoleRequest, DepartmentSlug } from '@/types/database';
+import { Department, TaskStatus, Profile, Task, WeeklyTarget, Announcement, ResourceItem, Meeting, RoleRequest, DepartmentSlug, LedgerEntry, StudentDonation, MoneyHolding, FinanceSheetConfig } from '@/types/database';
 
 const now = new Date();
 
@@ -115,3 +115,49 @@ export const INITIAL_ANNOUNCEMENTS: Announcement[] = [];
 export const INITIAL_MEETINGS: Meeting[] = [];
 export const INITIAL_RESOURCES: ResourceItem[] = [];
 export const INITIAL_ROLE_REQUESTS: RoleRequest[] = [];
+
+
+// =============================================================================
+// FINANCIAL WORKSPACE INITIAL DATA
+// =============================================================================
+
+export const INITIAL_LEDGER_ENTRIES: LedgerEntry[] = [
+  { id: 'ledg-1', serial_no: 1, date: '2026-06-03', item: 'Party Fund', credit: 4950, debit: null, remark: 'Cash received', category: 'Fundraising', payment_mode: 'Cash', created_at: '2026-06-03T10:00:00.000Z', updated_at: '2026-06-03T10:00:00.000Z' },
+  { id: 'ledg-2', serial_no: 2, date: '2026-07-06', item: '250 Donation Fund', credit: 7320, debit: null, remark: 'Cash donation received', category: 'Student Donations', payment_mode: 'Cash', created_at: '2026-07-06T11:00:00.000Z', updated_at: '2026-07-06T11:00:00.000Z' },
+  { id: 'ledg-3', serial_no: 3, date: '2026-07-07', item: 'Ledger Purchase', credit: null, debit: 172, remark: 'Cash Paid', category: 'Stationery', payment_mode: 'Cash', created_at: '2026-07-07T09:30:00.000Z', updated_at: '2026-07-07T09:30:00.000Z' },
+  { id: 'ledg-4', serial_no: null, date: '2026-07-07', item: 'Travel', credit: null, debit: 60, remark: 'Cash Paid', category: 'Travel & Conveyance', payment_mode: 'Cash', created_at: '2026-07-07T12:00:00.000Z', updated_at: '2026-07-07T12:00:00.000Z' },
+  { id: 'ledg-5', serial_no: 4, date: '2026-07-09', item: 'Seal Purchase', credit: null, debit: 400, remark: 'Cash Paid', category: 'Stationery', payment_mode: 'Cash', created_at: '2026-07-09T10:00:00.000Z', updated_at: '2026-07-09T10:00:00.000Z' },
+  { id: 'ledg-6', serial_no: null, date: '2026-07-09', item: 'Travel', credit: null, debit: 60, remark: 'Cash Paid', category: 'Travel & Conveyance', payment_mode: 'Cash', created_at: '2026-07-09T14:00:00.000Z', updated_at: '2026-07-09T14:00:00.000Z' },
+  { id: 'ledg-7', serial_no: 5, date: '2026-09-02', item: 'A3 Print', credit: null, debit: 30, remark: 'Cash Paid', category: 'Printing', payment_mode: 'Cash', created_at: '2026-09-02T11:00:00.000Z', updated_at: '2026-09-02T11:00:00.000Z' },
+  { id: 'ledg-8', serial_no: 6, date: '2026-09-07', item: 'Drinks for Meeting (Tilo)', credit: null, debit: 400, remark: 'Cash Paid', category: 'Meetings & Hospitality', payment_mode: 'Cash', created_at: '2026-09-07T16:00:00.000Z', updated_at: '2026-09-07T16:00:00.000Z' },
+  { id: 'ledg-9', serial_no: 7, date: '2026-09-24', item: 'Meta Ads Charge', credit: null, debit: 227, remark: 'By Fampay', category: 'Marketing & Ads', payment_mode: 'Fampay', created_at: '2026-09-24T18:00:00.000Z', updated_at: '2026-09-24T18:00:00.000Z' },
+  { id: 'ledg-10', serial_no: 8, date: '2026-09-28', item: 'Email Domain by GoDaddy', credit: null, debit: 175, remark: 'By Fampay', category: 'Subscriptions & Infrastructure', payment_mode: 'Fampay', created_at: '2026-09-28T19:00:00.000Z', updated_at: '2026-09-28T19:00:00.000Z' },
+  { id: 'ledg-11', serial_no: 9, date: '2026-10-01', item: 'Author Payment (AU-Paid-001)', credit: null, debit: 200, remark: 'By Fampay', category: 'Author Honorarium', payment_mode: 'Fampay', created_at: '2026-10-01T10:00:00.000Z', updated_at: '2026-10-01T10:00:00.000Z' },
+  { id: 'ledg-12', serial_no: 10, date: '2026-10-01', item: 'Author Payment (AU-Paid-002)', credit: null, debit: 100, remark: 'By Fampay', category: 'Author Honorarium', payment_mode: 'Fampay', created_at: '2026-10-01T10:15:00.000Z', updated_at: '2026-10-01T10:15:00.000Z' },
+  { id: 'ledg-13', serial_no: 11, date: '2026-11-06', item: 'ChromaDiaries Godaddy Subscription (2026)', credit: null, debit: 1060.82, remark: 'By Fampay', category: 'Subscriptions & Infrastructure', payment_mode: 'Fampay', created_at: '2026-11-06T14:00:00.000Z', updated_at: '2026-11-06T14:00:00.000Z' },
+  { id: 'ledg-14', serial_no: null, date: '2026-11-06', item: 'Jalal, faheem 100', credit: 300, debit: 4950, remark: 'Cash adjustment', category: 'Member Settlement', payment_mode: 'Cash', created_at: '2026-11-06T15:00:00.000Z', updated_at: '2026-11-06T15:00:00.000Z' },
+  { id: 'ledg-15', serial_no: null, date: '2026-11-06', item: '975,1028,1198,pc,1027', credit: 750, debit: null, remark: 'Donation collection batch', category: 'Student Donations', payment_mode: 'Cash', created_at: '2026-11-06T16:00:00.000Z', updated_at: '2026-11-06T16:00:00.000Z' },
+  { id: 'ledg-16', serial_no: null, date: '2026-11-06', item: 'naseef book', credit: 200, debit: null, remark: 'Book purchase / sales', category: 'Sales & Publications', payment_mode: 'Cash', created_at: '2026-11-06T17:00:00.000Z', updated_at: '2026-11-06T17:00:00.000Z' },
+];
+
+export const INITIAL_MONEY_HOLDINGS: MoneyHolding[] = [
+  { id: 'hold-bank', account_name: 'Bank Balance', account_type: 'bank', balance: 3655, custodian_name: 'ChromaDiaries Official Current A/C', notes: 'Verified bank balance', updated_at: now.toISOString() },
+  { id: 'hold-manager', account_name: 'Manager By Hand', account_type: 'cash_in_hand', balance: 1000, custodian_name: 'General Manager (Admin)', notes: 'Physical cash held by General Manager', updated_at: now.toISOString() },
+  { id: 'hold-debt', account_name: 'Debt / Receivables', account_type: 'debt', balance: 1000, custodian_name: 'Pending Debts / Receivables', notes: 'Debt to be collected / recovered', updated_at: now.toISOString() },
+];
+
+export const INITIAL_STUDENT_DONATIONS: StudentDonation[] = [
+  { id: 'sd-1', student_name: 'Naseef Rahman', student_id: 'CD-STU-001', batch_or_class: 'Grade 12-A', phone: '+91 98471 23456', pledged_amount: 500, collected_amount: 500, status: 'paid', payment_mode: 'UPI', receipt_no: 'REC-2026-01', date: '2026-07-06', remarks: '250 Donation Fund campaign', created_at: now.toISOString(), updated_at: now.toISOString() },
+  { id: 'sd-2', student_name: 'Faheem Jalal', student_id: 'CD-STU-002', batch_or_class: 'Batch 2026', phone: '+91 80866 55432', pledged_amount: 400, collected_amount: 300, status: 'partial', payment_mode: 'Cash', receipt_no: 'REC-2026-02', date: '2026-11-06', remarks: '₹100 pending balance', created_at: now.toISOString(), updated_at: now.toISOString() },
+  { id: 'sd-3', student_name: 'Ameen K.', student_id: 'CD-STU-003', batch_or_class: 'Literature Club', phone: '+91 97441 99887', pledged_amount: 250, collected_amount: 250, status: 'paid', payment_mode: 'Fampay', receipt_no: 'REC-2026-03', date: '2026-07-06', remarks: 'Paid via Fampay app', created_at: now.toISOString(), updated_at: now.toISOString() },
+  { id: 'sd-4', student_name: 'Shibli Farooq', student_id: 'CD-STU-004', batch_or_class: 'Grade 11-B', phone: '+91 94002 11223', pledged_amount: 500, collected_amount: 0, status: 'pending', payment_mode: 'Cash', receipt_no: null, date: '2026-11-07', remarks: 'Pledged for magazine print issue', created_at: now.toISOString(), updated_at: now.toISOString() },
+  { id: 'sd-5', student_name: 'Hashim C.P.', student_id: 'CD-STU-005', batch_or_class: 'Batch 2026', phone: '+91 80755 85732', pledged_amount: 1000, collected_amount: 1000, status: 'paid', payment_mode: 'Bank Transfer', receipt_no: 'REC-2026-04', date: '2026-06-03', remarks: 'Party Fund sponsorship', created_at: now.toISOString(), updated_at: now.toISOString() },
+];
+
+export const INITIAL_FINANCE_SHEET_CONFIG: FinanceSheetConfig = {
+  google_sheet_url: '',
+  google_sheet_csv_url: '',
+  apps_script_url: '',
+  auto_sync: false,
+  last_synced_at: null,
+};

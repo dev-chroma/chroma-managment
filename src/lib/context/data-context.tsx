@@ -12,6 +12,10 @@ import {
   RoleRequest,
   WeeklyTarget,
   DepartmentSlug,
+  LedgerEntry,
+  StudentDonation,
+  MoneyHolding,
+  FinanceSheetConfig,
 } from '@/types/database';
 import {
   INITIAL_DEPARTMENTS,
@@ -22,6 +26,10 @@ import {
   INITIAL_RESOURCES,
   INITIAL_ROLE_REQUESTS,
   DEFAULT_DEPARTMENT_CATEGORIES,
+  INITIAL_LEDGER_ENTRIES,
+  INITIAL_MONEY_HOLDINGS,
+  INITIAL_STUDENT_DONATIONS,
+  INITIAL_FINANCE_SHEET_CONFIG,
 } from '@/lib/mock/initial-data';
 import { useAuth } from './auth-context';
 import { isTaskQualifyingFinished } from '@/lib/services/workload-engine';
@@ -72,6 +80,25 @@ interface DataContextType {
   addMeeting: (data: Omit<Meeting, 'id' | 'created_at'>) => Promise<Meeting>;
   addResource: (data: Omit<ResourceItem, 'id' | 'created_at'>) => Promise<ResourceItem>;
   deleteResource: (id: string) => Promise<boolean>;
+  ledgerEntries: LedgerEntry[];
+  studentDonations: StudentDonation[];
+  moneyHoldings: MoneyHolding[];
+  customBookBalance: number | null;
+  sheetConfig: FinanceSheetConfig;
+  addLedgerEntry: (entry: Omit<LedgerEntry, 'id' | 'created_at' | 'updated_at'>) => Promise<LedgerEntry>;
+  updateLedgerEntry: (id: string, updates: Partial<LedgerEntry>) => Promise<boolean>;
+  deleteLedgerEntry: (id: string) => Promise<boolean>;
+  bulkImportLedger: (entries: Array<Omit<LedgerEntry, 'id' | 'created_at' | 'updated_at'>>) => Promise<number>;
+  addStudentDonation: (donation: Omit<StudentDonation, 'id' | 'created_at' | 'updated_at'>) => Promise<StudentDonation>;
+  updateStudentDonation: (id: string, updates: Partial<StudentDonation>) => Promise<boolean>;
+  deleteStudentDonation: (id: string) => Promise<boolean>;
+  updateMoneyHolding: (id: string, updates: Partial<MoneyHolding>) => Promise<boolean>;
+  addMoneyHolding: (holding: Omit<MoneyHolding, 'id' | 'updated_at'>) => Promise<MoneyHolding>;
+  deleteMoneyHolding: (id: string) => Promise<boolean>;
+  setCustomBookBalance: (amount: number | null) => void;
+  updateSheetConfig: (config: Partial<FinanceSheetConfig>) => void;
+  syncFromGoogleSheet: (sheetUrlOrCsv?: string) => Promise<{ success: boolean; count: number; error?: string }>;
+  pushToGoogleSheet: (webhookUrl?: string) => Promise<{ success: boolean; error?: string }>;
 }
 
 const DataContext = createContext<DataContextType | undefined>(undefined);
@@ -91,6 +118,58 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
     'd2222222-2222-2222-2222-222222222222': 3, // Media
     'd3333333-3333-3333-3333-333333333333': 2, // Video
     'd4444444-4444-4444-4444-444444444444': 3, // Outreach
+  });
+
+  // Financial Workspace States (Ledger, Money Holdings, Student Donations)
+  const [ledgerEntries, setLedgerEntries] = useState<LedgerEntry[]>(() => {
+    if (typeof window !== 'undefined') {
+      const stored = localStorage.getItem('chromadiaries_ledger_entries');
+      if (stored) {
+        try { return JSON.parse(stored); } catch {}
+      }
+    }
+    return INITIAL_LEDGER_ENTRIES;
+  });
+
+  const [studentDonations, setStudentDonations] = useState<StudentDonation[]>(() => {
+    if (typeof window !== 'undefined') {
+      const stored = localStorage.getItem('chromadiaries_student_donations');
+      if (stored) {
+        try { return JSON.parse(stored); } catch {}
+      }
+    }
+    return INITIAL_STUDENT_DONATIONS;
+  });
+
+  const [moneyHoldings, setMoneyHoldings] = useState<MoneyHolding[]>(() => {
+    if (typeof window !== 'undefined') {
+      const stored = localStorage.getItem('chromadiaries_money_holdings');
+      if (stored) {
+        try { return JSON.parse(stored); } catch {}
+      }
+    }
+    return INITIAL_MONEY_HOLDINGS;
+  });
+
+  const [customBookBalance, setCustomBookBalanceState] = useState<number | null>(() => {
+    if (typeof window !== 'undefined') {
+      const stored = localStorage.getItem('chromadiaries_custom_book_balance');
+      if (stored !== null) {
+        const num = parseFloat(stored);
+        if (!isNaN(num)) return num;
+      }
+    }
+    return 5655;
+  });
+
+  const [sheetConfig, setSheetConfigState] = useState<FinanceSheetConfig>(() => {
+    if (typeof window !== 'undefined') {
+      const stored = localStorage.getItem('chromadiaries_sheet_config');
+      if (stored) {
+        try { return JSON.parse(stored); } catch {}
+      }
+    }
+    return INITIAL_FINANCE_SHEET_CONFIG;
   });
 
   const [departmentCategories, setDepartmentCategories] = useState<Record<string, string[]>>(() => {
@@ -684,6 +763,243 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
     return true;
   };
 
+  // Financial Methods: Ledger
+  const addLedgerEntry = async (data: Omit<LedgerEntry, 'id' | 'created_at' | 'updated_at'>): Promise<LedgerEntry> => {
+    const newEntry: LedgerEntry = {
+      ...data,
+      id: generateUUID(),
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    };
+
+    setLedgerEntries((prev) => {
+      const updated = [newEntry, ...prev];
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('chromadiaries_ledger_entries', JSON.stringify(updated));
+      }
+      return updated;
+    });
+
+    if (sheetConfig.apps_script_url) {
+      fetch('/api/finance/sync-sheet', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'push', webhookUrl: sheetConfig.apps_script_url, rows: [newEntry] }),
+      }).catch((e) => console.error('Failed to push new entry to sheet webhook:', e));
+    }
+
+    return newEntry;
+  };
+
+  const updateLedgerEntry = async (id: string, updates: Partial<LedgerEntry>): Promise<boolean> => {
+    setLedgerEntries((prev) => {
+      const updated = prev.map((entry) =>
+        entry.id === id ? { ...entry, ...updates, updated_at: new Date().toISOString() } : entry
+      );
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('chromadiaries_ledger_entries', JSON.stringify(updated));
+      }
+      return updated;
+    });
+    return true;
+  };
+
+  const deleteLedgerEntry = async (id: string): Promise<boolean> => {
+    setLedgerEntries((prev) => {
+      const updated = prev.filter((entry) => entry.id !== id);
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('chromadiaries_ledger_entries', JSON.stringify(updated));
+      }
+      return updated;
+    });
+    return true;
+  };
+
+  const bulkImportLedger = async (entries: Array<Omit<LedgerEntry, 'id' | 'created_at' | 'updated_at'>>): Promise<number> => {
+    const formatted: LedgerEntry[] = entries.map((e) => ({
+      ...e,
+      id: generateUUID(),
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    }));
+
+    setLedgerEntries((prev) => {
+      const updated = [...formatted, ...prev];
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('chromadiaries_ledger_entries', JSON.stringify(updated));
+      }
+      return updated;
+    });
+
+    return formatted.length;
+  };
+
+  // Financial Methods: Student Donations
+  const addStudentDonation = async (donation: Omit<StudentDonation, 'id' | 'created_at' | 'updated_at'>): Promise<StudentDonation> => {
+    const newDonation: StudentDonation = {
+      ...donation,
+      id: generateUUID(),
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    };
+
+    setStudentDonations((prev) => {
+      const updated = [newDonation, ...prev];
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('chromadiaries_student_donations', JSON.stringify(updated));
+      }
+      return updated;
+    });
+
+    return newDonation;
+  };
+
+  const updateStudentDonation = async (id: string, updates: Partial<StudentDonation>): Promise<boolean> => {
+    setStudentDonations((prev) => {
+      const updated = prev.map((d) =>
+        d.id === id ? { ...d, ...updates, updated_at: new Date().toISOString() } : d
+      );
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('chromadiaries_student_donations', JSON.stringify(updated));
+      }
+      return updated;
+    });
+    return true;
+  };
+
+  const deleteStudentDonation = async (id: string): Promise<boolean> => {
+    setStudentDonations((prev) => {
+      const updated = prev.filter((d) => d.id !== id);
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('chromadiaries_student_donations', JSON.stringify(updated));
+      }
+      return updated;
+    });
+    return true;
+  };
+
+  // Financial Methods: Money Holdings
+  const updateMoneyHolding = async (id: string, updates: Partial<MoneyHolding>): Promise<boolean> => {
+    setMoneyHoldings((prev) => {
+      const updated = prev.map((h) =>
+        h.id === id ? { ...h, ...updates, updated_at: new Date().toISOString() } : h
+      );
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('chromadiaries_money_holdings', JSON.stringify(updated));
+      }
+      return updated;
+    });
+    return true;
+  };
+
+  const addMoneyHolding = async (holding: Omit<MoneyHolding, 'id' | 'updated_at'>): Promise<MoneyHolding> => {
+    const newHolding: MoneyHolding = {
+      ...holding,
+      id: generateUUID(),
+      updated_at: new Date().toISOString(),
+    };
+
+    setMoneyHoldings((prev) => {
+      const updated = [...prev, newHolding];
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('chromadiaries_money_holdings', JSON.stringify(updated));
+      }
+      return updated;
+    });
+
+    return newHolding;
+  };
+
+  const deleteMoneyHolding = async (id: string): Promise<boolean> => {
+    setMoneyHoldings((prev) => {
+      const updated = prev.filter((h) => h.id !== id);
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('chromadiaries_money_holdings', JSON.stringify(updated));
+      }
+      return updated;
+    });
+    return true;
+  };
+
+  const setCustomBookBalance = (amount: number | null) => {
+    setCustomBookBalanceState(amount);
+    if (typeof window !== 'undefined') {
+      if (amount === null) {
+        localStorage.removeItem('chromadiaries_custom_book_balance');
+      } else {
+        localStorage.setItem('chromadiaries_custom_book_balance', amount.toString());
+      }
+    }
+  };
+
+  const updateSheetConfig = (config: Partial<FinanceSheetConfig>) => {
+    setSheetConfigState((prev) => {
+      const updated = { ...prev, ...config };
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('chromadiaries_sheet_config', JSON.stringify(updated));
+      }
+      return updated;
+    });
+  };
+
+  const syncFromGoogleSheet = async (sheetUrlOrCsv?: string): Promise<{ success: boolean; count: number; error?: string }> => {
+    const targetUrl = sheetUrlOrCsv || sheetConfig.google_sheet_url || sheetConfig.google_sheet_csv_url;
+    if (!targetUrl) {
+      return { success: false, count: 0, error: 'No Google Sheet URL configured.' };
+    }
+
+    try {
+      const res = await fetch('/api/finance/sync-sheet', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'pull', sheetUrl: targetUrl }),
+      });
+
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        return { success: false, count: 0, error: data.error || 'Failed to pull from Google Sheet.' };
+      }
+
+      if (data.rows && Array.isArray(data.rows) && data.rows.length > 0) {
+        setLedgerEntries(data.rows);
+        if (typeof window !== 'undefined') {
+          localStorage.setItem('chromadiaries_ledger_entries', JSON.stringify(data.rows));
+        }
+        updateSheetConfig({ last_synced_at: new Date().toISOString() });
+        return { success: true, count: data.rows.length };
+      }
+
+      return { success: false, count: 0, error: 'No data rows returned from Google Sheet.' };
+    } catch (err: any) {
+      return { success: false, count: 0, error: err.message || 'Network error syncing sheet.' };
+    }
+  };
+
+  const pushToGoogleSheet = async (webhookUrl?: string): Promise<{ success: boolean; error?: string }> => {
+    const targetUrl = webhookUrl || sheetConfig.apps_script_url;
+    if (!targetUrl) {
+      return { success: false, error: 'No Google Apps Script Webhook URL configured.' };
+    }
+
+    try {
+      const res = await fetch('/api/finance/sync-sheet', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'push', webhookUrl: targetUrl, rows: ledgerEntries }),
+      });
+
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        return { success: false, error: data.error || 'Failed to push to Google Sheet.' };
+      }
+
+      updateSheetConfig({ last_synced_at: new Date().toISOString() });
+      return { success: true };
+    } catch (err: any) {
+      return { success: false, error: err.message || 'Network error pushing to sheet.' };
+    }
+  };
+
   return (
     <DataContext.Provider
       value={{
@@ -720,6 +1036,25 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
         addMeeting,
         addResource,
         deleteResource,
+        ledgerEntries,
+        studentDonations,
+        moneyHoldings,
+        customBookBalance,
+        sheetConfig,
+        addLedgerEntry,
+        updateLedgerEntry,
+        deleteLedgerEntry,
+        bulkImportLedger,
+        addStudentDonation,
+        updateStudentDonation,
+        deleteStudentDonation,
+        updateMoneyHolding,
+        addMoneyHolding,
+        deleteMoneyHolding,
+        setCustomBookBalance,
+        updateSheetConfig,
+        syncFromGoogleSheet,
+        pushToGoogleSheet,
       }}
     >
       {children}

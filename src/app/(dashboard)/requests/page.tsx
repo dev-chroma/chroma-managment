@@ -37,18 +37,26 @@ export default function RoleRequestsPage() {
   const [activeReviewId, setActiveReviewId] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
 
+  const isDeptMatch = (reqDeptId?: string | null, userDeptId?: string | null) => {
+    if (!reqDeptId || !userDeptId) return false;
+    if (reqDeptId === userDeptId) return true;
+    const d1 = departments.find((d) => d.id === reqDeptId || d.slug === reqDeptId);
+    const d2 = departments.find((d) => d.id === userDeptId || d.slug === userDeptId);
+    return Boolean(d1 && d2 && (d1.id === d2.id || d1.slug === d2.slug));
+  };
+
   // Strict Request Routing:
-  // - Owner gets all requests
-  // - Department Admin gets requests specifically for their department
+  // - Owner gets all requests (from login or in-app)
+  // - Department Admin / Head gets requests specifically for their department
   // - Members only see their own submissions
   const visibleRequests = roleRequests.filter((req) => {
     let matchesRole = false;
-    if (role === 'owner') matchesRole = true;
-    else if (role === 'admin') {
-      matchesRole = (
-        req.requested_department_id === user?.department_id ||
-        req.current_department_id === user?.department_id
-      );
+    if (role === 'owner') {
+      matchesRole = true;
+    } else if (role === 'admin') {
+      matchesRole =
+        isDeptMatch(req.requested_department_id, user?.department_id) ||
+        isDeptMatch(req.current_department_id, user?.department_id);
     } else {
       matchesRole = (
         req.user_id === user?.id ||
@@ -255,7 +263,7 @@ export default function RoleRequestsPage() {
                   )}
 
                   {/* Action buttons for Approvers (Owner / Department Admin for their dept) */}
-                  {isPrivileged && (role === 'owner' || req.requested_department_id === user?.department_id) && req.status === 'submitted' && (
+                  {isPrivileged && (role === 'owner' || isDeptMatch(req.requested_department_id, user?.department_id) || isDeptMatch(req.current_department_id, user?.department_id)) && req.status === 'submitted' && (
                     <div className="pt-2">
                       {activeReviewId === req.id ? (
                         <div className="p-4 rounded-xl border border-primary/30 bg-primary/5 space-y-3">

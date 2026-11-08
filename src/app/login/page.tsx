@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/lib/context/auth-context';
 import { useData } from '@/lib/context/data-context';
 import { 
@@ -37,6 +37,12 @@ export default function LoginPage() {
   const [reqName, setReqName] = useState('');
   const [reqEmail, setReqEmail] = useState('');
   const [reqDeptId, setReqDeptId] = useState(departments[0]?.id || 'd1111111-1111-1111-1111-111111111111');
+
+  useEffect(() => {
+    if (departments.length > 0 && (!reqDeptId || !departments.some((d) => d.id === reqDeptId))) {
+      setReqDeptId(departments[0].id);
+    }
+  }, [departments, reqDeptId]);
   const [reqRole, setReqRole] = useState<'member' | 'admin' | 'general_member'>('member');
   const [reqPassword, setReqPassword] = useState('');
   const [reqReason, setReqReason] = useState('');

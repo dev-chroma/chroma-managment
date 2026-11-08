@@ -40,7 +40,7 @@ interface SidebarProps {
 export function Sidebar({ isOpen = false, onClose }: SidebarProps) {
   const pathname = usePathname();
   const { user, role, logout } = useAuth();
-  const { tasks, roleRequests } = useData();
+  const { tasks, roleRequests, departments } = useData();
 
   // Helper to map department id to slug
   const getDeptSlug = (deptId?: string | null): string => {
@@ -61,10 +61,13 @@ export function Sidebar({ isOpen = false, onClose }: SidebarProps) {
   const pendingRequestsCount = role === 'owner'
     ? roleRequests.filter((r) => r.status === 'submitted').length
     : role === 'admin'
-      ? roleRequests.filter((r) => r.status === 'submitted' && (
-          r.requested_department_id === user?.department_id ||
-          r.current_department_id === user?.department_id
-        )).length
+      ? roleRequests.filter((r) => {
+          if (r.status !== 'submitted') return false;
+          if (r.requested_department_id === user?.department_id || r.current_department_id === user?.department_id) return true;
+          const userDept = departments.find((d) => d.id === user?.department_id || d.slug === user?.department_id);
+          const reqDept = departments.find((d) => d.id === r.requested_department_id || d.slug === r.requested_department_id);
+          return Boolean(userDept && reqDept && (userDept.id === reqDept.id || userDept.slug === reqDept.slug));
+        }).length
       : 0;
 
   // 1. Department Workspace Links (Workspaces Group)

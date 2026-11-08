@@ -192,7 +192,17 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
   const [announcements, setAnnouncements] = useState<Announcement[]>(INITIAL_ANNOUNCEMENTS);
   const [meetings, setMeetings] = useState<Meeting[]>(INITIAL_MEETINGS);
   const [resources, setResources] = useState<ResourceItem[]>(INITIAL_RESOURCES);
-  const [roleRequests, setRoleRequests] = useState<RoleRequest[]>(INITIAL_ROLE_REQUESTS);
+  const [roleRequests, setRoleRequests] = useState<RoleRequest[]>(() => {
+    if (typeof window !== 'undefined') {
+      const stored = localStorage.getItem('chromadiaries_role_requests');
+      if (stored) {
+        try {
+          return JSON.parse(stored);
+        } catch {}
+      }
+    }
+    return INITIAL_ROLE_REQUESTS;
+  });
   const [weeklyTargets, setWeeklyTargets] = useState<Record<string, number>>({
     'd1111111-1111-1111-1111-111111111111': 3, // Editing
     'd2222222-2222-2222-2222-222222222222': 3, // Media
@@ -473,7 +483,20 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
 
         const { data: reqData, error: reqError } = await supabase.from('role_requests').select('*');
         if (!reqError && reqData) {
-          setRoleRequests(reqData as RoleRequest[]);
+          setRoleRequests((prev) => {
+            const map = new Map<string, RoleRequest>();
+            (reqData as RoleRequest[]).forEach((r) => map.set(r.id, r));
+            prev.forEach((r) => {
+              if (!map.has(r.id)) map.set(r.id, r);
+            });
+            const merged = Array.from(map.values()).sort(
+              (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+            );
+            if (typeof window !== 'undefined') {
+              localStorage.setItem('chromadiaries_role_requests', JSON.stringify(merged));
+            }
+            return merged;
+          });
         }
 
         const { data: targetData, error: targetError } = await supabase.from('weekly_targets').select('*');
@@ -1068,7 +1091,13 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
       status: 'submitted',
       created_at: new Date().toISOString(),
     };
-    setRoleRequests((prev) => [req, ...prev]);
+    setRoleRequests((prev) => {
+      const updated = [req, ...prev];
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('chromadiaries_role_requests', JSON.stringify(updated));
+      }
+      return updated;
+    });
 
     if (isSupabaseConfigured()) {
       const supabase = createClient();
@@ -1088,8 +1117,8 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
     decision: 'approved' | 'rejected',
     remarks?: string
   ): Promise<boolean> => {
-    setRoleRequests((prev) =>
-      prev.map((r) =>
+    setRoleRequests((prev) => {
+      const updated = prev.map((r) =>
         r.id === requestId
           ? {
               ...r,
@@ -1099,8 +1128,12 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
               decision_date: new Date().toISOString(),
             }
           : r
-      )
-    );
+      );
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('chromadiaries_role_requests', JSON.stringify(updated));
+      }
+      return updated;
+    });
     if (isSupabaseConfigured()) {
       const supabase = createClient();
       if (supabase) {

@@ -1,7 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 import * as XLSX from 'xlsx';
+import { createClient } from '@supabase/supabase-js';
 
-const DEFAULT_WEBHOOK_URL = 'https://script.google.com/macros/s/AKfycbzFLHRck8uno6AyP9EKg7ej_8un_tZz22_lh0I1IFD0a76ubiPV1XrMYsqbyfefxCpj/exec';
+const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://jvylhtbypldyttspkdal.supabase.co';
+const SUPABASE_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'sb_publishable_Q4fHWUSyInCkrEMbqGlQDg_7kVRD-hB';
+const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
+
+const DEFAULT_WEBHOOK_URL = 'https://script.google.com/macros/s/AKfycbzgK9hQUjKqtQaEd6mV901X19iF1d0i78NgVQHYsPjWMMImucl-I_Ts3m233N6gOGVY/exec';
 const DEFAULT_SHEET_URL = 'https://docs.google.com/spreadsheets/d/1YtLXElTsedWX3kFPqoE4iJn84ige3-U1ftojhmfcxxM/edit?gid=0#gid=0';
 
 function formatSheetDate(val: any): string {
@@ -351,6 +356,14 @@ export async function GET(req: NextRequest) {
                   .filter((s: any) => s.student_name);
 
                 if (parsedStudents.length > 0) {
+                  // Upsert live parsed students to Supabase
+                  try {
+                    await supabase.from('student_donations').delete().eq('sheet_name', sheet);
+                    await supabase.from('student_donations').insert(parsedStudents);
+                  } catch (e) {
+                    console.error('Supabase write error in route:', e);
+                  }
+
                   return NextResponse.json({
                     success: true,
                     sheet,
@@ -364,8 +377,30 @@ export async function GET(req: NextRequest) {
             }
           }
         } catch (webhookErr) {
-          console.warn(`Webhook pull for ${sheet} failed, using dataset fallback:`, webhookErr);
+          console.warn(`Webhook pull for ${sheet} failed, checking Supabase database:`, webhookErr);
         }
+      }
+
+      // Check live database from Supabase
+      try {
+        const { data: supaStudents, error: supaErr } = await supabase
+          .from('student_donations')
+          .select('*')
+          .eq('sheet_name', sheet)
+          .order('serial_no', { ascending: true });
+
+        if (!supaErr && supaStudents && supaStudents.length > 0) {
+          return NextResponse.json({
+            success: true,
+            sheet,
+            count: supaStudents.length,
+            students: supaStudents,
+            syncedAt: new Date().toISOString(),
+            source: 'supabase_database',
+          });
+        }
+      } catch (dbErr) {
+        console.warn('Supabase read error in route:', dbErr);
       }
 
       // Fallback: return verified sheet dataset matching sheet parameter

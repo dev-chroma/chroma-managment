@@ -37,12 +37,81 @@ import {
   FileText,
   Layers,
   Filter,
+  Code,
+  Copy,
+  Check,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
 import { TwoStepDeleteModal } from '@/components/common/two-step-delete-modal';
 
 const CONNECTED_SHEET_URL = 'https://docs.google.com/spreadsheets/d/1YtLXElTsedWX3kFPqoE4iJn84ige3-U1ftojhmfcxxM/edit?gid=0#gid=0';
+
+const APPS_SCRIPT_CODE = `function doGet(e) {
+  var sheetName = (e && e.parameter && e.parameter.sheet) ? e.parameter.sheet : 'Main';
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sheet = ss.getSheetByName(sheetName) || ss.getActiveSheet();
+  var data = sheet.getDataRange().getValues();
+  return ContentService.createTextOutput(JSON.stringify(data))
+    .setMimeType(ContentService.MimeType.JSON);
+}
+
+function doPost(e) {
+  try {
+    var body = JSON.parse(e.postData.contents);
+    var ss = SpreadsheetApp.getActiveSpreadsheet();
+
+    if (body.action === 'push_student') {
+      var sheetName = body.sheet || (body.student && body.student.sheet_name) || 'SS1';
+      var sheet = ss.getSheetByName(sheetName);
+      if (!sheet) {
+        return ContentService.createTextOutput(JSON.stringify({ success: false, error: 'Sheet tab ' + sheetName + ' not found' })).setMimeType(ContentService.MimeType.JSON);
+      }
+      var data = sheet.getDataRange().getValues();
+      var adNo = String(body.adNo || (body.student && body.student.admission_no) || '').trim();
+      var foundRow = -1;
+
+      for (var i = 1; i < data.length; i++) {
+        if (String(data[i][1]).trim() === adNo) { // Column B: Ad.No
+          foundRow = i + 1;
+          break;
+        }
+      }
+
+      var student = body.student || {};
+      var paid = Number(body.paid !== undefined ? body.paid : student.collected_amount || 0);
+      var amount = Number(body.amount !== undefined ? body.amount : student.pledged_amount || 250);
+      var balance = amount - paid;
+      var status = String(body.status || student.addition_status || 'Added');
+
+      if (foundRow > 0) {
+        sheet.getRange(foundRow, 4).setValue(amount); // Column D: Amount
+        sheet.getRange(foundRow, 5).setValue(paid);   // Column E: Paid
+        sheet.getRange(foundRow, 6).setValue(balance);// Column F: Balance
+        sheet.getRange(foundRow, 7).setValue(status); // Column G: Status
+        return ContentService.createTextOutput(JSON.stringify({ success: true, updatedRow: foundRow, sheet: sheetName })).setMimeType(ContentService.MimeType.JSON);
+      } else {
+        var nextNo = data.length;
+        sheet.appendRow([nextNo, adNo, student.student_name || '', amount, paid, balance, status]);
+        return ContentService.createTextOutput(JSON.stringify({ success: true, appended: true, sheet: sheetName })).setMimeType(ContentService.MimeType.JSON);
+      }
+    }
+
+    if (body.action === 'push' || body.action === 'sync_all') {
+      var sheet = ss.getSheetByName('Main') || ss.getActiveSheet();
+      if (body.rows && Array.isArray(body.rows)) {
+        body.rows.forEach(function(row) {
+          sheet.appendRow([row.serial_no || '', row.date || '', row.item || '', row.credit || '', row.debit || '', row.remark || '']);
+        });
+      }
+      return ContentService.createTextOutput(JSON.stringify({ success: true })).setMimeType(ContentService.MimeType.JSON);
+    }
+
+    return ContentService.createTextOutput(JSON.stringify({ success: true, message: 'Received' })).setMimeType(ContentService.MimeType.JSON);
+  } catch (err) {
+    return ContentService.createTextOutput(JSON.stringify({ success: false, error: err.toString() })).setMimeType(ContentService.MimeType.JSON);
+  }
+}`;
 
 export default function FinancialWorkspacePage() {
   const {
@@ -162,11 +231,11 @@ export default function FinancialWorkspacePage() {
 
   const [isSyncing, setIsSyncing] = useState(false);
   const [syncStatusMsg, setSyncStatusMsg] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+  const [isScriptModalOpen, setIsScriptModalOpen] = useState(false);
+  const [isScriptCopied, setIsScriptCopied] = useState(false);
 
-  // Initial auto-sync from Google Sheet on mount
-  useEffect(() => {
-    syncFromGoogleSheet().catch(() => {});
-  }, []);
+  // Database is fetched live from Supabase via DataContext on mount.
+  // Manual sync can be triggered anytime using the 'Sync Sheet' button.
 
   // --- LEDGER CALCULATIONS ---
   const { totalCredit, totalDebit, netLedgerBalance } = useMemo(() => {
@@ -381,6 +450,17 @@ export default function FinancialWorkspacePage() {
             >
               <RefreshCw className={cn('h-3.5 w-3.5 text-primary', isSyncing && 'animate-spin')} />
               <span>{isSyncing ? 'Syncing...' : 'Sync Sheet'}</span>
+            </button>
+          )}
+
+          {isFinancialController && (
+            <button
+              onClick={() => setIsScriptModalOpen(true)}
+              className="flex items-center gap-1.5 px-3 py-2 rounded-xl border border-blue-500/30 bg-blue-500/10 hover:bg-blue-500/20 text-blue-700 dark:text-blue-300 text-xs font-semibold transition-all cursor-pointer"
+              title="View Google Apps Script Code for Multi-Tab Sync (Main, SS1, SS2)"
+            >
+              <Code className="h-3.5 w-3.5" />
+              <span>Apps Script Code</span>
             </button>
           )}
 
@@ -2185,6 +2265,72 @@ export default function FinancialWorkspacePage() {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+      {/* Google Apps Script Code Modal */}
+      {isScriptModalOpen && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 z-50">
+          <div className="bg-card border border-border rounded-3xl max-w-2xl w-full p-6 space-y-4 animate-in fade-in zoom-in-95 max-h-[90vh] flex flex-col">
+            <div className="flex items-center justify-between pb-3 border-b border-border">
+              <div className="flex items-center gap-2">
+                <Code className="h-5 w-5 text-primary" />
+                <h3 className="font-bold text-base text-foreground">Google Apps Script Deployment Code</h3>
+              </div>
+              <button
+                onClick={() => setIsScriptModalOpen(false)}
+                className="text-muted-foreground hover:text-foreground p-1 rounded-lg"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            <div className="text-xs text-muted-foreground space-y-2">
+              <p>
+                To enable <strong>automatic two-way synchronization</strong> between your Google Sheet tabs (<strong>Main</strong>, <strong>SS1</strong>, and <strong>SS2</strong>) and ChromaDiaries, copy the code below into your Google Sheet&apos;s <em>Extensions &gt; Apps Script</em> and deploy as Web App:
+              </p>
+              <ol className="list-decimal list-inside space-y-1 font-mono text-[11px] bg-muted/40 p-3 rounded-xl border border-border">
+                <li>Open your Google Sheet &gt; Extensions &gt; Apps Script</li>
+                <li>Paste this code replacing the existing editor code</li>
+                <li>Click <strong>Deploy &gt; New deployment</strong></li>
+                <li>Select type: <strong>Web app</strong></li>
+                <li>Execute as: <strong>Me</strong> | Who has access: <strong>Anyone</strong></li>
+                <li>Click <strong>Deploy</strong> and authorize permissions</li>
+              </ol>
+            </div>
+
+            <div className="relative flex-1 min-h-0 bg-zinc-950 rounded-2xl border border-zinc-800 p-3 font-mono text-[11px] text-zinc-200 overflow-y-auto">
+              <pre className="whitespace-pre-wrap">{APPS_SCRIPT_CODE}</pre>
+            </div>
+
+            <div className="flex items-center justify-between pt-3 border-t border-border">
+              <span className="text-[11px] text-muted-foreground">
+                Supports: <strong className="text-foreground">doGet</strong> (multi-tab SS1, SS2, Main) &amp; <strong className="text-foreground">doPost</strong> (student records &amp; ledger)
+              </span>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setIsScriptModalOpen(false)}
+                  className="px-4 py-2 rounded-xl border border-border text-foreground hover:bg-muted font-semibold text-xs cursor-pointer"
+                >
+                  Close
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (typeof navigator !== 'undefined' && navigator.clipboard) {
+                      navigator.clipboard.writeText(APPS_SCRIPT_CODE);
+                      setIsScriptCopied(true);
+                      setTimeout(() => setIsScriptCopied(false), 3000);
+                    }
+                  }}
+                  className="px-4 py-2 rounded-xl bg-primary text-primary-foreground font-bold hover:bg-primary/90 text-xs flex items-center gap-1.5 shadow-xs cursor-pointer"
+                >
+                  {isScriptCopied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
+                  <span>{isScriptCopied ? 'Copied to Clipboard!' : 'Copy Script Code'}</span>
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       )}

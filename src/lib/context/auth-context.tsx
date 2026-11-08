@@ -129,7 +129,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                 const deptInfo = memberDeptMap.get(p.id);
                 map.set(p.email.toLowerCase(), {
                   ...p,
-                  department_id: deptInfo ? deptInfo.deptId : (existing?.department_id || null),
+                  department_id: p.department_id || (deptInfo ? deptInfo.deptId : (existing?.department_id || null)),
                   password: existing?.password || 'member@123',
                 });
               });
@@ -336,6 +336,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             bio: (updatedAcc as UserAccount).bio,
             avatar_url: (updatedAcc as UserAccount).avatar_url,
             system_role: (updatedAcc as UserAccount).system_role,
+            department_id: (updatedAcc as UserAccount).department_id,
+            is_active: (updatedAcc as UserAccount).is_active,
             updated_at: new Date().toISOString(),
           })
           .eq('id', userId)

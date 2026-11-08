@@ -162,7 +162,7 @@ export const INITIAL_PROFILES: Profile[] = [
     updated_at: now.toISOString(),
   },
   {
-    id: 'u0000000-0000-0000-0000-000000000005',
+    id: 'a5555555-0000-0000-0000-000000000005',
     email: 'programe.admin@chromadiaries.in',
     full_name: 'Program Coordinator Admin',
     avatar_url: '/profile-icon.png',
@@ -174,7 +174,7 @@ export const INITIAL_PROFILES: Profile[] = [
     updated_at: now.toISOString(),
   },
   {
-    id: 'u0000000-0000-0000-0000-000000000006',
+    id: 'a6666666-0000-0000-0000-000000000006',
     email: 'programe.member@chromadiaries.in',
     full_name: 'Program Team Member',
     avatar_url: '/profile-icon.png',
@@ -186,7 +186,7 @@ export const INITIAL_PROFILES: Profile[] = [
     updated_at: now.toISOString(),
   },
   {
-    id: 'u0000000-0000-0000-0000-000000000007',
+    id: 'a7777777-0000-0000-0000-000000000007',
     email: 'finance@chromadiaries.in',
     full_name: 'Financial Controller',
     avatar_url: '/profile-icon.png',
@@ -198,7 +198,7 @@ export const INITIAL_PROFILES: Profile[] = [
     updated_at: now.toISOString(),
   },
   {
-    id: 'u0000000-0000-0000-0000-000000000008',
+    id: 'a8888888-0000-0000-0000-000000000008',
     email: 'finance.admin@chromadiaries.in',
     full_name: 'Financial Controller Admin',
     avatar_url: '/profile-icon.png',
@@ -220,7 +220,7 @@ export const INITIAL_TASKS: Task[] = [
     description: 'Annual flagship youth festival: poetry recitation, author panel, and ChromaDiaries print edition release ceremony.',
     category: 'Official Programe',
     status_id: 'p2', // Planned (counts as Progress)
-    assigned_to: 'u0000000-0000-0000-0000-000000000005',
+    assigned_to: 'a5555555-0000-0000-0000-000000000005',
     deadline: '2026-11-20T18:00:00.000Z',
     author_name: 'Program Committee',
     profile_link: 'https://chromadiaries.in/fest2026',
@@ -245,7 +245,7 @@ export const INITIAL_TASKS: Task[] = [
     description: 'Interactive session with literary mentors on English prose, poetic meter, and story editing.',
     category: 'English Programe',
     status_id: 'p3', // Progress (counts as Progress)
-    assigned_to: 'u0000000-0000-0000-0000-000000000006',
+    assigned_to: 'a6666666-0000-0000-0000-000000000006',
     deadline: '2026-11-16T15:30:00.000Z',
     author_name: 'Language Club',
     profile_link: 'https://chromadiaries.in/masterclass',
@@ -269,7 +269,7 @@ export const INITIAL_TASKS: Task[] = [
     description: 'Multi-college book stall tour, literary quiz, and membership promotion across campuses.',
     category: 'Promotion Programe',
     status_id: 'p4', // Sheduled (counts as Progress)
-    assigned_to: 'u0000000-0000-0000-0000-000000000006',
+    assigned_to: 'a6666666-0000-0000-0000-000000000006',
     deadline: '2026-11-25T11:00:00.000Z',
     author_name: 'Promotion Wing',
     is_archived: false,
@@ -292,7 +292,7 @@ export const INITIAL_TASKS: Task[] = [
     description: 'Keynote symposium discussing the future of youth literature in educational institutions.',
     category: 'Special Day Programe',
     status_id: 'p5', // Completed
-    assigned_to: 'u0000000-0000-0000-0000-000000000005',
+    assigned_to: 'a5555555-0000-0000-0000-000000000005',
     deadline: '2026-11-11T17:00:00.000Z',
     completed_at: '2026-11-11T16:45:00.000Z',
     author_name: 'Education Council',
@@ -316,7 +316,7 @@ export const INITIAL_TASKS: Task[] = [
     description: 'Panel discussion with student creators on modern trends and AI tools in creative literature.',
     category: 'Trend Programe',
     status_id: 'p1', // Pending
-    assigned_to: 'u0000000-0000-0000-0000-000000000005',
+    assigned_to: 'a5555555-0000-0000-0000-000000000005',
     deadline: '2026-11-28T16:00:00.000Z',
     author_name: 'Tech & Lit Club',
     is_archived: false,
@@ -339,7 +339,7 @@ export const INITIAL_TASKS: Task[] = [
     description: 'Flash writing competition with cash prizes, certificates, and editorial publishing.',
     category: 'Other Programe',
     status_id: 'p3', // Progress
-    assigned_to: 'u0000000-0000-0000-0000-000000000006',
+    assigned_to: 'a6666666-0000-0000-0000-000000000006',
     deadline: '2026-11-22T14:00:00.000Z',
     author_name: 'Championship Wing',
     is_archived: false,
@@ -507,7 +507,7 @@ export const INITIAL_STUDENT_DONATIONS: StudentDonation[] = [
 
 export const INITIAL_TODOS: WorkspaceTodo[] = [
   {
-    id: 'todo-1',
+    id: 'c0000001-0000-0000-0000-000000000001',
     title: 'Review and verify cash holdings with bank statement',
     description: 'Perform monthly physical cash verification with General Manager and bank book.',
     assigned_to: 'a0000000-0000-0000-0000-000000000001',
@@ -519,10 +519,10 @@ export const INITIAL_TODOS: WorkspaceTodo[] = [
     updated_at: now.toISOString(),
   },
   {
-    id: 'todo-2',
+    id: 'c0000001-0000-0000-0000-000000000002',
     title: 'Finalize English Programe schedule and speaker list',
     description: 'Coordinate with literary club mentors for dates and topic confirmations.',
-    assigned_to: 'u0000000-0000-0000-0000-000000000005',
+    assigned_to: 'a5555555-0000-0000-0000-000000000005',
     assigned_by: 'a0000000-0000-0000-0000-000000000001',
     department_id: 'd5555555-5555-5555-5555-555555555555',
     priority: 'high',
@@ -532,10 +532,10 @@ export const INITIAL_TODOS: WorkspaceTodo[] = [
     updated_at: now.toISOString(),
   },
   {
-    id: 'todo-3',
+    id: 'c0000001-0000-0000-0000-000000000003',
     title: 'Follow up on pending donation collections for SS1 & SS2',
     description: 'Check receipt status for students with partial or pending balances.',
-    assigned_to: 'u0000000-0000-0000-0000-000000000007',
+    assigned_to: 'a7777777-0000-0000-0000-000000000007',
     assigned_by: 'a0000000-0000-0000-0000-000000000001',
     department_id: 'd6666666-6666-6666-6666-666666666666',
     priority: 'medium',
@@ -549,7 +549,7 @@ export const INITIAL_TODOS: WorkspaceTodo[] = [
 export const INITIAL_FINANCE_SHEET_CONFIG: FinanceSheetConfig = {
   google_sheet_url: 'https://docs.google.com/spreadsheets/d/1YtLXElTsedWX3kFPqoE4iJn84ige3-U1ftojhmfcxxM/edit?gid=0#gid=0',
   google_sheet_csv_url: 'https://docs.google.com/spreadsheets/d/1YtLXElTsedWX3kFPqoE4iJn84ige3-U1ftojhmfcxxM/export?format=csv',
-  apps_script_url: 'https://script.google.com/macros/s/AKfycbzFLHRck8uno6AyP9EKg7ej_8un_tZz22_lh0I1IFD0a76ubiPV1XrMYsqbyfefxCpj/exec',
+  apps_script_url: 'https://script.google.com/macros/s/AKfycbzgK9hQUjKqtQaEd6mV901X19iF1d0i78NgVQHYsPjWMMImucl-I_Ts3m233N6gOGVY/exec',
   auto_sync: true,
   last_synced_at: now.toISOString(),
 };
@@ -575,14 +575,14 @@ export const INITIAL_PROGRAMME_STATUSES: ProgrammeStatusConfig[] = [
 
 export const INITIAL_PROGRAMMES: Programme[] = [
   {
-    id: 'prg-001',
+    id: 'b0000001-0000-0000-0000-000000000001',
     unique_code: 'CD-PRG-001',
     title: 'ChromaDiaries Youth Literature Fest 2026',
     description: 'Annual flagship youth festival: poetry recitation, author panel, and ChromaDiaries print edition release ceremony.',
     category: 'Special Programme',
     status: 'Planned',
     deadline: '2026-11-20',
-    assigned_to: 'u0000000-0000-0000-0000-000000000005',
+    assigned_to: 'a5555555-0000-0000-0000-000000000005',
     created_by: 'a0000000-0000-0000-0000-000000000001',
     venue: 'Main Campus Auditorium & YouTube Live',
     is_paused: false,
@@ -591,15 +591,15 @@ export const INITIAL_PROGRAMMES: Programme[] = [
     updated_at: '2026-11-08T09:00:00.000Z',
   },
   {
-    id: 'prg-002',
+    id: 'b0000001-0000-0000-0000-000000000002',
     unique_code: 'CD-PRG-002',
     title: 'English Creative Writing & Poetry Masterclass',
     description: 'Interactive session with literary mentors on English prose, poetic meter, and magazine story editing.',
     category: 'Promotion Programme',
     status: 'Progressed',
     deadline: '2026-11-16',
-    assigned_to: 'u0000000-0000-0000-0000-000000000006',
-    created_by: 'u0000000-0000-0000-0000-000000000005',
+    assigned_to: 'a6666666-0000-0000-0000-000000000006',
+    created_by: 'a5555555-0000-0000-0000-000000000005',
     venue: 'Seminar Hall B',
     is_paused: false,
     is_archived: false,
@@ -607,14 +607,14 @@ export const INITIAL_PROGRAMMES: Programme[] = [
     updated_at: '2026-11-08T08:30:00.000Z',
   },
   {
-    id: 'prg-003',
+    id: 'b0000001-0000-0000-0000-000000000003',
     unique_code: 'CD-PRG-003',
     title: 'Viral Literary Reel & Micro-Story Trend Series',
     description: 'Social media reel challenge highlighting youth flash fiction, reader reactions, and trending audio narratives.',
     category: 'Trend Programme',
     status: 'Scheduled',
     deadline: '2026-11-25',
-    assigned_to: 'u0000000-0000-0000-0000-000000000006',
+    assigned_to: 'a6666666-0000-0000-0000-000000000006',
     created_by: 'a0000000-0000-0000-0000-000000000001',
     venue: 'Instagram & YouTube Shorts Studio',
     is_paused: false,
@@ -623,14 +623,14 @@ export const INITIAL_PROGRAMMES: Programme[] = [
     updated_at: '2026-11-07T14:00:00.000Z',
   },
   {
-    id: 'prg-004',
+    id: 'b0000001-0000-0000-0000-000000000004',
     unique_code: 'CD-PRG-004',
     title: 'Chroma Youth Outreach & Inter-School Book Drive',
     description: 'Connecting literary clubs and book donors across 12 institutions for student library book contributions.',
     category: 'Promotion Programme',
     status: 'Completed',
     deadline: '2026-11-05',
-    assigned_to: 'u0000000-0000-0000-0000-000000000005',
+    assigned_to: 'a5555555-0000-0000-0000-000000000005',
     created_by: 'a0000000-0000-0000-0000-000000000001',
     venue: 'District High Schools Network',
     is_paused: false,
@@ -639,14 +639,14 @@ export const INITIAL_PROGRAMMES: Programme[] = [
     updated_at: '2026-11-05T18:00:00.000Z',
   },
   {
-    id: 'prg-005',
+    id: 'b0000001-0000-0000-0000-000000000005',
     unique_code: 'CD-PRG-005',
     title: 'Winter Annual Editorial Symposium & Writers Gala',
     description: 'Gathering of magazine writers, columnists, and reviewers to plan next year’s publication roadmaps.',
     category: 'Other Programme',
     status: 'Pending',
     deadline: '2026-12-15',
-    assigned_to: 'u0000000-0000-0000-0000-000000000005',
+    assigned_to: 'a5555555-0000-0000-0000-000000000005',
     created_by: 'a0000000-0000-0000-0000-000000000001',
     venue: 'ChromaDiaries Conference Suite',
     is_paused: false,
@@ -659,10 +659,10 @@ export const INITIAL_PROGRAMMES: Programme[] = [
 export const INITIAL_PROGRAMME_TASKS: ProgrammeTask[] = [
   {
     id: 'ptsk-001',
-    programme_id: 'prg-001',
+    programme_id: 'b0000001-0000-0000-0000-000000000001',
     title: 'Confirm auditorium booking & AV stage lights',
     description: 'Finalize auditorium permit with administration and test acoustic speakers & stage mics.',
-    assigned_to: 'u0000000-0000-0000-0000-000000000005',
+    assigned_to: 'a5555555-0000-0000-0000-000000000005',
     priority: 'Urgent',
     deadline: '2026-11-12',
     status: 'Completed',
@@ -670,10 +670,10 @@ export const INITIAL_PROGRAMME_TASKS: ProgrammeTask[] = [
   },
   {
     id: 'ptsk-002',
-    programme_id: 'prg-001',
+    programme_id: 'b0000001-0000-0000-0000-000000000001',
     title: 'Send formal invitation letters to 4 guest authors',
     description: 'Draft official invitation emails with docket schedule, honorarium details, and travel allowance.',
-    assigned_to: 'u0000000-0000-0000-0000-000000000005',
+    assigned_to: 'a5555555-0000-0000-0000-000000000005',
     priority: 'High',
     deadline: '2026-11-14',
     status: 'Completed',
@@ -681,10 +681,10 @@ export const INITIAL_PROGRAMME_TASKS: ProgrammeTask[] = [
   },
   {
     id: 'ptsk-003',
-    programme_id: 'prg-001',
+    programme_id: 'b0000001-0000-0000-0000-000000000001',
     title: 'Print magazine commemorative edition copies',
     description: 'Coordinate with print press for 250 deluxe copies of the literary edition.',
-    assigned_to: 'u0000000-0000-0000-0000-000000000006',
+    assigned_to: 'a6666666-0000-0000-0000-000000000006',
     priority: 'High',
     deadline: '2026-11-18',
     status: 'In Progress',
@@ -692,10 +692,10 @@ export const INITIAL_PROGRAMME_TASKS: ProgrammeTask[] = [
   },
   {
     id: 'ptsk-004',
-    programme_id: 'prg-001',
+    programme_id: 'b0000001-0000-0000-0000-000000000001',
     title: 'Assign student volunteer anchors and stage hosts',
     description: 'Brief the master of ceremonies, reception greeting squad, and timekeepers.',
-    assigned_to: 'u0000000-0000-0000-0000-000000000006',
+    assigned_to: 'a6666666-0000-0000-0000-000000000006',
     priority: 'Medium',
     deadline: '2026-11-19',
     status: 'Pending',
@@ -703,10 +703,10 @@ export const INITIAL_PROGRAMME_TASKS: ProgrammeTask[] = [
   },
   {
     id: 'ptsk-005',
-    programme_id: 'prg-002',
+    programme_id: 'b0000001-0000-0000-0000-000000000002',
     title: 'Circulate Google Forms registration link to colleges',
     description: 'Share poster with QR registration link to partner literature societies.',
-    assigned_to: 'u0000000-0000-0000-0000-000000000006',
+    assigned_to: 'a6666666-0000-0000-0000-000000000006',
     priority: 'Urgent',
     deadline: '2026-11-10',
     status: 'Completed',
@@ -714,10 +714,10 @@ export const INITIAL_PROGRAMME_TASKS: ProgrammeTask[] = [
   },
   {
     id: 'ptsk-006',
-    programme_id: 'prg-002',
+    programme_id: 'b0000001-0000-0000-0000-000000000002',
     title: 'Prepare slide presentation and writing workbooks',
     description: 'Assemble 15 exercise prompts on poetic meter and flash fiction structure.',
-    assigned_to: 'u0000000-0000-0000-0000-000000000006',
+    assigned_to: 'a6666666-0000-0000-0000-000000000006',
     priority: 'High',
     deadline: '2026-11-14',
     status: 'In Progress',
@@ -728,7 +728,7 @@ export const INITIAL_PROGRAMME_TASKS: ProgrammeTask[] = [
 export const INITIAL_PROGRAMME_NOTES: ProgrammeNote[] = [
   {
     id: 'pnote-001',
-    programme_id: 'prg-001',
+    programme_id: 'b0000001-0000-0000-0000-000000000001',
     title: 'Executive Concept & Stage Run-of-Show',
     content: `# ChromaDiaries Youth Literature Fest 2026
 ## Concept & Objectives
@@ -745,20 +745,20 @@ To celebrate student creative writing, honour magazine contributors, and launch 
 - Reception escort assigned at the gate
 - Mementoes and bouquets prepared by Outreach team
 - Honorarium vouchers to be signed by Financial Controller`,
-    author_id: 'u0000000-0000-0000-0000-000000000005',
+    author_id: 'a5555555-0000-0000-0000-000000000005',
     author_name: 'Program Coordinator Admin',
     created_at: '2026-11-01T14:00:00.000Z',
     updated_at: '2026-11-06T11:20:00.000Z',
   },
   {
     id: 'pnote-002',
-    programme_id: 'prg-001',
+    programme_id: 'b0000001-0000-0000-0000-000000000001',
     title: 'Hospitality & Guest Requirements',
     content: `### Guest Accommodations:
 - Keynote speaker traveling from Calicut; arranged cab pickup at 8:30 AM.
 - Dietary preferences: Vegetarian snacks and tea during the intermission.
 - Audio preference: Lapel wireless microphone for the poetry reading.`,
-    author_id: 'u0000000-0000-0000-0000-000000000006',
+    author_id: 'a6666666-0000-0000-0000-000000000006',
     author_name: 'Program Team Member',
     created_at: '2026-11-04T16:00:00.000Z',
     updated_at: '2026-11-07T10:15:00.000Z',
@@ -768,7 +768,7 @@ To celebrate student creative writing, honour magazine contributors, and launch 
 export const INITIAL_PROGRAMME_GUESTS: ProgrammeGuest[] = [
   {
     id: 'pguest-001',
-    programme_id: 'prg-001',
+    programme_id: 'b0000001-0000-0000-0000-000000000001',
     full_name: 'Dr. K. R. Haridas',
     designation: 'Professor of English & Renowned Essayist',
     organization: 'Kerala University of Letters',
@@ -784,7 +784,7 @@ export const INITIAL_PROGRAMME_GUESTS: ProgrammeGuest[] = [
   },
   {
     id: 'pguest-002',
-    programme_id: 'prg-001',
+    programme_id: 'b0000001-0000-0000-0000-000000000001',
     full_name: 'Fathima Zahra',
     designation: 'Award-winning Spoken Word Poet',
     organization: 'Youth Writers Collective',
@@ -800,7 +800,7 @@ export const INITIAL_PROGRAMME_GUESTS: ProgrammeGuest[] = [
   },
   {
     id: 'pguest-003',
-    programme_id: 'prg-001',
+    programme_id: 'b0000001-0000-0000-0000-000000000001',
     full_name: 'V. M. Sreekumar',
     designation: 'Senior Editor & Columnist',
     organization: 'The Lit Gazette',
@@ -819,7 +819,7 @@ export const INITIAL_PROGRAMME_GUESTS: ProgrammeGuest[] = [
 export const INITIAL_PROGRAMME_CANDIDATES: ProgrammeCandidate[] = [
   {
     id: 'pcand-001',
-    programme_id: 'prg-001',
+    programme_id: 'b0000001-0000-0000-0000-000000000001',
     full_name: 'Amina Nihal',
     phone: '+91 97451 11223',
     email: 'amina.nihal@campus.ac.in',
@@ -832,7 +832,7 @@ export const INITIAL_PROGRAMME_CANDIDATES: ProgrammeCandidate[] = [
   },
   {
     id: 'pcand-002',
-    programme_id: 'prg-001',
+    programme_id: 'b0000001-0000-0000-0000-000000000001',
     full_name: 'Mohammed Basil',
     phone: '+91 98952 33445',
     email: 'basil.m@farook.edu.in',
@@ -845,7 +845,7 @@ export const INITIAL_PROGRAMME_CANDIDATES: ProgrammeCandidate[] = [
   },
   {
     id: 'pcand-003',
-    programme_id: 'prg-001',
+    programme_id: 'b0000001-0000-0000-0000-000000000001',
     full_name: 'Devika Menon',
     phone: '+91 96450 77889',
     email: 'devika.m@marivanios.in',
@@ -861,7 +861,7 @@ export const INITIAL_PROGRAMME_CANDIDATES: ProgrammeCandidate[] = [
 export const INITIAL_PROGRAMME_PARTICIPANTS: ProgrammeParticipant[] = [
   {
     id: 'ppart-001',
-    programme_id: 'prg-001',
+    programme_id: 'b0000001-0000-0000-0000-000000000001',
     full_name: 'Muhammed Rayan',
     phone: '+91 90481 22334',
     institution_or_class: 'BA English Literature, Sem 5',
@@ -873,7 +873,7 @@ export const INITIAL_PROGRAMME_PARTICIPANTS: ProgrammeParticipant[] = [
   },
   {
     id: 'ppart-002',
-    programme_id: 'prg-001',
+    programme_id: 'b0000001-0000-0000-0000-000000000001',
     full_name: 'Aysha Shamna',
     phone: '+91 99955 66778',
     institution_or_class: 'MA Journalism & Mass Comm',
@@ -885,7 +885,7 @@ export const INITIAL_PROGRAMME_PARTICIPANTS: ProgrammeParticipant[] = [
   },
   {
     id: 'ppart-003',
-    programme_id: 'prg-001',
+    programme_id: 'b0000001-0000-0000-0000-000000000001',
     full_name: 'Rahul K. Varma',
     phone: '+91 94462 88990',
     institution_or_class: 'BSc Computer Science, Sem 3',
@@ -900,7 +900,7 @@ export const INITIAL_PROGRAMME_PARTICIPANTS: ProgrammeParticipant[] = [
 export const INITIAL_PROGRAMME_ACTIVITIES: ProgrammeActivity[] = [
   {
     id: 'pact-001',
-    programme_id: 'prg-001',
+    programme_id: 'b0000001-0000-0000-0000-000000000001',
     action: 'Programme Created',
     user_name: 'General Manager',
     details: 'Initial programme record CD-PRG-001 created and scheduled for 20 Nov 2026.',
@@ -908,7 +908,7 @@ export const INITIAL_PROGRAMME_ACTIVITIES: ProgrammeActivity[] = [
   },
   {
     id: 'pact-002',
-    programme_id: 'prg-001',
+    programme_id: 'b0000001-0000-0000-0000-000000000001',
     action: 'Assignee Assigned',
     user_name: 'General Manager',
     details: 'Assigned leadership to Program Coordinator Admin.',
@@ -916,7 +916,7 @@ export const INITIAL_PROGRAMME_ACTIVITIES: ProgrammeActivity[] = [
   },
   {
     id: 'pact-003',
-    programme_id: 'prg-001',
+    programme_id: 'b0000001-0000-0000-0000-000000000001',
     action: 'Guest Confirmed',
     user_name: 'Program Coordinator Admin',
     details: 'Dr. K. R. Haridas confirmed attendance as Chief Guest.',
@@ -924,7 +924,7 @@ export const INITIAL_PROGRAMME_ACTIVITIES: ProgrammeActivity[] = [
   },
   {
     id: 'pact-004',
-    programme_id: 'prg-001',
+    programme_id: 'b0000001-0000-0000-0000-000000000001',
     action: 'Status Updated',
     user_name: 'Program Coordinator Admin',
     details: 'Programme status transitioned to Planned.',

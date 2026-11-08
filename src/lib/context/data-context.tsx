@@ -254,7 +254,19 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
     if (typeof window !== 'undefined') {
       const stored = localStorage.getItem('chromadiaries_sheet_config');
       if (stored) {
-        try { return JSON.parse(stored); } catch {}
+        try {
+          const parsed = JSON.parse(stored);
+          if (parsed && typeof parsed === 'object') {
+            if (
+              !parsed.apps_script_url ||
+              parsed.apps_script_url.includes('AKfycbzFLHRck8uno6AyP9EKg7ej_8un_tZz22_lh0I1IFD0a76ubiPV1XrMYsqbyfefxCpj')
+            ) {
+              parsed.apps_script_url = INITIAL_FINANCE_SHEET_CONFIG.apps_script_url;
+              localStorage.setItem('chromadiaries_sheet_config', JSON.stringify(parsed));
+            }
+            return parsed;
+          }
+        } catch {}
       }
     }
     return INITIAL_FINANCE_SHEET_CONFIG;
@@ -423,7 +435,10 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
       try {
         const { data: deptData, error: deptError } = await supabase.from('departments').select('*');
         if (!deptError && deptData && deptData.length > 0) {
-          setDepartments(deptData as Department[]);
+          const map = new Map<string, Department>();
+          INITIAL_DEPARTMENTS.forEach((d) => map.set(d.id, d));
+          (deptData as Department[]).forEach((d) => map.set(d.id, d));
+          setDepartments(Array.from(map.values()));
         }
 
         const { data: statusData, error: statusError } = await supabase.from('task_statuses').select('*');
@@ -472,6 +487,133 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
         if (!logsError && logsData) {
           setActivityLogs(logsData as TaskActivityLog[]);
         }
+
+        // Live Ledger Entries
+        const { data: ledgerData, error: ledgerError } = await supabase
+          .from('ledger_entries')
+          .select('*')
+          .order('serial_no', { ascending: true, nullsFirst: false });
+        if (!ledgerError && ledgerData && ledgerData.length > 0) {
+          setLedgerEntries(ledgerData as LedgerEntry[]);
+        }
+
+        // Live Student Donations
+        const { data: donData, error: donError } = await supabase
+          .from('student_donations')
+          .select('*')
+          .order('sheet_name', { ascending: true })
+          .order('serial_no', { ascending: true });
+        if (!donError && donData && donData.length > 0) {
+          setStudentDonations(donData as StudentDonation[]);
+        }
+
+        // Live Money Holdings
+        const { data: holdData, error: holdError } = await supabase
+          .from('money_holdings')
+          .select('*');
+        if (!holdError && holdData && holdData.length > 0) {
+          setMoneyHoldings(holdData as MoneyHolding[]);
+        }
+
+        // Live Workspace Todos
+        const { data: todoData, error: todoError } = await supabase
+          .from('workspace_todos')
+          .select('*')
+          .order('created_at', { ascending: false });
+        if (!todoError && todoData && todoData.length > 0) {
+          setTodos(todoData as WorkspaceTodo[]);
+        }
+
+        // Live Programme Categories
+        const { data: pcatData, error: pcatError } = await supabase
+          .from('programme_categories')
+          .select('*')
+          .order('display_order', { ascending: true });
+        if (!pcatError && pcatData && pcatData.length > 0) {
+          setProgrammeCategories(pcatData.map((c: any) => ({
+            id: c.id,
+            name: c.name,
+            color: c.color,
+            is_active: c.is_active,
+            order: c.display_order ?? c.order ?? 1,
+          })));
+        }
+
+        // Live Programme Statuses
+        const { data: pstatData, error: pstatError } = await supabase
+          .from('programme_statuses')
+          .select('*')
+          .order('display_order', { ascending: true });
+        if (!pstatError && pstatData && pstatData.length > 0) {
+          setProgrammeStatuses(pstatData.map((s: any) => ({
+            id: s.id,
+            name: s.name,
+            color: s.color,
+            counts_as_progress: s.counts_as_progress,
+            counts_as_completed: s.counts_as_completed,
+            is_active: s.is_active,
+            order: s.display_order ?? s.order ?? 1,
+          })));
+        }
+
+        // Live Programmes
+        const { data: prgData, error: prgError } = await supabase
+          .from('programmes')
+          .select('*')
+          .order('created_at', { ascending: false });
+        if (!prgError && prgData && prgData.length > 0) {
+          setProgrammes(prgData as Programme[]);
+        }
+
+        // Live Programme Tasks
+        const { data: ptskData, error: ptskError } = await supabase
+          .from('programme_tasks')
+          .select('*');
+        if (!ptskError && ptskData && ptskData.length > 0) {
+          setProgrammeTasks(ptskData as ProgrammeTask[]);
+        }
+
+        // Live Programme Notes
+        const { data: pnoteData, error: pnoteError } = await supabase
+          .from('programme_notes')
+          .select('*')
+          .order('created_at', { ascending: false });
+        if (!pnoteError && pnoteData && pnoteData.length > 0) {
+          setProgrammeNotes(pnoteData as ProgrammeNote[]);
+        }
+
+        // Live Programme Guests
+        const { data: pguestData, error: pguestError } = await supabase
+          .from('programme_guests')
+          .select('*');
+        if (!pguestError && pguestData && pguestData.length > 0) {
+          setProgrammeGuests(pguestData as ProgrammeGuest[]);
+        }
+
+        // Live Programme Candidates
+        const { data: pcandData, error: pcandError } = await supabase
+          .from('programme_candidates')
+          .select('*');
+        if (!pcandError && pcandData && pcandData.length > 0) {
+          setProgrammeCandidates(pcandData as ProgrammeCandidate[]);
+        }
+
+        // Live Programme Participants
+        const { data: ppartData, error: ppartError } = await supabase
+          .from('programme_participants')
+          .select('*');
+        if (!ppartError && ppartData && ppartData.length > 0) {
+          setProgrammeParticipants(ppartData as ProgrammeParticipant[]);
+        }
+
+        // Live Programme Activities
+        const { data: pactData, error: pactError } = await supabase
+          .from('programme_activities')
+          .select('*')
+          .order('created_at', { ascending: false });
+        if (!pactError && pactData && pactData.length > 0) {
+          setProgrammeActivities(pactData as ProgrammeActivity[]);
+        }
       } catch (err) {
         // Fall back gracefully to initialized state
         console.warn('Supabase fetch notice: using local state fallback.', err);
@@ -491,14 +633,38 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
   const getTasksForDepartment = (departmentId: string) =>
     tasks.filter((t) => t.department_id === departmentId);
 
+  const getDeptPrefix = (slug?: string) => {
+    switch (slug) {
+      case 'editing': return 'CD-W';
+      case 'media': return 'CD-M';
+      case 'video': return 'CD-V';
+      case 'outreach': return 'CD-O';
+      case 'programe': return 'CD-P';
+      case 'finance': return 'CD-F';
+      default: return 'CD-W';
+    }
+  };
+
   const createTask = async (data: Partial<Task> & { department_id: string; title: string }): Promise<Task> => {
     const dept = departments.find((d) => d.id === data.department_id);
-    const deptSlug = dept?.slug || 'editing';
-    const prefix = deptSlug === 'editing' ? 'CD-W' : deptSlug === 'media' ? 'CD-M' : deptSlug === 'video' ? 'CD-V' : 'CD-O';
+    const prefix = getDeptPrefix(dept?.slug);
 
-    // Auto generate ID (e.g. CD-W-001, CD-M-001, CD-V-001, CD-O-001)
-    const count = tasks.filter((t) => t.department_id === data.department_id).length + 1;
-    const auto_id = `${prefix}-${String(count).padStart(3, '0')}`;
+    // Auto generate ID reusing lowest unused sequence number (e.g. if CD-W-001 deleted, reuse CD-W-001 next time)
+    const existingSeqs = new Set<number>(
+      tasks
+        .filter((t) => t.department_id === data.department_id && !t.is_archived && t.auto_id)
+        .map((t) => {
+          const match = t.auto_id?.match(/-(\d+)$/);
+          return match ? parseInt(match[1], 10) : 0;
+        })
+        .filter((n) => n > 0)
+    );
+
+    let nextSeq = 1;
+    while (existingSeqs.has(nextSeq)) {
+      nextSeq++;
+    }
+    const auto_id = `${prefix}-${String(nextSeq).padStart(3, '0')}`;
 
     // Get default initial status if not supplied
     const deptStatuses = getStatusesForDepartment(data.department_id);
@@ -560,23 +726,33 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
     if (tasksData.length === 0) return [];
 
     const now = new Date().toISOString();
-    const deptCountMap: Record<string, number> = {};
+    const deptExistingSeqs: Record<string, Set<number>> = {};
     const createdTasks: Task[] = [];
     const createdLogs: TaskActivityLog[] = [];
 
     for (const data of tasksData) {
       const deptId = data.department_id;
-      if (deptCountMap[deptId] === undefined) {
-        const existingCount = tasks.filter((t) => t.department_id === deptId).length;
-        deptCountMap[deptId] = existingCount;
+      if (!deptExistingSeqs[deptId]) {
+        deptExistingSeqs[deptId] = new Set<number>(
+          tasks
+            .filter((t) => t.department_id === deptId && !t.is_archived && t.auto_id)
+            .map((t) => {
+              const match = t.auto_id?.match(/-(\d+)$/);
+              return match ? parseInt(match[1], 10) : 0;
+            })
+            .filter((n) => n > 0)
+        );
       }
-      deptCountMap[deptId] += 1;
-      const count = deptCountMap[deptId];
+
+      let nextSeq = 1;
+      while (deptExistingSeqs[deptId].has(nextSeq)) {
+        nextSeq++;
+      }
+      deptExistingSeqs[deptId].add(nextSeq);
 
       const dept = departments.find((d) => d.id === deptId);
-      const deptSlug = dept?.slug || 'editing';
-      const prefix = deptSlug === 'editing' ? 'CD-W' : deptSlug === 'media' ? 'CD-M' : deptSlug === 'video' ? 'CD-V' : 'CD-O';
-      const auto_id = `${prefix}-${String(count).padStart(3, '0')}`;
+      const prefix = getDeptPrefix(dept?.slug);
+      const auto_id = `${prefix}-${String(nextSeq).padStart(3, '0')}`;
 
       const deptStatuses = getStatusesForDepartment(deptId);
       const initialStatus = deptStatuses[0]?.id || '';
@@ -728,7 +904,29 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
   };
 
   const deleteTask = async (taskId: string): Promise<boolean> => {
-    return archiveTask(taskId);
+    // Remove from tasks state immediately so the auto_id number is freed up for next task
+    setTasks((prev) => {
+      const updated = prev.filter((t) => t.id !== taskId);
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('chromadiaries_tasks', JSON.stringify(updated));
+      }
+      return updated;
+    });
+
+    if (isSupabaseConfigured()) {
+      const supabase = createClient();
+      if (supabase) {
+        supabase.from('task_activity_logs').delete().eq('task_id', taskId).then(() => {
+          supabase.from('tasks').delete().eq('id', taskId).then(({ error }) => {
+            if (error) {
+              console.warn('Could not hard delete task in Supabase, falling back to archiving:', error);
+              supabase.from('tasks').update({ is_archived: true }).eq('id', taskId).then();
+            }
+          });
+        });
+      }
+    }
+    return true;
   };
 
   const toggleTaskPause = async (taskId: string): Promise<boolean> => {
@@ -1006,6 +1204,15 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
       return updated;
     });
 
+    if (isSupabaseConfigured()) {
+      const supabase = createClient();
+      if (supabase) {
+        supabase.from('ledger_entries').insert([newEntry]).then(({ error }) => {
+          if (error) console.error('Supabase addLedgerEntry error:', error);
+        });
+      }
+    }
+
     if (sheetConfig.apps_script_url) {
       fetch('/api/finance/sync-sheet', {
         method: 'POST',
@@ -1027,6 +1234,14 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
       }
       return updated;
     });
+    if (isSupabaseConfigured()) {
+      const supabase = createClient();
+      if (supabase) {
+        supabase.from('ledger_entries').update({ ...updates, updated_at: new Date().toISOString() }).eq('id', id).then(({ error }) => {
+          if (error) console.error('Supabase updateLedgerEntry error:', error);
+        });
+      }
+    }
     return true;
   };
 
@@ -1038,6 +1253,14 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
       }
       return updated;
     });
+    if (isSupabaseConfigured()) {
+      const supabase = createClient();
+      if (supabase) {
+        supabase.from('ledger_entries').delete().eq('id', id).then(({ error }) => {
+          if (error) console.error('Supabase deleteLedgerEntry error:', error);
+        });
+      }
+    }
     return true;
   };
 
@@ -1056,6 +1279,15 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
       }
       return updated;
     });
+
+    if (isSupabaseConfigured()) {
+      const supabase = createClient();
+      if (supabase) {
+        supabase.from('ledger_entries').insert(formatted).then(({ error }) => {
+          if (error) console.error('Supabase bulkImportLedger error:', error);
+        });
+      }
+    }
 
     return formatted.length;
   };
@@ -1076,6 +1308,15 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
       }
       return updated;
     });
+
+    if (isSupabaseConfigured()) {
+      const supabase = createClient();
+      if (supabase) {
+        supabase.from('student_donations').insert([newDonation]).then(({ error }) => {
+          if (error) console.error('Supabase addStudentDonation error:', error);
+        });
+      }
+    }
 
     if (sheetConfig.apps_script_url) {
       fetch('/api/finance/sync-sheet', {
@@ -1109,6 +1350,15 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
       return updated;
     });
 
+    if (isSupabaseConfigured()) {
+      const supabase = createClient();
+      if (supabase) {
+        supabase.from('student_donations').update({ ...updates, updated_at: new Date().toISOString() }).eq('id', id).then(({ error }) => {
+          if (error) console.error('Supabase updateStudentDonation error:', error);
+        });
+      }
+    }
+
     // Auto-push updated donation to Google Sheet
     if (targetDonation && sheetConfig.apps_script_url) {
       fetch('/api/finance/sync-sheet', {
@@ -1134,6 +1384,14 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
       }
       return updated;
     });
+    if (isSupabaseConfigured()) {
+      const supabase = createClient();
+      if (supabase) {
+        supabase.from('student_donations').delete().eq('id', id).then(({ error }) => {
+          if (error) console.error('Supabase deleteStudentDonation error:', error);
+        });
+      }
+    }
     return true;
   };
 
@@ -1148,6 +1406,14 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
       }
       return updated;
     });
+    if (isSupabaseConfigured()) {
+      const supabase = createClient();
+      if (supabase) {
+        supabase.from('money_holdings').update({ ...updates, updated_at: new Date().toISOString() }).eq('id', id).then(({ error }) => {
+          if (error) console.error('Supabase updateMoneyHolding error:', error);
+        });
+      }
+    }
     return true;
   };
 
@@ -1166,6 +1432,15 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
       return updated;
     });
 
+    if (isSupabaseConfigured()) {
+      const supabase = createClient();
+      if (supabase) {
+        supabase.from('money_holdings').insert([newHolding]).then(({ error }) => {
+          if (error) console.error('Supabase addMoneyHolding error:', error);
+        });
+      }
+    }
+
     return newHolding;
   };
 
@@ -1177,6 +1452,14 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
       }
       return updated;
     });
+    if (isSupabaseConfigured()) {
+      const supabase = createClient();
+      if (supabase) {
+        supabase.from('money_holdings').delete().eq('id', id).then(({ error }) => {
+          if (error) console.error('Supabase deleteMoneyHolding error:', error);
+        });
+      }
+    }
     return true;
   };
 
@@ -1277,6 +1560,18 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
           }
           return updated;
         });
+
+        if (isSupabaseConfigured()) {
+          const supabase = createClient();
+          if (supabase) {
+            supabase.from('student_donations').delete().eq('sheet_name', sheetName).then(() => {
+              supabase.from('student_donations').insert(data.students).then(({ error }) => {
+                if (error) console.error('Supabase student_donations sync error:', error);
+              });
+            });
+          }
+        }
+
         return { success: true, count: data.students.length };
       }
       return { success: false, count: 0, error: `No rows returned for ${sheetName}` };
@@ -1300,6 +1595,17 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
       }
       return updated;
     });
+
+    if (isSupabaseConfigured()) {
+      const supabase = createClient();
+      if (supabase) {
+        const { assignee: _a, creator: _c, ...dbPayload } = newTodo;
+        supabase.from('workspace_todos').insert([dbPayload]).then(({ error }) => {
+          if (error) console.error('Supabase addTodo error:', error);
+        });
+      }
+    }
+
     return newTodo;
   };
 
@@ -1311,6 +1617,17 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
       }
       return updated;
     });
+
+    if (isSupabaseConfigured()) {
+      const supabase = createClient();
+      if (supabase) {
+        const { assignee: _a, creator: _c, ...dbPayload } = updates as any;
+        supabase.from('workspace_todos').update({ ...dbPayload, updated_at: new Date().toISOString() }).eq('id', id).then(({ error }) => {
+          if (error) console.error('Supabase updateTodo error:', error);
+        });
+      }
+    }
+
     return true;
   };
 
@@ -1322,14 +1639,25 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
       }
       return updated;
     });
+
+    if (isSupabaseConfigured()) {
+      const supabase = createClient();
+      if (supabase) {
+        supabase.from('workspace_todos').delete().eq('id', id).then(({ error }) => {
+          if (error) console.error('Supabase deleteTodo error:', error);
+        });
+      }
+    }
+
     return true;
   };
 
   const toggleTodoStatus = async (id: string): Promise<boolean> => {
+    let nextStatus: 'pending' | 'completed' = 'completed';
     setTodos((prev) => {
       const updated: WorkspaceTodo[] = prev.map((t) => {
         if (t.id === id) {
-          const nextStatus: 'pending' | 'completed' = t.status === 'completed' ? 'pending' : 'completed';
+          nextStatus = t.status === 'completed' ? 'pending' : 'completed';
           return { ...t, status: nextStatus, updated_at: new Date().toISOString() };
         }
         return t;
@@ -1339,6 +1667,16 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
       }
       return updated;
     });
+
+    if (isSupabaseConfigured()) {
+      const supabase = createClient();
+      if (supabase) {
+        supabase.from('workspace_todos').update({ status: nextStatus, updated_at: new Date().toISOString() }).eq('id', id).then(({ error }) => {
+          if (error) console.error('Supabase toggleTodoStatus error:', error);
+        });
+      }
+    }
+
     return true;
   };
 
@@ -1374,6 +1712,16 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
       details: `Programme "${newProgramme.title}" (${newProgramme.unique_code}) was initiated.`,
     });
 
+    if (isSupabaseConfigured()) {
+      const supabase = createClient();
+      if (supabase) {
+        const { assignee: _a, creator: _c, ...dbPayload } = newProgramme;
+        supabase.from('programmes').insert([dbPayload]).then(({ error }) => {
+          if (error) console.error('Supabase addProgramme error:', error);
+        });
+      }
+    }
+
     return newProgramme;
   };
 
@@ -1395,6 +1743,16 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
       });
     }
 
+    if (isSupabaseConfigured()) {
+      const supabase = createClient();
+      if (supabase) {
+        const { assignee: _a, creator: _c, ...dbPayload } = updates as any;
+        supabase.from('programmes').update({ ...dbPayload, updated_at: new Date().toISOString() }).eq('id', id).then(({ error }) => {
+          if (error) console.error('Supabase updateProgramme error:', error);
+        });
+      }
+    }
+
     return true;
   };
 
@@ -1406,6 +1764,16 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
       }
       return updated;
     });
+
+    if (isSupabaseConfigured()) {
+      const supabase = createClient();
+      if (supabase) {
+        supabase.from('programmes').delete().eq('id', id).then(({ error }) => {
+          if (error) console.error('Supabase deleteProgramme error:', error);
+        });
+      }
+    }
+
     return true;
   };
 
@@ -1432,6 +1800,15 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
       details: newPaused ? 'Programme was placed on temporary hold.' : 'Programme was resumed.',
     });
 
+    if (isSupabaseConfigured()) {
+      const supabase = createClient();
+      if (supabase) {
+        supabase.from('programmes').update({ is_paused: newPaused, updated_at: new Date().toISOString() }).eq('id', id).then(({ error }) => {
+          if (error) console.error('Supabase toggleProgrammePause error:', error);
+        });
+      }
+    }
+
     return true;
   };
 
@@ -1454,6 +1831,17 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
       user_name: user?.full_name || 'Admin',
       details: `New task "${newTask.title}" added with ${newTask.priority} priority.`,
     });
+
+    if (isSupabaseConfigured()) {
+      const supabase = createClient();
+      if (supabase) {
+        const { assignee: _a, ...dbPayload } = newTask;
+        supabase.from('programme_tasks').insert([dbPayload]).then(({ error }) => {
+          if (error) console.error('Supabase addProgrammeTask error:', error);
+        });
+      }
+    }
+
     return newTask;
   };
 
@@ -1465,6 +1853,17 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
       }
       return updated;
     });
+
+    if (isSupabaseConfigured()) {
+      const supabase = createClient();
+      if (supabase) {
+        const { assignee: _a, ...dbPayload } = updates as any;
+        supabase.from('programme_tasks').update({ ...dbPayload, updated_at: new Date().toISOString() }).eq('id', id).then(({ error }) => {
+          if (error) console.error('Supabase updateProgrammeTask error:', error);
+        });
+      }
+    }
+
     return true;
   };
 
@@ -1476,6 +1875,16 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
       }
       return updated;
     });
+
+    if (isSupabaseConfigured()) {
+      const supabase = createClient();
+      if (supabase) {
+        supabase.from('programme_tasks').delete().eq('id', id).then(({ error }) => {
+          if (error) console.error('Supabase deleteProgrammeTask error:', error);
+        });
+      }
+    }
+
     return true;
   };
 
@@ -1504,6 +1913,16 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
         details: `Task status changed to ${newStatus}.`,
       });
     }
+
+    if (isSupabaseConfigured()) {
+      const supabase = createClient();
+      if (supabase) {
+        supabase.from('programme_tasks').update({ status: newStatus, updated_at: new Date().toISOString() }).eq('id', id).then(({ error }) => {
+          if (error) console.error('Supabase toggleProgrammeTaskStatus error:', error);
+        });
+      }
+    }
+
     return true;
   };
 
@@ -1527,6 +1946,16 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
       user_name: user?.full_name || 'Admin',
       details: `Created document "${newNote.title}".`,
     });
+
+    if (isSupabaseConfigured()) {
+      const supabase = createClient();
+      if (supabase) {
+        supabase.from('programme_notes').insert([newNote]).then(({ error }) => {
+          if (error) console.error('Supabase addProgrammeNote error:', error);
+        });
+      }
+    }
+
     return newNote;
   };
 
@@ -1538,6 +1967,16 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
       }
       return updated;
     });
+
+    if (isSupabaseConfigured()) {
+      const supabase = createClient();
+      if (supabase) {
+        supabase.from('programme_notes').update({ ...updates, updated_at: new Date().toISOString() }).eq('id', id).then(({ error }) => {
+          if (error) console.error('Supabase updateProgrammeNote error:', error);
+        });
+      }
+    }
+
     return true;
   };
 
@@ -1549,6 +1988,16 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
       }
       return updated;
     });
+
+    if (isSupabaseConfigured()) {
+      const supabase = createClient();
+      if (supabase) {
+        supabase.from('programme_notes').delete().eq('id', id).then(({ error }) => {
+          if (error) console.error('Supabase deleteProgrammeNote error:', error);
+        });
+      }
+    }
+
     return true;
   };
 
@@ -1572,6 +2021,16 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
       user_name: user?.full_name || 'Admin',
       details: `Added ${newGuest.full_name} (${newGuest.category || 'Guest'}).`,
     });
+
+    if (isSupabaseConfigured()) {
+      const supabase = createClient();
+      if (supabase) {
+        supabase.from('programme_guests').insert([newGuest]).then(({ error }) => {
+          if (error) console.error('Supabase addProgrammeGuest error:', error);
+        });
+      }
+    }
+
     return newGuest;
   };
 
@@ -1583,6 +2042,16 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
       }
       return updated;
     });
+
+    if (isSupabaseConfigured()) {
+      const supabase = createClient();
+      if (supabase) {
+        supabase.from('programme_guests').update({ ...updates, updated_at: new Date().toISOString() }).eq('id', id).then(({ error }) => {
+          if (error) console.error('Supabase updateProgrammeGuest error:', error);
+        });
+      }
+    }
+
     return true;
   };
 
@@ -1594,6 +2063,16 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
       }
       return updated;
     });
+
+    if (isSupabaseConfigured()) {
+      const supabase = createClient();
+      if (supabase) {
+        supabase.from('programme_guests').delete().eq('id', id).then(({ error }) => {
+          if (error) console.error('Supabase deleteProgrammeGuest error:', error);
+        });
+      }
+    }
+
     return true;
   };
 
@@ -1617,6 +2096,16 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
       user_name: user?.full_name || 'Admin',
       details: `Added candidate "${newCandidate.full_name}".`,
     });
+
+    if (isSupabaseConfigured()) {
+      const supabase = createClient();
+      if (supabase) {
+        supabase.from('programme_candidates').insert([newCandidate]).then(({ error }) => {
+          if (error) console.error('Supabase addProgrammeCandidate error:', error);
+        });
+      }
+    }
+
     return newCandidate;
   };
 
@@ -1628,6 +2117,16 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
       }
       return updated;
     });
+
+    if (isSupabaseConfigured()) {
+      const supabase = createClient();
+      if (supabase) {
+        supabase.from('programme_candidates').update({ ...updates, updated_at: new Date().toISOString() }).eq('id', id).then(({ error }) => {
+          if (error) console.error('Supabase updateProgrammeCandidate error:', error);
+        });
+      }
+    }
+
     return true;
   };
 
@@ -1639,6 +2138,16 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
       }
       return updated;
     });
+
+    if (isSupabaseConfigured()) {
+      const supabase = createClient();
+      if (supabase) {
+        supabase.from('programme_candidates').delete().eq('id', id).then(({ error }) => {
+          if (error) console.error('Supabase deleteProgrammeCandidate error:', error);
+        });
+      }
+    }
+
     return true;
   };
 
@@ -1662,6 +2171,16 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
       user_name: user?.full_name || 'Admin',
       details: `Registered participant "${newParticipant.full_name}".`,
     });
+
+    if (isSupabaseConfigured()) {
+      const supabase = createClient();
+      if (supabase) {
+        supabase.from('programme_participants').insert([newParticipant]).then(({ error }) => {
+          if (error) console.error('Supabase addProgrammeParticipant error:', error);
+        });
+      }
+    }
+
     return newParticipant;
   };
 
@@ -1673,6 +2192,16 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
       }
       return updated;
     });
+
+    if (isSupabaseConfigured()) {
+      const supabase = createClient();
+      if (supabase) {
+        supabase.from('programme_participants').update({ ...updates, updated_at: new Date().toISOString() }).eq('id', id).then(({ error }) => {
+          if (error) console.error('Supabase updateProgrammeParticipant error:', error);
+        });
+      }
+    }
+
     return true;
   };
 
@@ -1684,6 +2213,16 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
       }
       return updated;
     });
+
+    if (isSupabaseConfigured()) {
+      const supabase = createClient();
+      if (supabase) {
+        supabase.from('programme_participants').delete().eq('id', id).then(({ error }) => {
+          if (error) console.error('Supabase deleteProgrammeParticipant error:', error);
+        });
+      }
+    }
+
     return true;
   };
 
@@ -1700,6 +2239,16 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
       }
       return updated;
     });
+
+    if (isSupabaseConfigured()) {
+      const supabase = createClient();
+      if (supabase) {
+        supabase.from('programme_activities').insert([newActivity]).then(({ error }) => {
+          if (error) console.error('Supabase addProgrammeActivity error:', error);
+        });
+      }
+    }
+
     return newActivity;
   };
 
@@ -1710,6 +2259,36 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
       localStorage.setItem('chromadiaries_programme_categories', JSON.stringify(categories));
       localStorage.setItem('chromadiaries_programme_statuses', JSON.stringify(statuses));
     }
+
+    if (isSupabaseConfigured()) {
+      const supabase = createClient();
+      if (supabase) {
+        const catRows = categories.map((c) => ({
+          id: c.id,
+          name: c.name,
+          color: c.color,
+          is_active: c.is_active,
+          display_order: c.order,
+        }));
+        supabase.from('programme_categories').upsert(catRows).then(({ error }) => {
+          if (error) console.error('Supabase programme_categories error:', error);
+        });
+
+        const statRows = statuses.map((s) => ({
+          id: s.id,
+          name: s.name,
+          color: s.color,
+          counts_as_progress: s.counts_as_progress,
+          counts_as_completed: s.counts_as_completed,
+          is_active: s.is_active,
+          display_order: s.order,
+        }));
+        supabase.from('programme_statuses').upsert(statRows).then(({ error }) => {
+          if (error) console.error('Supabase programme_statuses error:', error);
+        });
+      }
+    }
+
     return true;
   };
 

@@ -19,6 +19,12 @@ import {
   X,
   Printer,
   Download,
+  Sparkles,
+  FolderKanban,
+  ArrowUp,
+  ArrowDown,
+  ToggleLeft,
+  ToggleRight,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { exportAuditLogsToExcel, exportAuditLogsToPdf } from '@/lib/services/export-service';
@@ -39,13 +45,89 @@ export default function SystemControlPage() {
     getCategoriesForDepartment,
     addCategoryToDepartment,
     removeCategoryFromDepartment,
+    programmeCategories,
+    programmeStatuses,
+    updateProgrammeControlSettings,
   } = useData();
 
   const [selectedDeptId, setSelectedDeptId] = useState<string>(departments[0]?.id || '');
-  const [activeTab, setActiveTab] = useState<'statuses' | 'targets' | 'categories' | 'audit'>('statuses');
+  const [activeTab, setActiveTab] = useState<'statuses' | 'targets' | 'categories' | 'audit' | 'programme'>('categories');
   const [newCategoryName, setNewCategoryName] = useState('');
   const [categorySuccess, setCategorySuccess] = useState<string | null>(null);
   const [catToDelete, setCatToDelete] = useState<{ deptSlug: string; deptName: string; category: string } | null>(null);
+
+  // Programme Control Settings state
+  const [prgCats, setPrgCats] = useState(programmeCategories);
+  const [prgStats, setPrgStats] = useState(programmeStatuses);
+  const [newCatName, setNewCatName] = useState('');
+  const [newCatColor, setNewCatColor] = useState('#3b82f6');
+  const [newStatName, setNewStatName] = useState('');
+  const [newStatColor, setNewStatColor] = useState('#6366f1');
+  const [newStatProgress, setNewStatProgress] = useState(true);
+  const [newStatCompleted, setNewStatCompleted] = useState(false);
+  const [prgNotice, setPrgNotice] = useState<string | null>(null);
+
+  React.useEffect(() => {
+    setPrgCats(programmeCategories);
+  }, [programmeCategories]);
+
+  React.useEffect(() => {
+    setPrgStats(programmeStatuses);
+  }, [programmeStatuses]);
+
+  const handleAddPrgCategory = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newCatName.trim()) return;
+    const newCat = {
+      id: `pcat-${Date.now()}`,
+      name: newCatName.trim(),
+      color: newCatColor,
+      is_active: true,
+      order: prgCats.length + 1,
+    };
+    setPrgCats([...prgCats, newCat]);
+    setNewCatName('');
+  };
+
+  const handleAddPrgStatus = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newStatName.trim()) return;
+    const newStat = {
+      id: `pstat-${Date.now()}`,
+      name: newStatName.trim(),
+      color: newStatColor,
+      counts_as_progress: newStatProgress,
+      counts_as_completed: newStatCompleted,
+      is_active: true,
+      order: prgStats.length + 1,
+    };
+    setPrgStats([...prgStats, newStat]);
+    setNewStatName('');
+  };
+
+  const moveCat = (index: number, direction: 'up' | 'down') => {
+    const targetIdx = direction === 'up' ? index - 1 : index + 1;
+    if (targetIdx < 0 || targetIdx >= prgCats.length) return;
+    const list = [...prgCats];
+    const [moved] = list.splice(index, 1);
+    list.splice(targetIdx, 0, moved);
+    setPrgCats(list.map((c, i) => ({ ...c, order: i + 1 })));
+  };
+
+  const moveStat = (index: number, direction: 'up' | 'down') => {
+    const targetIdx = direction === 'up' ? index - 1 : index + 1;
+    if (targetIdx < 0 || targetIdx >= prgStats.length) return;
+    const list = [...prgStats];
+    const [moved] = list.splice(index, 1);
+    list.splice(targetIdx, 0, moved);
+    setPrgStats(list.map((s, i) => ({ ...s, order: i + 1 })));
+  };
+
+  const handleSavePrgSettings = async () => {
+    await updateProgrammeControlSettings(prgCats, prgStats);
+    setPrgNotice('Programme categories and workflow statuses updated and saved to database successfully!');
+    setTimeout(() => setPrgNotice(null), 3500);
+  };
 
   // New status form state
   const [newStatusName, setNewStatusName] = useState('');
@@ -156,6 +238,16 @@ export default function SystemControlPage() {
           )}
         >
           Weekly Workload Targets
+        </button>
+        <button
+          onClick={() => setActiveTab('programme')}
+          className={cn(
+            'px-3.5 py-2 rounded-xl transition-all cursor-pointer flex items-center gap-1.5',
+            activeTab === 'programme' ? 'bg-primary text-primary-foreground shadow-xs' : 'text-muted-foreground hover:text-foreground'
+          )}
+        >
+          <Sparkles className="h-3.5 w-3.5" />
+          <span>Programme Control Settings</span>
         </button>
         <button
           onClick={() => setActiveTab('audit')}
@@ -292,9 +384,11 @@ export default function SystemControlPage() {
                         onChange={(e) => setNewCategoryName(e.target.value)}
                         placeholder={
                           activeDept.slug === 'editing' ? 'e.g. Essay, Article, Poem...' :
-                          activeDept.slug === 'media' ? 'e.g. Promotion Poster...' :
+                          activeDept.slug === 'media' ? 'e.g. Promotion Poster, Writings Poster...' :
                           activeDept.slug === 'video' ? 'e.g. Talk Video, AI Video...' :
-                          'e.g. DH Insitution, CIC...'
+                          activeDept.slug === 'outreach' ? 'e.g. DH Insitution, CIC Institutuin...' :
+                          activeDept.slug === 'programe' ? 'e.g. Promotion Programe, English Programe...' :
+                          'e.g. Ledger Entry, Student Donation, Hospitality...'
                         }
                         className="w-full bg-background border border-border rounded-xl px-3 py-2 text-foreground focus:outline-none focus:ring-1 focus:ring-primary text-xs"
                       />
@@ -345,9 +439,9 @@ export default function SystemControlPage() {
       {activeTab === 'statuses' && (
         <div className="space-y-6">
           {/* Department Selector */}
-          <div className="flex items-center gap-3">
-            <label className="text-xs font-bold text-foreground">Select Department:</label>
-            <div className="flex items-center gap-2">
+          <div className="flex flex-col sm:flex-row sm:items-center gap-3">
+            <label className="text-xs font-bold text-foreground shrink-0">Select Department:</label>
+            <div className="flex items-center gap-2 flex-wrap">
               {departments.map((dept) => (
                 <button
                   key={dept.id}
@@ -571,6 +665,276 @@ export default function SystemControlPage() {
               <Save className="h-4 w-4" />
               <span>Save Target Changes</span>
             </button>
+          </div>
+        </div>
+      )}
+
+      {/* Tab: Programme Control Settings */}
+      {activeTab === 'programme' && (
+        <div className="space-y-6">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-card border border-border p-5 rounded-2xl">
+            <div>
+              <div className="flex items-center gap-2 text-xs text-primary font-bold">
+                <Sparkles className="h-4 w-4" />
+                <span>Centralized Programme Architecture</span>
+              </div>
+              <h2 className="text-base font-extrabold text-foreground mt-0.5">
+                Programme Categories & Workflow Status Governance
+              </h2>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                Add, reorder, and toggle programme categories and statuses. Deactivating preserves historical logs and assignments.
+              </p>
+            </div>
+            <button
+              onClick={handleSavePrgSettings}
+              className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-primary text-primary-foreground font-semibold text-xs hover:bg-primary/90 transition-all shadow-sm cursor-pointer shrink-0"
+            >
+              <Save className="h-4 w-4" />
+              <span>Save Programme Settings</span>
+            </button>
+          </div>
+
+          {prgNotice && (
+            <div className="p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-500 text-xs flex items-center gap-2">
+              <CheckCircle2 className="h-4 w-4 shrink-0" />
+              <span>{prgNotice}</span>
+            </div>
+          )}
+
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {/* Programme Categories Column */}
+            <div className="bg-card border border-border rounded-2xl p-6 space-y-5">
+              <div className="flex items-center justify-between pb-3 border-b border-border">
+                <div>
+                  <h3 className="font-bold text-sm text-foreground flex items-center gap-2">
+                    <FolderKanban className="h-4 w-4 text-primary" />
+                    <span>Programme Categories</span>
+                  </h3>
+                  <span className="text-[11px] text-muted-foreground">
+                    Categories shown in programme creation and filter tabs ({prgCats.length})
+                  </span>
+                </div>
+              </div>
+
+              {/* Existing Categories List */}
+              <div className="space-y-2">
+                {prgCats.map((cat, idx) => (
+                  <div
+                    key={cat.id}
+                    className="p-3 rounded-xl border border-border/80 bg-background/50 flex items-center justify-between gap-3 text-xs"
+                  >
+                    <div className="flex items-center gap-2.5 min-w-0">
+                      <span
+                        className="w-3.5 h-3.5 rounded-full shrink-0 border border-border shadow-xs"
+                        style={{ backgroundColor: cat.color }}
+                      />
+                      <span className="font-semibold text-foreground truncate">{cat.name}</span>
+                      <span
+                        className={cn(
+                          'text-[10px] font-mono px-2 py-0.5 rounded-full uppercase font-bold shrink-0',
+                          cat.is_active ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400' : 'bg-muted text-muted-foreground'
+                        )}
+                      >
+                        {cat.is_active ? 'Active' : 'Inactive'}
+                      </span>
+                    </div>
+
+                    <div className="flex items-center gap-1 shrink-0">
+                      <button
+                        type="button"
+                        onClick={() => moveCat(idx, 'up')}
+                        disabled={idx === 0}
+                        title="Move Up"
+                        className="p-1 rounded-md text-muted-foreground hover:text-foreground disabled:opacity-20 cursor-pointer"
+                      >
+                        <ArrowUp className="h-3.5 w-3.5" />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => moveCat(idx, 'down')}
+                        disabled={idx === prgCats.length - 1}
+                        title="Move Down"
+                        className="p-1 rounded-md text-muted-foreground hover:text-foreground disabled:opacity-20 cursor-pointer"
+                      >
+                        <ArrowDown className="h-3.5 w-3.5" />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const updated = prgCats.map((c, i) => (i === idx ? { ...c, is_active: !c.is_active } : c));
+                          setPrgCats(updated);
+                        }}
+                        className="p-1 rounded-md text-muted-foreground hover:text-foreground cursor-pointer"
+                        title={cat.is_active ? 'Deactivate' : 'Activate'}
+                      >
+                        {cat.is_active ? <ToggleRight className="h-4 w-4 text-emerald-500" /> : <ToggleLeft className="h-4 w-4" />}
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {/* Add New Category */}
+              <form onSubmit={handleAddPrgCategory} className="pt-3 border-t border-border space-y-3 text-xs">
+                <span className="font-bold text-foreground block">Add New Programme Category</span>
+                <div className="grid grid-cols-1 sm:grid-cols-4 gap-2">
+                  <input
+                    type="text"
+                    required
+                    value={newCatName}
+                    onChange={(e) => setNewCatName(e.target.value)}
+                    placeholder="e.g. Literary Conclave"
+                    className="sm:col-span-3 bg-background border border-border rounded-xl px-3 py-2 text-foreground focus:outline-none focus:ring-1 focus:ring-primary text-xs"
+                  />
+                  <input
+                    type="color"
+                    value={newCatColor}
+                    onChange={(e) => setNewCatColor(e.target.value)}
+                    className="w-full h-9 rounded-xl bg-background border border-border cursor-pointer p-1"
+                    title="Choose Category Color"
+                  />
+                </div>
+                <button
+                  type="submit"
+                  className="w-full py-2 rounded-xl bg-muted hover:bg-muted/80 text-foreground font-semibold flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
+                >
+                  <Plus className="h-3.5 w-3.5" />
+                  <span>Add Category to Scheme</span>
+                </button>
+              </form>
+            </div>
+
+            {/* Programme Statuses Column */}
+            <div className="bg-card border border-border rounded-2xl p-6 space-y-5">
+              <div className="flex items-center justify-between pb-3 border-b border-border">
+                <div>
+                  <h3 className="font-bold text-sm text-foreground flex items-center gap-2">
+                    <History className="h-4 w-4 text-primary" />
+                    <span>Programme Workflow Statuses</span>
+                  </h3>
+                  <span className="text-[11px] text-muted-foreground">
+                    Execution stages & progress weightings ({prgStats.length})
+                  </span>
+                </div>
+              </div>
+
+              {/* Existing Statuses List */}
+              <div className="space-y-2">
+                {prgStats.map((stat, idx) => (
+                  <div
+                    key={stat.id}
+                    className="p-3 rounded-xl border border-border/80 bg-background/50 flex items-center justify-between gap-3 text-xs"
+                  >
+                    <div className="flex items-center gap-2.5 min-w-0 flex-wrap">
+                      <span
+                        className="w-3.5 h-3.5 rounded-full shrink-0 border border-border shadow-xs"
+                        style={{ backgroundColor: stat.color }}
+                      />
+                      <span className="font-semibold text-foreground truncate">{stat.name}</span>
+                      {stat.counts_as_progress && (
+                        <span className="text-[9px] font-mono px-1.5 py-0.5 rounded bg-blue-500/10 text-blue-600 dark:text-blue-400">
+                          Progress
+                        </span>
+                      )}
+                      {stat.counts_as_completed && (
+                        <span className="text-[9px] font-mono px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
+                          Done
+                        </span>
+                      )}
+                      <span
+                        className={cn(
+                          'text-[10px] font-mono px-2 py-0.5 rounded-full uppercase font-bold shrink-0',
+                          stat.is_active ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400' : 'bg-muted text-muted-foreground'
+                        )}
+                      >
+                        {stat.is_active ? 'Active' : 'Inactive'}
+                      </span>
+                    </div>
+
+                    <div className="flex items-center gap-1 shrink-0">
+                      <button
+                        type="button"
+                        onClick={() => moveStat(idx, 'up')}
+                        disabled={idx === 0}
+                        title="Move Up"
+                        className="p-1 rounded-md text-muted-foreground hover:text-foreground disabled:opacity-20 cursor-pointer"
+                      >
+                        <ArrowUp className="h-3.5 w-3.5" />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => moveStat(idx, 'down')}
+                        disabled={idx === prgStats.length - 1}
+                        title="Move Down"
+                        className="p-1 rounded-md text-muted-foreground hover:text-foreground disabled:opacity-20 cursor-pointer"
+                      >
+                        <ArrowDown className="h-3.5 w-3.5" />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const updated = prgStats.map((s, i) => (i === idx ? { ...s, is_active: !s.is_active } : s));
+                          setPrgStats(updated);
+                        }}
+                        className="p-1 rounded-md text-muted-foreground hover:text-foreground cursor-pointer"
+                        title={stat.is_active ? 'Deactivate' : 'Activate'}
+                      >
+                        {stat.is_active ? <ToggleRight className="h-4 w-4 text-emerald-500" /> : <ToggleLeft className="h-4 w-4" />}
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {/* Add New Status */}
+              <form onSubmit={handleAddPrgStatus} className="pt-3 border-t border-border space-y-3 text-xs">
+                <span className="font-bold text-foreground block">Add New Programme Workflow Status</span>
+                <div className="grid grid-cols-1 sm:grid-cols-4 gap-2">
+                  <input
+                    type="text"
+                    required
+                    value={newStatName}
+                    onChange={(e) => setNewStatName(e.target.value)}
+                    placeholder="e.g. In Review"
+                    className="sm:col-span-3 bg-background border border-border rounded-xl px-3 py-2 text-foreground focus:outline-none focus:ring-1 focus:ring-primary text-xs"
+                  />
+                  <input
+                    type="color"
+                    value={newStatColor}
+                    onChange={(e) => setNewStatColor(e.target.value)}
+                    className="w-full h-9 rounded-xl bg-background border border-border cursor-pointer p-1"
+                    title="Choose Status Color"
+                  />
+                </div>
+                <div className="flex items-center gap-4 text-xs">
+                  <label className="flex items-center gap-1.5 cursor-pointer text-muted-foreground">
+                    <input
+                      type="checkbox"
+                      checked={newStatProgress}
+                      onChange={(e) => setNewStatProgress(e.target.checked)}
+                      className="rounded border-border text-primary focus:ring-primary"
+                    />
+                    <span>Counts as Progress</span>
+                  </label>
+                  <label className="flex items-center gap-1.5 cursor-pointer text-muted-foreground">
+                    <input
+                      type="checkbox"
+                      checked={newStatCompleted}
+                      onChange={(e) => setNewStatCompleted(e.target.checked)}
+                      className="rounded border-border text-primary focus:ring-primary"
+                    />
+                    <span>Counts as Completed</span>
+                  </label>
+                </div>
+                <button
+                  type="submit"
+                  className="w-full py-2 rounded-xl bg-muted hover:bg-muted/80 text-foreground font-semibold flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
+                >
+                  <Plus className="h-3.5 w-3.5" />
+                  <span>Add Status to Scheme</span>
+                </button>
+              </form>
+            </div>
           </div>
         </div>
       )}

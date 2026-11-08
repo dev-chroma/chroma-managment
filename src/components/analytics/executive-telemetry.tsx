@@ -23,6 +23,7 @@ import {
   FileText,
   Clock,
   Flame,
+  Coins,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import Link from 'next/link';
@@ -45,7 +46,7 @@ export function ExecutiveTelemetry({
   weeklyTargets = {},
   compact = false,
 }: ExecutiveTelemetryProps) {
-  const [roleListTab, setRoleListTab] = useState<'editors' | 'designers' | 'video' | 'outreach'>('editors');
+  const [roleListTab, setRoleListTab] = useState<'editors' | 'designers' | 'video' | 'outreach' | 'programe' | 'finance'>('editors');
 
   const activeTasks = tasks.filter((t) => !t.is_archived);
 
@@ -552,6 +553,26 @@ export function ExecutiveTelemetry({
               <Send className="h-3.5 w-3.5" />
               <span>Outreach</span>
             </button>
+            <button
+              onClick={() => setRoleListTab('programe')}
+              className={cn(
+                'px-3 py-1.5 rounded-lg transition-all cursor-pointer flex items-center gap-1.5',
+                roleListTab === 'programe' ? 'bg-primary text-primary-foreground shadow-xs' : 'text-muted-foreground hover:text-foreground'
+              )}
+            >
+              <Sparkles className="h-3.5 w-3.5" />
+              <span>Programme</span>
+            </button>
+            <button
+              onClick={() => setRoleListTab('finance')}
+              className={cn(
+                'px-3 py-1.5 rounded-lg transition-all cursor-pointer flex items-center gap-1.5',
+                roleListTab === 'finance' ? 'bg-primary text-primary-foreground shadow-xs' : 'text-muted-foreground hover:text-foreground'
+              )}
+            >
+              <Coins className="h-3.5 w-3.5" />
+              <span>Finance</span>
+            </button>
           </div>
         </div>
 
@@ -559,13 +580,18 @@ export function ExecutiveTelemetry({
         {(() => {
           const targetSlug = roleListTab === 'editors' ? 'editing' :
                              roleListTab === 'designers' ? 'media' :
-                             roleListTab === 'video' ? 'video' : 'outreach';
+                             roleListTab === 'video' ? 'video' :
+                             roleListTab === 'outreach' ? 'outreach' :
+                             roleListTab === 'programe' ? 'programe' : 'finance';
 
           const targetDept = departments.find((d) => d.slug === targetSlug);
-          const deptMembers = members.filter(
-            (m) => (m.system_role === 'member' || m.system_role === 'general_member') &&
-                   (m.department_id === targetDept?.id || m.system_role === 'general_member')
-          );
+          const deptMembers = members.filter((m) => {
+            if (targetSlug === 'finance') {
+              return m.department_id === targetDept?.id && m.system_role === 'admin';
+            }
+            return (m.system_role === 'member' || m.system_role === 'admin' || m.system_role === 'general_member') &&
+                   (m.department_id === targetDept?.id || m.system_role === 'general_member');
+          });
 
           return (
             <div className="overflow-x-auto">

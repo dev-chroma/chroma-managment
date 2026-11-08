@@ -681,29 +681,24 @@ export default function TeamMembersPage() {
                       const isPrograme = selDept?.slug === 'programe' || selDept?.name.toLowerCase().includes('programe');
                       if (isFinance) {
                         return (
-                          <div>
-                            <select
-                              value="admin"
-                              disabled
-                              className="w-full bg-muted border border-border rounded-xl px-3 py-2 text-foreground cursor-not-allowed font-medium"
-                            >
-                              <option value="admin">Finance Admin (Admin Only)</option>
-                            </select>
-                            <span className="text-[10px] text-amber-600 dark:text-amber-400 mt-1 block">
-                              Finance is strictly Admin only.
-                            </span>
-                          </div>
+                          <select
+                            value="admin"
+                            disabled
+                            className="w-full bg-muted border border-border rounded-xl px-3 py-2 text-foreground font-semibold cursor-not-allowed"
+                          >
+                            <option value="admin">Finance Department Admin (Admin Only)</option>
+                          </select>
                         );
                       }
                       if (isPrograme) {
                         return (
                           <select
-                            value={editRole === 'owner' || editRole === 'general_member' ? 'member' : editRole}
+                            value={editRole === 'admin' ? 'admin' : 'member'}
                             onChange={(e) => setEditRole(e.target.value as SystemRole)}
                             className="w-full bg-background border border-border rounded-xl px-3 py-2 text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
                           >
-                            <option value="member">Programe Team Member</option>
-                            <option value="admin">Programe Department Admin</option>
+                            <option value="member">Programme Team Member</option>
+                            <option value="admin">Programme Department Admin</option>
                           </select>
                         );
                       }
@@ -739,9 +734,9 @@ export default function TeamMembersPage() {
                         const newDeptId = e.target.value;
                         setEditDepartmentId(newDeptId);
                         const selDept = departments.find((d) => d.id === newDeptId);
-                        if (selDept?.slug === 'finance' || selDept?.name.toLowerCase().includes('finance')) {
+                        if (selDept?.slug === 'finance') {
                           setEditRole('admin');
-                        } else if (selDept?.slug === 'programe' || selDept?.name.toLowerCase().includes('programe')) {
+                        } else if (selDept?.slug === 'programe') {
                           if (editRole !== 'admin') setEditRole('member');
                         }
                       }}
@@ -891,29 +886,24 @@ export default function TeamMembersPage() {
                       const isPrograme = selDept?.slug === 'programe' || selDept?.name.toLowerCase().includes('programe');
                       if (isFinance) {
                         return (
-                          <div>
-                            <select
-                              value="admin"
-                              disabled
-                              className="w-full bg-muted border border-border rounded-xl px-3 py-2 text-foreground cursor-not-allowed font-medium"
-                            >
-                              <option value="admin">Finance Admin (Admin Only)</option>
-                            </select>
-                            <span className="text-[10px] text-amber-600 dark:text-amber-400 mt-1 block">
-                              Finance department is strictly Admin only.
-                            </span>
-                          </div>
+                          <select
+                            value="admin"
+                            disabled
+                            className="w-full bg-muted border border-border rounded-xl px-3 py-2 text-foreground font-semibold cursor-not-allowed"
+                          >
+                            <option value="admin">Finance Department Admin (Admin Only)</option>
+                          </select>
                         );
                       }
                       if (isPrograme) {
                         return (
                           <select
-                            value={newRole === 'owner' || newRole === 'general_member' ? 'member' : newRole}
+                            value={newRole === 'admin' ? 'admin' : 'member'}
                             onChange={(e) => setNewRole(e.target.value as SystemRole)}
                             className="w-full bg-background border border-border rounded-xl px-3 py-2 text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
                           >
-                            <option value="member">Programe Team Member</option>
-                            <option value="admin">Programe Department Admin</option>
+                            <option value="member">Programme Team Member</option>
+                            <option value="admin">Programme Department Admin</option>
                           </select>
                         );
                       }
@@ -949,9 +939,9 @@ export default function TeamMembersPage() {
                         const newDeptId = e.target.value;
                         setDepartmentId(newDeptId);
                         const selDept = departments.find((d) => d.id === newDeptId);
-                        if (selDept?.slug === 'finance' || selDept?.name.toLowerCase().includes('finance')) {
+                        if (selDept?.slug === 'finance') {
                           setNewRole('admin');
-                        } else if (selDept?.slug === 'programe' || selDept?.name.toLowerCase().includes('programe')) {
+                        } else if (selDept?.slug === 'programe') {
                           if (newRole !== 'admin') setNewRole('member');
                         }
                       }}

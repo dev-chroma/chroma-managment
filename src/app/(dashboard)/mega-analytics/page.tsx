@@ -71,13 +71,18 @@ export default function MegaAnalyticsPage() {
     ? departments 
     : departments.filter((d) => d.id === selectedDeptId);
 
-  // Strictly filter out Admin and Owner: only actual members and general_members have performance/workload calculated
+  // Include members, general_members, and department administrators (e.g. Finance Admin, Programme Coordinator)
   const qualifyingMembers = allProfiles.filter(
-    (m) => m.system_role === 'member' || m.system_role === 'general_member'
+    (m) => m.system_role === 'member' || m.system_role === 'general_member' || m.system_role === 'admin'
   );
 
+  const displayedMembers = qualifyingMembers.filter((m) => {
+    if (selectedDeptId === 'all') return true;
+    return m.department_id === selectedDeptId || m.system_role === 'general_member';
+  });
+
   // Compute Carry-forward calculation results for qualifying members only
-  const memberWorkloadResults = qualifyingMembers.map((member) => {
+  const memberWorkloadResults = displayedMembers.map((member) => {
     // Find member's primary department (or infer from assignments)
     const memberTasks = tasks.filter((t) => t.assigned_to === member.id && !t.is_archived);
     const primaryDeptId = memberTasks[0]?.department_id || departments[0]?.id;
@@ -299,7 +304,7 @@ export default function MegaAnalyticsPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-border/60">
-                {qualifyingMembers.map((member) => {
+                {displayedMembers.map((member) => {
                   const mTasks = tasks.filter((t) => (t.assigned_to === member.id || t.assigned_to === member.username) && !t.is_archived);
                   const dept = departments.find((d) => d.id === member.department_id) || departments[0];
                   let onTime = 0;
@@ -594,7 +599,7 @@ export default function MegaAnalyticsPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-border/60">
-                {qualifyingMembers.map((member) => {
+                {displayedMembers.map((member) => {
                   const mTasks = tasks.filter((t) => (t.assigned_to === member.id || t.assigned_to === member.username) && !t.is_archived);
                   const dept = departments.find((d) => d.id === member.department_id) || departments[0];
                   let onTime = 0;

@@ -380,29 +380,71 @@ export default function RoleRequestsPage() {
 
             <form onSubmit={handleSubmitRequest} className="space-y-3.5 text-xs">
               <div>
-                <label className="block font-semibold text-foreground mb-1">Requested Role</label>
-                <select
-                  value={requestedRole}
-                  onChange={(e) => setRequestedRole(e.target.value)}
-                  className="w-full bg-background border border-border rounded-lg px-3 py-2 text-foreground focus:ring-1 focus:ring-primary"
-                >
-                  <option value="member">Department Member</option>
-                  <option value="general_member">General Member (Cross-Department)</option>
-                  <option value="admin">Department Admin</option>
-                </select>
-              </div>
-
-              <div>
                 <label className="block font-semibold text-foreground mb-1">Target Department</label>
                 <select
                   value={requestedDeptId}
-                  onChange={(e) => setRequestedDeptId(e.target.value)}
+                  onChange={(e) => {
+                    const newDeptId = e.target.value;
+                    setRequestedDeptId(newDeptId);
+                    const dept = departments.find((d) => d.id === newDeptId);
+                    if (dept?.slug === 'finance') {
+                      setRequestedRole('admin');
+                    } else if (requestedRole !== 'admin' && requestedRole !== 'member') {
+                      setRequestedRole('member');
+                    }
+                  }}
                   className="w-full bg-background border border-border rounded-lg px-3 py-2 text-foreground focus:ring-1 focus:ring-primary"
                 >
                   {departments.map((d) => (
                     <option key={d.id} value={d.id}>{d.name}</option>
                   ))}
                 </select>
+              </div>
+
+              <div>
+                <label className="block font-semibold text-foreground mb-1">Requested Role</label>
+                {(() => {
+                  const selDept = departments.find((d) => d.id === requestedDeptId);
+                  const isFinance = selDept?.slug === 'finance';
+                  const isPrograme = selDept?.slug === 'programe';
+
+                  if (isFinance) {
+                    return (
+                      <select
+                        value="admin"
+                        disabled
+                        className="w-full bg-muted border border-border rounded-lg px-3 py-2 text-foreground font-semibold cursor-not-allowed"
+                      >
+                        <option value="admin">Finance Department Admin (Admin Only)</option>
+                      </select>
+                    );
+                  }
+
+                  if (isPrograme) {
+                    return (
+                      <select
+                        value={requestedRole === 'admin' ? 'admin' : 'member'}
+                        onChange={(e) => setRequestedRole(e.target.value)}
+                        className="w-full bg-background border border-border rounded-lg px-3 py-2 text-foreground focus:ring-1 focus:ring-primary"
+                      >
+                        <option value="member">Programme Team Member</option>
+                        <option value="admin">Programme Department Admin</option>
+                      </select>
+                    );
+                  }
+
+                  return (
+                    <select
+                      value={requestedRole}
+                      onChange={(e) => setRequestedRole(e.target.value)}
+                      className="w-full bg-background border border-border rounded-lg px-3 py-2 text-foreground focus:ring-1 focus:ring-primary"
+                    >
+                      <option value="member">Department Member</option>
+                      <option value="general_member">General Member (Cross-Department)</option>
+                      <option value="admin">Department Admin</option>
+                    </select>
+                  );
+                })()}
               </div>
 
               <div>

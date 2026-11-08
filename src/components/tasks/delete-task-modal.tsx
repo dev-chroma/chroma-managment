@@ -23,7 +23,7 @@ export function DeleteTaskModal({
 
   if (!isOpen || !task) return null;
 
-  const requiredPhrase = 'I am sure delete';
+  const requiredPhrase = 'I am sure to delete';
   const isMatch = confirmText.trim().toLowerCase() === requiredPhrase.toLowerCase();
 
   const handleDelete = async () => {
@@ -104,7 +104,7 @@ export function DeleteTaskModal({
                 setConfirmText(e.target.value);
                 setError(null);
               }}
-              placeholder='Type "I am sure delete"'
+              placeholder='Type "I am sure to delete"'
               className="w-full bg-background border border-border rounded-xl px-3.5 py-2.5 text-xs text-foreground placeholder:text-muted-foreground font-mono focus:ring-1 focus:ring-rose-500"
               autoFocus
             />

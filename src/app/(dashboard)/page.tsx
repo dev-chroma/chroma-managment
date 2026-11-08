@@ -338,7 +338,7 @@ export default function DashboardPage() {
         </div>
 
         {activeStudioTab === 'distribution' ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {departments.map((dept) => {
               const deptStatuses = statuses.filter((s) => s.department_id === dept.id);
               const deptTasks = tasks.filter((t) => t.department_id === dept.id);

@@ -140,6 +140,24 @@ export function DynamicWorkflowChart({ department, tasks, statuses }: DynamicWor
         </div>
       )}
 
+      {department.slug === 'programe' && (
+        <div className="mb-3 px-3 py-1.5 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-[11px] text-emerald-700 dark:text-emerald-300 flex items-center justify-between">
+          <span>Programme Finished Work:</span>
+          <span className="font-mono font-bold">
+            {metrics.completedWorkTotal} Completed
+          </span>
+        </div>
+      )}
+
+      {department.slug === 'finance' && (
+        <div className="mb-3 px-3 py-1.5 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-[11px] text-emerald-700 dark:text-emerald-300 flex items-center justify-between">
+          <span>Finance Control Work:</span>
+          <span className="font-mono font-bold">
+            {metrics.completedWorkTotal} Completed
+          </span>
+        </div>
+      )}
+
       {/* Legend Grid - Shows all department statuses cleanly */}
       <div className="grid grid-cols-2 gap-1.5 pt-2 border-t border-border/50 text-[11px]">
         {statuses.map((status) => {

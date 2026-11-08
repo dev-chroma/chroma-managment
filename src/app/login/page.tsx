@@ -291,7 +291,16 @@ export default function LoginPage() {
                       <Building2 className="absolute left-3 top-2.5 h-3.5 w-3.5 text-muted-foreground pointer-events-none" />
                       <select
                         value={reqDeptId}
-                        onChange={(e) => setReqDeptId(e.target.value)}
+                        onChange={(e) => {
+                          const newDeptId = e.target.value;
+                          setReqDeptId(newDeptId);
+                          const dept = departments.find((d) => d.id === newDeptId);
+                          if (dept?.slug === 'finance') {
+                            setReqRole('admin');
+                          } else if (reqRole !== 'admin' && reqRole !== 'member') {
+                            setReqRole('member');
+                          }
+                        }}
                         className="w-full bg-background border border-border rounded-xl pl-9 pr-2 py-2 text-foreground focus:outline-none focus:ring-1 focus:ring-primary text-xs cursor-pointer shadow-xs"
                       >
                         {departments.map((d) => (
@@ -307,15 +316,48 @@ export default function LoginPage() {
                     <label className="block font-semibold text-foreground mb-1">
                       Requested Role <span className="text-rose-500">*</span>
                     </label>
-                    <select
-                      value={reqRole}
-                      onChange={(e) => setReqRole(e.target.value as 'member' | 'admin' | 'general_member')}
-                      className="w-full bg-background border border-border rounded-xl px-3 py-2 text-foreground focus:outline-none focus:ring-1 focus:ring-primary text-xs cursor-pointer shadow-xs"
-                    >
-                      <option value="member">Department Member</option>
-                      <option value="general_member">General Member (Cross-Department)</option>
-                      <option value="admin">Dept Admin</option>
-                    </select>
+                    {(() => {
+                      const selDept = departments.find((d) => d.id === reqDeptId);
+                      const isFinance = selDept?.slug === 'finance';
+                      const isPrograme = selDept?.slug === 'programe';
+
+                      if (isFinance) {
+                        return (
+                          <select
+                            value="admin"
+                            disabled
+                            className="w-full bg-muted border border-border rounded-xl px-3 py-2 text-foreground focus:outline-none text-xs font-semibold cursor-not-allowed shadow-xs"
+                          >
+                            <option value="admin">Finance Admin (Admin Only)</option>
+                          </select>
+                        );
+                      }
+
+                      if (isPrograme) {
+                        return (
+                          <select
+                            value={reqRole === 'admin' ? 'admin' : 'member'}
+                            onChange={(e) => setReqRole(e.target.value as 'member' | 'admin')}
+                            className="w-full bg-background border border-border rounded-xl px-3 py-2 text-foreground focus:outline-none focus:ring-1 focus:ring-primary text-xs cursor-pointer shadow-xs"
+                          >
+                            <option value="member">Programme Member</option>
+                            <option value="admin">Programme Department Admin</option>
+                          </select>
+                        );
+                      }
+
+                      return (
+                        <select
+                          value={reqRole}
+                          onChange={(e) => setReqRole(e.target.value as 'member' | 'admin' | 'general_member')}
+                          className="w-full bg-background border border-border rounded-xl px-3 py-2 text-foreground focus:outline-none focus:ring-1 focus:ring-primary text-xs cursor-pointer shadow-xs"
+                        >
+                          <option value="member">Department Member</option>
+                          <option value="general_member">General Member (Cross-Department)</option>
+                          <option value="admin">Dept Admin</option>
+                        </select>
+                      );
+                    })()}
                   </div>
                 </div>
 

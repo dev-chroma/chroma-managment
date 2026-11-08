@@ -33,7 +33,7 @@ export function TwoStepDeleteModal({
 
   if (!isOpen) return null;
 
-  const requiredPhrase = 'I am sure delete';
+  const requiredPhrase = 'I am sure to delete';
   const isMatch = confirmText.trim().toLowerCase() === requiredPhrase.toLowerCase();
 
   const handleConfirm = async () => {
@@ -108,7 +108,7 @@ export function TwoStepDeleteModal({
               setConfirmText(e.target.value);
               if (error) setError(null);
             }}
-            placeholder='Type "I am sure delete"'
+            placeholder='Type "I am sure to delete"'
             autoFocus
             className="w-full bg-background border-2 border-border focus:border-rose-500 rounded-xl px-3.5 py-2 text-sm text-foreground focus:outline-none transition-colors"
           />

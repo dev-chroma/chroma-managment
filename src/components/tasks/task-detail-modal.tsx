@@ -119,8 +119,11 @@ export function TaskDetailModal({
               <span className="font-mono text-xs font-bold px-2.5 py-0.5 rounded-lg bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800/60">
                 {task.auto_id}
               </span>
-              <span className={cn('inline-flex items-center gap-1.5 text-xs font-semibold px-2.5 py-0.5 rounded-full border shadow-2xs', badgeStyle.bg, badgeStyle.text, badgeStyle.border)}>
-                <span className={cn('h-1.5 w-1.5 rounded-full shrink-0', badgeStyle.dotBg)} />
+              <span
+                className={cn('inline-flex items-center gap-1.5 text-xs font-semibold px-2.5 py-0.5 rounded-full border shadow-2xs', badgeStyle.bg, badgeStyle.text, badgeStyle.border)}
+                style={badgeStyle.style}
+              >
+                <span className={cn('h-1.5 w-1.5 rounded-full shrink-0', badgeStyle.dotBg)} style={badgeStyle.dotStyle} />
                 <span>{currentStatus?.name || 'Unknown'}</span>
               </span>
               {task.category && (

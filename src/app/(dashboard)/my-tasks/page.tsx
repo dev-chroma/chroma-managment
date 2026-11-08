@@ -216,8 +216,11 @@ export default function MyTasksPage() {
 
                   <div className="shrink-0 flex items-center gap-3">
                     <div className="text-right">
-                      <span className={cn('inline-flex items-center gap-1.5 text-[11px] font-semibold px-2.5 py-0.5 rounded-full border shadow-2xs', badge.bg, badge.text, badge.border)}>
-                        <span className={cn('h-1.5 w-1.5 rounded-full shrink-0', badge.dotBg)} />
+                      <span
+                        className={cn('inline-flex items-center gap-1.5 text-[11px] font-semibold px-2.5 py-0.5 rounded-full border shadow-2xs', badge.bg, badge.text, badge.border)}
+                        style={badge.style}
+                      >
+                        <span className={cn('h-1.5 w-1.5 rounded-full shrink-0', badge.dotBg)} style={badge.dotStyle} />
                         <span>{statusObj?.name || 'Pending'}</span>
                       </span>
                       {task.rejection_reason && (

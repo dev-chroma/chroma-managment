@@ -516,8 +516,11 @@ export default function DashboardPage() {
                         </div>
                       </div>
 
-                      <span className={cn('text-[11px] font-semibold px-2.5 py-0.5 rounded-full border inline-flex items-center gap-1.5 shadow-2xs', badge.bg, badge.text, badge.border)}>
-                        <span className={cn('h-1.5 w-1.5 rounded-full shrink-0', badge.dotBg)} />
+                      <span
+                        className={cn('text-[11px] font-semibold px-2.5 py-0.5 rounded-full border inline-flex items-center gap-1.5 shadow-2xs', badge.bg, badge.text, badge.border)}
+                        style={badge.style}
+                      >
+                        <span className={cn('h-1.5 w-1.5 rounded-full shrink-0', badge.dotBg)} style={badge.dotStyle} />
                         <span>{statusObj?.name || 'Pending'}</span>
                       </span>
 

@@ -25,10 +25,28 @@ import {
   ArrowDown,
   ToggleLeft,
   ToggleRight,
+  Palette,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { exportAuditLogsToExcel, exportAuditLogsToPdf } from '@/lib/services/export-service';
 import { TwoStepDeleteModal } from '@/components/common/two-step-delete-modal';
+import { getStatusBadgeClasses } from '@/lib/services/status-engine';
+
+const PRESET_COLORS = [
+  { label: 'Amber', hex: '#f59e0b' },
+  { label: 'Sky', hex: '#38bdf8' },
+  { label: 'Indigo', hex: '#818cf8' },
+  { label: 'Emerald', hex: '#10b981' },
+  { label: 'Cyan', hex: '#06b6d4' },
+  { label: 'Deep Indigo', hex: '#6366f1' },
+  { label: 'Green', hex: '#22c55e' },
+  { label: 'Rose', hex: '#ef4444' },
+  { label: 'Purple', hex: '#a855f7' },
+  { label: 'Blue', hex: '#3b82f6' },
+  { label: 'Orange', hex: '#f97316' },
+  { label: 'Pink', hex: '#ec4899' },
+  { label: 'Slate', hex: '#64748b' },
+];
 
 export default function SystemControlPage() {
   const { role, user } = useAuth();
@@ -136,6 +154,11 @@ export default function SystemControlPage() {
   const [countsAsCompleted, setCountsAsCompleted] = useState(false);
   const [isTerminal, setIsTerminal] = useState(false);
 
+  // Status editing and color control state
+  const [statusNotice, setStatusNotice] = useState<string | null>(null);
+  const [editingStatus, setEditingStatus] = useState<TaskStatus | null>(null);
+  const [activeColorPickerStatusId, setActiveColorPickerStatusId] = useState<string | null>(null);
+
   // Target editing state
   const [editingTargets, setEditingTargets] = useState<Record<string, number>>(weeklyTargets);
   const [saveSuccess, setSaveSuccess] = useState(false);
@@ -163,6 +186,35 @@ export default function SystemControlPage() {
   const currentDeptStatuses = statuses
     .filter((s) => s.department_id === selectedDeptId && s.is_active)
     .sort((a, b) => a.display_order - b.display_order);
+
+  const handleStatusColorChange = async (statusId: string, newColor: string) => {
+    await updateStatus(statusId, { color: newColor });
+    const target = statuses.find((s) => s.id === statusId);
+    setStatusNotice(`Color for "${target?.name || 'Status'}" updated to ${newColor} across all workspaces.`);
+    setTimeout(() => setStatusNotice(null), 3500);
+  };
+
+  const moveDepartmentStatus = async (index: number, direction: 'up' | 'down') => {
+    const targetIdx = direction === 'up' ? index - 1 : index + 1;
+    if (targetIdx < 0 || targetIdx >= currentDeptStatuses.length) return;
+    const current = currentDeptStatuses[index];
+    const target = currentDeptStatuses[targetIdx];
+    const tempOrder = current.display_order;
+    await Promise.all([
+      updateStatus(current.id, { display_order: target.display_order }),
+      updateStatus(target.id, { display_order: tempOrder }),
+    ]);
+    setStatusNotice(`Reordered stage "${current.name}" moved ${direction}.`);
+    setTimeout(() => setStatusNotice(null), 3500);
+  };
+
+  const handlePrgStatusColorChange = async (statId: string, newColor: string) => {
+    const updated = prgStats.map((s) => (s.id === statId ? { ...s, color: newColor } : s));
+    setPrgStats(updated);
+    await updateProgrammeControlSettings(prgCats, updated);
+    setStatusNotice(`Programme stage color updated to ${newColor}.`);
+    setTimeout(() => setStatusNotice(null), 3500);
+  };
 
   const handleAddStatus = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -209,6 +261,174 @@ export default function SystemControlPage() {
           Configure dynamic department statuses, adjust weekly workload quotas, and inspect audit trails.
         </p>
       </div>
+
+      {/* Global Status Notification Banner */}
+      {statusNotice && (
+        <div className="p-3.5 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-800 dark:text-emerald-300 text-xs font-semibold flex items-center justify-between shadow-xs">
+          <div className="flex items-center gap-2.5">
+            <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-600 dark:text-emerald-400" />
+            <span>{statusNotice}</span>
+          </div>
+          <button
+            onClick={() => setStatusNotice(null)}
+            className="p-1 rounded-md text-muted-foreground hover:text-foreground"
+          >
+            <X className="h-3.5 w-3.5" />
+          </button>
+        </div>
+      )}
+
+      {/* Modal: Edit Workflow Stage */}
+      {editingStatus && (
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-card border border-border rounded-2xl w-full max-w-md p-6 space-y-4 shadow-2xl">
+            <div className="flex items-center justify-between pb-3 border-b border-border">
+              <h3 className="font-bold text-sm text-foreground flex items-center gap-2">
+                <Palette className="h-4 w-4 text-primary" />
+                <span>Edit Workflow Stage</span>
+              </h3>
+              <button
+                onClick={() => setEditingStatus(null)}
+                className="p-1 rounded-lg text-muted-foreground hover:text-foreground"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+
+            <div className="space-y-4 text-xs">
+              <div>
+                <label className="block font-semibold text-foreground mb-1">Status Name</label>
+                <input
+                  type="text"
+                  value={editingStatus.name}
+                  onChange={(e) => setEditingStatus({ ...editingStatus, name: e.target.value })}
+                  className="w-full bg-background border border-border rounded-lg px-3 py-2 text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
+                />
+              </div>
+
+              <div>
+                <label className="block font-semibold text-foreground mb-1">Badge Color & Palette</label>
+                <div className="flex items-center gap-2">
+                  <input
+                    type="color"
+                    value={editingStatus.color || '#f59e0b'}
+                    onChange={(e) => setEditingStatus({ ...editingStatus, color: e.target.value })}
+                    className="h-9 w-12 rounded cursor-pointer border border-border bg-transparent p-0.5"
+                  />
+                  <input
+                    type="text"
+                    value={editingStatus.color || '#f59e0b'}
+                    onChange={(e) => setEditingStatus({ ...editingStatus, color: e.target.value })}
+                    className="flex-1 bg-background border border-border rounded-lg px-3 py-2 text-foreground font-mono"
+                  />
+                </div>
+
+                {/* Preset Swatches in Modal */}
+                <div className="flex items-center gap-1.5 flex-wrap pt-2.5">
+                  {PRESET_COLORS.map((p) => (
+                    <button
+                      key={p.hex}
+                      type="button"
+                      onClick={() => setEditingStatus({ ...editingStatus, color: p.hex })}
+                      className={cn(
+                        'h-6 w-6 rounded-full border-2 transition-all cursor-pointer',
+                        editingStatus.color?.toLowerCase() === p.hex.toLowerCase()
+                          ? 'border-primary ring-2 ring-primary/30 scale-110 shadow-sm'
+                          : 'border-transparent hover:scale-110'
+                      )}
+                      style={{ backgroundColor: p.hex }}
+                      title={`${p.label} (${p.hex})`}
+                    />
+                  ))}
+                </div>
+              </div>
+
+              <div>
+                <label className="block font-semibold text-foreground mb-1">System Classification</label>
+                <select
+                  value={editingStatus.status_type}
+                  onChange={(e) => setEditingStatus({ ...editingStatus, status_type: e.target.value as StatusType })}
+                  className="w-full bg-background border border-border rounded-lg px-3 py-2 text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
+                >
+                  <option value="pending">Pending</option>
+                  <option value="in_progress">In Progress</option>
+                  <option value="completed">Completed / Finished</option>
+                  <option value="rejected">Rejected</option>
+                  <option value="paused">Paused</option>
+                  <option value="ended">Ended / Cancelled</option>
+                  <option value="custom">Custom</option>
+                </select>
+              </div>
+
+              <div className="space-y-2 pt-1">
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={editingStatus.counts_as_completed}
+                    onChange={(e) => setEditingStatus({ ...editingStatus, counts_as_completed: e.target.checked })}
+                    className="rounded border-border text-primary focus:ring-primary"
+                  />
+                  <span className="text-foreground">Counts as Finished in Workload Telemetry</span>
+                </label>
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={editingStatus.is_terminal}
+                    onChange={(e) => setEditingStatus({ ...editingStatus, is_terminal: e.target.checked })}
+                    className="rounded border-border text-primary focus:ring-primary"
+                  />
+                  <span className="text-foreground">Terminal Status (Archived / Final State)</span>
+                </label>
+              </div>
+
+              {/* Live Badge Preview */}
+              <div className="p-3 bg-muted/40 rounded-xl border border-border flex items-center justify-between">
+                <span className="text-muted-foreground font-semibold text-xs">Live Badge Preview:</span>
+                {(() => {
+                  const pb = getStatusBadgeClasses(editingStatus);
+                  return (
+                    <span
+                      className={cn('inline-flex items-center gap-1.5 text-xs font-semibold px-2.5 py-0.5 rounded-full border shadow-2xs', pb.bg, pb.text, pb.border)}
+                      style={pb.style}
+                    >
+                      <span className={cn('h-1.5 w-1.5 rounded-full shrink-0', pb.dotBg)} style={pb.dotStyle} />
+                      <span>{editingStatus.name || 'Preview'}</span>
+                    </span>
+                  );
+                })()}
+              </div>
+
+              <div className="flex items-center justify-end gap-2 pt-2 border-t border-border">
+                <button
+                  type="button"
+                  onClick={() => setEditingStatus(null)}
+                  className="px-3 py-1.5 rounded-lg border border-border text-muted-foreground hover:bg-muted"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={async () => {
+                    await updateStatus(editingStatus.id, {
+                      name: editingStatus.name,
+                      color: editingStatus.color,
+                      status_type: editingStatus.status_type,
+                      counts_as_completed: editingStatus.counts_as_completed,
+                      is_terminal: editingStatus.is_terminal,
+                    });
+                    setStatusNotice(`Stage "${editingStatus.name}" updated successfully.`);
+                    setTimeout(() => setStatusNotice(null), 3500);
+                    setEditingStatus(null);
+                  }}
+                  className="px-3.5 py-1.5 rounded-lg bg-primary text-primary-foreground font-semibold hover:bg-primary/90"
+                >
+                  Save Changes
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Tabs */}
       <div className="flex items-center gap-2 border-b border-border pb-2 text-xs font-semibold flex-wrap">
@@ -469,45 +689,159 @@ export default function SystemControlPage() {
                 <span className="text-xs text-muted-foreground">Order determines dropdown sequence</span>
               </div>
 
-              <div className="space-y-2">
-                {currentDeptStatuses.map((st, index) => (
-                  <div
-                    key={st.id}
-                    className="p-3 rounded-xl bg-muted/40 border border-border flex items-center justify-between gap-3 text-xs"
-                  >
-                    <div className="flex items-center gap-3 min-w-0">
-                      <span className="h-6 w-6 rounded-md bg-background border border-border flex items-center justify-center font-mono font-bold text-muted-foreground text-[11px]">
-                        {index + 1}
-                      </span>
-                      <span className="h-3.5 w-3.5 rounded-full shrink-0" style={{ backgroundColor: st.color }} />
-                      <div>
-                        <div className="font-semibold text-foreground flex items-center gap-2">
-                          <span>{st.name}</span>
-                          <span className="text-[10px] font-mono text-muted-foreground">({st.slug})</span>
+              <div className="space-y-2.5">
+                {currentDeptStatuses.map((st, index) => {
+                  const badge = getStatusBadgeClasses(st);
+                  const isPickerOpen = activeColorPickerStatusId === st.id;
+
+                  return (
+                    <div key={st.id} className="space-y-1.5">
+                      <div className="p-3 rounded-xl bg-muted/40 border border-border flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs transition-colors hover:bg-muted/60">
+                        <div className="flex items-center gap-3 min-w-0">
+                          {/* Reordering Controls */}
+                          <div className="flex flex-col gap-0.5 shrink-0">
+                            <button
+                              type="button"
+                              onClick={() => moveDepartmentStatus(index, 'up')}
+                              disabled={index === 0}
+                              title="Move Stage Up"
+                              className="p-0.5 rounded text-muted-foreground hover:text-foreground disabled:opacity-20 cursor-pointer"
+                            >
+                              <ArrowUp className="h-3 w-3" />
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => moveDepartmentStatus(index, 'down')}
+                              disabled={index === currentDeptStatuses.length - 1}
+                              title="Move Stage Down"
+                              className="p-0.5 rounded text-muted-foreground hover:text-foreground disabled:opacity-20 cursor-pointer"
+                            >
+                              <ArrowDown className="h-3 w-3" />
+                            </button>
+                          </div>
+
+                          <span className="h-6 w-6 rounded-md bg-background border border-border flex items-center justify-center font-mono font-bold text-muted-foreground text-[11px] shrink-0">
+                            {index + 1}
+                          </span>
+
+                          {/* Direct Interactive Color Picker Swatch */}
+                          <div className="relative group shrink-0">
+                            <label className="cursor-pointer block" title="Click to choose custom color">
+                              <span
+                                className="h-5 w-5 rounded-full shrink-0 border-2 border-background shadow-xs ring-1 ring-border group-hover:scale-115 transition-transform block cursor-pointer"
+                                style={{ backgroundColor: st.color || '#f59e0b' }}
+                              />
+                              <input
+                                type="color"
+                                value={st.color || '#f59e0b'}
+                                onChange={(e) => handleStatusColorChange(st.id, e.target.value)}
+                                className="absolute inset-0 opacity-0 cursor-pointer w-full h-full"
+                              />
+                            </label>
+                          </div>
+
+                          <div>
+                            <div className="font-semibold text-foreground flex items-center gap-2 flex-wrap">
+                              <span>{st.name}</span>
+                              <span className="text-[10px] font-mono text-muted-foreground">({st.slug})</span>
+                              {/* Quick Palette Toggle Button */}
+                              <button
+                                type="button"
+                                onClick={() => setActiveColorPickerStatusId(isPickerOpen ? null : st.id)}
+                                className={cn(
+                                  'text-[10px] font-mono px-1.5 py-0.5 rounded border transition-colors flex items-center gap-1 cursor-pointer',
+                                  isPickerOpen
+                                    ? 'bg-primary/10 border-primary text-primary'
+                                    : 'bg-background border-border text-muted-foreground hover:text-primary hover:border-primary'
+                                )}
+                                title="Click to toggle quick palette presets"
+                              >
+                                <Palette className="h-3 w-3" />
+                                <span>{st.color || '#f59e0b'}</span>
+                              </button>
+                            </div>
+                            <div className="text-[10px] text-muted-foreground flex items-center gap-2 mt-0.5 flex-wrap">
+                              <span>Classification: <strong className="text-foreground capitalize">{st.status_type}</strong></span>
+                              {st.counts_as_completed && (
+                                <span className="text-emerald-600 dark:text-emerald-400 font-semibold">
+                                  · Counts as Finished
+                                </span>
+                              )}
+                              {st.is_terminal && <span>· Terminal</span>}
+                            </div>
+                          </div>
                         </div>
-                        <div className="text-[10px] text-muted-foreground flex items-center gap-2 mt-0.5">
-                          <span>Classification: <strong className="text-foreground capitalize">{st.status_type}</strong></span>
-                          {st.counts_as_completed && (
-                            <span className="text-emerald-600 dark:text-emerald-400 font-semibold">
-                              · Counts as Finished
-                            </span>
-                          )}
-                          {st.is_terminal && <span>· Terminal</span>}
+
+                        <div className="flex items-center gap-2 shrink-0 self-end sm:self-auto">
+                          {/* Live System Badge Preview */}
+                          <span
+                            className={cn('inline-flex items-center gap-1.5 text-[11px] font-semibold px-2.5 py-0.5 rounded-full border shadow-2xs', badge.bg, badge.text, badge.border)}
+                            style={badge.style}
+                            title="Live status badge preview as shown in workspace"
+                          >
+                            <span className={cn('h-1.5 w-1.5 rounded-full shrink-0', badge.dotBg)} style={badge.dotStyle} />
+                            <span>Preview</span>
+                          </span>
+
+                          <button
+                            type="button"
+                            onClick={() => setEditingStatus(st)}
+                            className="p-1.5 rounded-lg text-muted-foreground hover:text-primary hover:bg-primary/10 transition-colors cursor-pointer"
+                            title="Edit Stage Details"
+                          >
+                            <Edit2 className="h-4 w-4" />
+                          </button>
+
+                          <button
+                            type="button"
+                            onClick={() => deactivateStatus(st.id)}
+                            className="p-1.5 rounded-lg text-rose-500 hover:bg-rose-500/10 transition-colors cursor-pointer"
+                            title="Deactivate status (preserves historical tasks)"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </button>
                         </div>
                       </div>
-                    </div>
 
-                    <div className="flex items-center gap-2">
-                      <button
-                        onClick={() => deactivateStatus(st.id)}
-                        className="p-1.5 rounded text-rose-500 hover:bg-rose-500/10 transition-colors"
-                        title="Deactivate status (preserves historical tasks)"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </button>
+                      {/* Expandable Palette Presets Bar for this status */}
+                      {isPickerOpen && (
+                        <div className="p-2.5 rounded-xl bg-background border border-primary/40 flex items-center gap-2 flex-wrap shadow-sm">
+                          <span className="text-[11px] font-semibold text-muted-foreground flex items-center gap-1">
+                            <Palette className="h-3 w-3 text-primary" />
+                            <span>Select Color:</span>
+                          </span>
+                          <div className="flex items-center gap-1.5 flex-wrap">
+                            {PRESET_COLORS.map((p) => (
+                              <button
+                                key={p.hex}
+                                type="button"
+                                onClick={() => {
+                                  handleStatusColorChange(st.id, p.hex);
+                                  setActiveColorPickerStatusId(null);
+                                }}
+                                className={cn(
+                                  'h-5 w-5 rounded-full border-2 transition-transform cursor-pointer',
+                                  st.color?.toLowerCase() === p.hex.toLowerCase()
+                                    ? 'border-primary ring-2 ring-primary/30 scale-110 shadow-xs'
+                                    : 'border-background hover:scale-115'
+                                )}
+                                style={{ backgroundColor: p.hex }}
+                                title={`${p.label} (${p.hex})`}
+                              />
+                            ))}
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => setActiveColorPickerStatusId(null)}
+                            className="ml-auto text-[10px] text-muted-foreground hover:text-foreground px-2 py-0.5 rounded-md bg-muted"
+                          >
+                            Close
+                          </button>
+                        </div>
+                      )}
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             </div>
 
@@ -543,7 +877,7 @@ export default function SystemControlPage() {
                       type="color"
                       value={newStatusColor}
                       onChange={(e) => setNewStatusColor(e.target.value)}
-                      className="h-9 w-12 rounded cursor-pointer border border-border bg-transparent"
+                      className="h-9 w-12 rounded cursor-pointer border border-border bg-transparent p-0.5"
                     />
                     <input
                       type="text"
@@ -551,6 +885,24 @@ export default function SystemControlPage() {
                       onChange={(e) => setNewStatusColor(e.target.value)}
                       className="flex-1 bg-background border border-border rounded-lg px-3 py-2 text-foreground font-mono"
                     />
+                  </div>
+                  {/* Preset swatches for Add Status */}
+                  <div className="flex items-center gap-1.5 flex-wrap pt-2">
+                    {PRESET_COLORS.map((p) => (
+                      <button
+                        key={p.hex}
+                        type="button"
+                        onClick={() => setNewStatusColor(p.hex)}
+                        className={cn(
+                          'h-5 w-5 rounded-full border-2 transition-all cursor-pointer',
+                          newStatusColor.toLowerCase() === p.hex.toLowerCase()
+                            ? 'border-primary ring-2 ring-primary/30 scale-110 shadow-xs'
+                            : 'border-transparent hover:scale-110'
+                        )}
+                        style={{ backgroundColor: p.hex }}
+                        title={`${p.label} (${p.hex})`}
+                      />
+                    ))}
                   </div>
                 </div>
 
@@ -826,10 +1178,18 @@ export default function SystemControlPage() {
                     className="p-3 rounded-xl border border-border/80 bg-background/50 flex items-center justify-between gap-3 text-xs"
                   >
                     <div className="flex items-center gap-2.5 min-w-0 flex-wrap">
-                      <span
-                        className="w-3.5 h-3.5 rounded-full shrink-0 border border-border shadow-xs"
-                        style={{ backgroundColor: stat.color }}
-                      />
+                      <label className="relative group cursor-pointer block" title="Click to choose custom stage color">
+                        <span
+                          className="w-4 h-4 rounded-full shrink-0 border border-border shadow-xs block group-hover:scale-115 transition-transform cursor-pointer"
+                          style={{ backgroundColor: stat.color || '#6366f1' }}
+                        />
+                        <input
+                          type="color"
+                          value={stat.color || '#6366f1'}
+                          onChange={(e) => handlePrgStatusColorChange(stat.id, e.target.value)}
+                          className="absolute inset-0 opacity-0 cursor-pointer w-full h-full"
+                        />
+                      </label>
                       <span className="font-semibold text-foreground truncate">{stat.name}</span>
                       {stat.counts_as_progress && (
                         <span className="text-[9px] font-mono px-1.5 py-0.5 rounded bg-blue-500/10 text-blue-600 dark:text-blue-400">

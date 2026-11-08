@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { useData } from '@/lib/context/data-context';
 import { useAuth } from '@/lib/context/auth-context';
 import { LedgerEntry, StudentDonation, MoneyHolding } from '@/types/database';
@@ -16,7 +16,6 @@ import {
   FileSpreadsheet,
   Plus,
   Search,
-  Filter,
   CheckCircle2,
   AlertTriangle,
   AlertCircle,
@@ -29,23 +28,15 @@ import {
   Trash2,
   RefreshCw,
   ExternalLink,
-  ShieldAlert,
-  ArrowRight,
-  ArrowUpDown,
-  Building,
-  User,
   Users,
-  Copy,
-  Check,
-  Calendar,
   X,
   CreditCard,
   Banknote,
-  Sparkles,
-  Link as LinkIcon,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
+
+const CONNECTED_SHEET_URL = 'https://docs.google.com/spreadsheets/d/1YtLXElTsedWX3kFPqoE4iJn84ige3-U1ftojhmfcxxM/edit?gid=0#gid=0';
 
 export default function FinancialWorkspacePage() {
   const {
@@ -53,7 +44,6 @@ export default function FinancialWorkspacePage() {
     studentDonations,
     moneyHoldings,
     customBookBalance,
-    sheetConfig,
     addLedgerEntry,
     updateLedgerEntry,
     deleteLedgerEntry,
@@ -64,15 +54,13 @@ export default function FinancialWorkspacePage() {
     addMoneyHolding,
     deleteMoneyHolding,
     setCustomBookBalance,
-    updateSheetConfig,
     syncFromGoogleSheet,
-    pushToGoogleSheet,
   } = useData();
 
   const { role, user } = useAuth();
 
   // Active Main Tab
-  const [activeTab, setActiveTab] = useState<'ledger' | 'holdings' | 'donations' | 'sheet_sync'>('ledger');
+  const [activeTab, setActiveTab] = useState<'ledger' | 'holdings' | 'donations'>('ledger');
 
   // Search & Filter State
   const [ledgerSearch, setLedgerSearch] = useState('');
@@ -85,7 +73,6 @@ export default function FinancialWorkspacePage() {
   // Modals state
   const [isAddTransactionOpen, setIsAddTransactionOpen] = useState(false);
   const [editingTransaction, setEditingTransaction] = useState<LedgerEntry | null>(null);
-  const [deletingTransactionId, setDeletingTransactionId] = useState<string | null>(null);
 
   const [isAddDonationOpen, setIsAddDonationOpen] = useState(false);
   const [editingDonation, setEditingDonation] = useState<StudentDonation | null>(null);
@@ -95,16 +82,19 @@ export default function FinancialWorkspacePage() {
   const [editingHolding, setEditingHolding] = useState<MoneyHolding | null>(null);
   const [isAddHoldingOpen, setIsAddHoldingOpen] = useState(false);
 
-  const [isSheetModalOpen, setIsSheetModalOpen] = useState(false);
   const [isSyncing, setIsSyncing] = useState(false);
   const [syncStatusMsg, setSyncStatusMsg] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
-  const [copiedScript, setCopiedScript] = useState(false);
 
   // Target balance mode: 'custom' | 'ledger'
   const [balanceMode, setBalanceMode] = useState<'custom' | 'ledger'>('custom');
   const [customBalanceInput, setCustomBalanceInput] = useState<string>(
     customBookBalance !== null ? customBookBalance.toString() : '5655'
   );
+
+  // Initial auto-sync from Google Sheet on mount
+  useEffect(() => {
+    syncFromGoogleSheet().catch(() => {});
+  }, []);
 
   // --- LEDGER CALCULATIONS ---
   const { totalCredit, totalDebit, netLedgerBalance } = useMemo(() => {
@@ -196,62 +186,22 @@ export default function FinancialWorkspacePage() {
       if (res.success) {
         setSyncStatusMsg({
           type: 'success',
-          text: `Successfully synced ${res.count} transactions from Google Sheets!`,
+          text: `Successfully synced ${res.count} transactions live from your Google Sheet!`,
         });
       } else {
         setSyncStatusMsg({
           type: 'error',
-          text: res.error || 'Failed to sync. Make sure your Google Sheet is shared as Viewable or Published.',
+          text: res.error || 'Failed to sync from Google Sheet.',
         });
       }
     } finally {
       setIsSyncing(false);
     }
   };
-
-  const handlePushToSheet = async () => {
-    setIsSyncing(true);
-    setSyncStatusMsg(null);
-    try {
-      const res = await pushToGoogleSheet();
-      if (res.success) {
-        setSyncStatusMsg({
-          type: 'success',
-          text: 'All website records successfully written to Google Sheets via Webhook!',
-        });
-      } else {
-        setSyncStatusMsg({
-          type: 'error',
-          text: res.error || 'Failed to push to Webhook. Ensure the Apps Script Webhook URL is set.',
-        });
-      }
-    } finally {
-      setIsSyncing(false);
-    }
-  };
-
-  const appsScriptSnippet = `// Google Apps Script (Paste into Extensions > Apps Script)
-function doGet(e) {
-  var sheet = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();
-  var data = sheet.getDataRange().getValues();
-  return ContentService.createTextOutput(JSON.stringify(data)).setMimeType(ContentService.MimeType.JSON);
-}
-
-function doPost(e) {
-  var sheet = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();
-  var payload = JSON.parse(e.postData.contents);
-  if (payload.action === 'sync_all' && payload.rows) {
-    // Write rows to sheet
-    payload.rows.forEach(function(r) {
-      sheet.appendRow([r.serial_no || '', r.date, r.item, r.credit || '', r.debit || '', r.remark || '']);
-    });
-  }
-  return ContentService.createTextOutput(JSON.stringify({ status: 'success' })).setMimeType(ContentService.MimeType.JSON);
-}`;
 
   return (
     <div className="p-5 md:p-8 space-y-7 max-w-7xl mx-auto">
-      {/* 1. Header & Quick Controls */}
+      {/* 1. Header & Live Connection Bar */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <div className="flex items-center gap-2 text-xs text-muted-foreground">
@@ -266,27 +216,31 @@ function doPost(e) {
             <span>Financial Workspace</span>
           </h1>
           <p className="text-xs text-muted-foreground mt-0.5">
-            Centralized Income & Expense Ledger, Live Google Sheet Synchronization, Cash Custody Reconciliation & Student Donations Control.
+            Centralized Income & Expense Ledger, Live Google Sheet Integration, Cash Custody Reconciliation & Student Donations Control.
           </p>
         </div>
 
-        {/* Global Finance Actions */}
+        {/* Global Finance Actions & Live Sheet Status */}
         <div className="flex items-center gap-2 self-start md:self-auto flex-wrap">
-          {/* Sheet Connection Pill */}
-          <button
-            onClick={() => setIsSheetModalOpen(true)}
-            className="flex items-center gap-2 px-3 py-2 rounded-xl border border-emerald-500/30 bg-emerald-500/5 hover:bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 text-xs font-bold transition-all cursor-pointer shadow-xs"
-            title="Configure Google Sheet Two-Way Sync"
+          {/* Live Google Sheet Pill (Opens user's sheet directly in new tab) */}
+          <a
+            href={CONNECTED_SHEET_URL}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex items-center gap-2 px-3.5 py-2 rounded-xl border border-emerald-500/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 text-xs font-bold hover:bg-emerald-500/20 transition-all cursor-pointer shadow-xs"
+            title="Open Connected Google Sheet in New Tab"
           >
+            <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
             <FileSpreadsheet className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
-            <span>{sheetConfig.google_sheet_url ? 'Sheet Connected' : 'Connect Google Sheet'}</span>
-          </button>
+            <span>Google Sheet Live</span>
+            <ExternalLink className="h-3 w-3 opacity-60" />
+          </a>
 
           <button
             onClick={handleTriggerSync}
-            disabled={isSyncing || !sheetConfig.google_sheet_url}
+            disabled={isSyncing}
             className="flex items-center gap-1.5 px-3 py-2 rounded-xl border border-border bg-card hover:bg-muted text-foreground text-xs font-semibold transition-all cursor-pointer disabled:opacity-50"
-            title="Sync latest rows from Google Sheets"
+            title="Pull latest rows from Google Sheets"
           >
             <RefreshCw className={cn('h-3.5 w-3.5 text-primary', isSyncing && 'animate-spin')} />
             <span>{isSyncing ? 'Syncing...' : 'Sync Sheet'}</span>
@@ -351,7 +305,7 @@ function doPost(e) {
         </div>
       )}
 
-      {/* 2. Top Navigation Tabs */}
+      {/* 2. Top Navigation Tabs (Ledger, Where Money Is, Student Donations) */}
       <div className="flex items-center gap-2 border-b border-border/80 pb-2 overflow-x-auto text-xs">
         <button
           onClick={() => setActiveTab('ledger')}
@@ -406,19 +360,6 @@ function doPost(e) {
           <span className={cn('text-[10px] px-1.5 py-0.5 rounded-full font-mono', activeTab === 'donations' ? 'bg-white/20 text-white' : 'bg-muted text-muted-foreground')}>
             {studentDonations.length}
           </span>
-        </button>
-
-        <button
-          onClick={() => setActiveTab('sheet_sync')}
-          className={cn(
-            'flex items-center gap-2 px-4 py-2.5 rounded-xl font-bold transition-all cursor-pointer shrink-0',
-            activeTab === 'sheet_sync'
-              ? 'bg-primary text-primary-foreground shadow-xs'
-              : 'text-muted-foreground hover:bg-muted hover:text-foreground'
-          )}
-        >
-          <LinkIcon className="h-4 w-4" />
-          <span>Google Sheet Two-Way Sync</span>
         </button>
       </div>
 
@@ -519,7 +460,7 @@ function doPost(e) {
                 <h3 className="font-extrabold text-sm tracking-wide">Income and Expense</h3>
               </div>
               <span className="text-[11px] font-medium text-emerald-100">
-                Live Sheet Telemetry ({filteredLedger.length} rows)
+                Live Google Sheet Telemetry ({filteredLedger.length} rows)
               </span>
             </div>
 
@@ -1089,104 +1030,6 @@ function doPost(e) {
                   )}
                 </tbody>
               </table>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* ===================================================================== */}
-      {/* TAB 4: GOOGLE SHEET SYNC HUB & APPS SCRIPT GUIDE                      */}
-      {/* ===================================================================== */}
-      {activeTab === 'sheet_sync' && (
-        <div className="space-y-6">
-          <div className="p-6 rounded-3xl bg-card border border-border space-y-6 shadow-sm">
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-              <div className="flex items-center gap-3">
-                <div className="p-3 rounded-2xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
-                  <FileSpreadsheet className="h-8 w-8" />
-                </div>
-                <div>
-                  <h3 className="text-lg font-extrabold text-foreground">Google Sheets Two-Way Synchronization</h3>
-                  <p className="text-xs text-muted-foreground">
-                    Connect your live spreadsheet to sync entries instantly both ways (Sheet to Site, and Site to Sheet).
-                  </p>
-                </div>
-              </div>
-
-              <div className="flex items-center gap-2">
-                <button
-                  onClick={handleTriggerSync}
-                  disabled={isSyncing || !sheetConfig.google_sheet_url}
-                  className="px-4 py-2.5 rounded-xl bg-primary text-primary-foreground font-bold text-xs flex items-center gap-2 shadow-xs cursor-pointer hover:bg-primary/90 transition-all disabled:opacity-50"
-                >
-                  <RefreshCw className={cn('h-4 w-4', isSyncing && 'animate-spin')} />
-                  <span>{isSyncing ? 'Pulling from Sheet...' : 'Pull Latest from Sheet'}</span>
-                </button>
-
-                <button
-                  onClick={handlePushToSheet}
-                  disabled={isSyncing || !sheetConfig.apps_script_url}
-                  className="px-4 py-2.5 rounded-xl border border-border bg-card hover:bg-muted text-foreground font-bold text-xs flex items-center gap-2 shadow-xs cursor-pointer transition-all disabled:opacity-50"
-                >
-                  <ExternalLink className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
-                  <span>Push All to Sheet (Webhook)</span>
-                </button>
-              </div>
-            </div>
-
-            {/* Configuration Inputs */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs pt-4 border-t border-border">
-              <div className="space-y-1.5">
-                <label className="font-semibold text-foreground">Google Sheet Link / URL</label>
-                <input
-                  type="text"
-                  placeholder="https://docs.google.com/spreadsheets/d/.../edit"
-                  value={sheetConfig.google_sheet_url || ''}
-                  onChange={(e) => updateSheetConfig({ google_sheet_url: e.target.value })}
-                  className="w-full bg-background border border-border rounded-xl px-3 py-2 text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
-                />
-                <span className="text-[11px] text-muted-foreground">
-                  Make sure sharing is set to "Anyone with the link can view".
-                </span>
-              </div>
-
-              <div className="space-y-1.5">
-                <label className="font-semibold text-foreground">Google Apps Script Webhook URL (For Two-Way Push)</label>
-                <input
-                  type="text"
-                  placeholder="https://script.google.com/macros/s/.../exec"
-                  value={sheetConfig.apps_script_url || ''}
-                  onChange={(e) => updateSheetConfig({ apps_script_url: e.target.value })}
-                  className="w-full bg-background border border-border rounded-xl px-3 py-2 text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
-                />
-                <span className="text-[11px] text-muted-foreground">
-                  Deploy as a Web App with access set to "Anyone".
-                </span>
-              </div>
-            </div>
-
-            {/* Quick 2-Way Sync Script Helper */}
-            <div className="p-4 rounded-2xl bg-muted/40 border border-border space-y-3">
-              <div className="flex items-center justify-between">
-                <span className="text-xs font-bold text-foreground">Google Apps Script Deployment Code</span>
-                <button
-                  onClick={() => {
-                    navigator.clipboard.writeText(appsScriptSnippet);
-                    setCopiedScript(true);
-                    setTimeout(() => setCopiedScript(false), 2000);
-                  }}
-                  className="px-3 py-1 rounded-xl bg-card border border-border hover:bg-muted text-foreground text-xs font-semibold flex items-center gap-1.5 cursor-pointer"
-                >
-                  {copiedScript ? <Check className="h-3.5 w-3.5 text-emerald-500" /> : <Copy className="h-3.5 w-3.5" />}
-                  <span>{copiedScript ? 'Copied!' : 'Copy Apps Script'}</span>
-                </button>
-              </div>
-              <p className="text-[11px] text-muted-foreground">
-                In your Google Sheet, open <strong>Extensions &gt; Apps Script</strong>, paste this code, and click <strong>Deploy &gt; New deployment &gt; Web app (Access: Anyone)</strong>. Paste the generated URL above.
-              </p>
-              <pre className="p-3 rounded-xl bg-black/80 text-emerald-300 font-mono text-[11px] overflow-x-auto max-h-44">
-                {appsScriptSnippet}
-              </pre>
             </div>
           </div>
         </div>
@@ -1914,7 +1757,7 @@ function doPost(e) {
                       status: newStatus,
                     });
 
-                    // Also ask if user wants to add this to the cash ledger
+                    // Also automatically log into the cash ledger
                     addLedgerEntry({
                       date: format(new Date(), 'dd-MM-yyyy'),
                       item: `Donation: ${paymentDonation.student_name}`,
@@ -1931,91 +1774,6 @@ function doPost(e) {
                 >
                   Confirm & Update
                 </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* ===================================================================== */}
-      {/* MODAL: GOOGLE SHEET SYNC CONFIGURATION                                 */}
-      {/* ===================================================================== */}
-      {isSheetModalOpen && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 z-50">
-          <div className="bg-card border border-border rounded-3xl max-w-xl w-full p-6 animate-in fade-in zoom-in-95 space-y-5">
-            <div className="flex items-center justify-between pb-3 border-b border-border">
-              <div className="flex items-center gap-2.5">
-                <div className="p-2 rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
-                  <FileSpreadsheet className="h-6 w-6" />
-                </div>
-                <div>
-                  <h3 className="font-extrabold text-base text-foreground">Connect Google Sheets</h3>
-                  <p className="text-xs text-muted-foreground">Synchronize your Income & Expense Ledger live</p>
-                </div>
-              </div>
-              <button onClick={() => setIsSheetModalOpen(false)} className="p-1 rounded-lg hover:bg-muted">
-                <X className="h-5 w-5" />
-              </button>
-            </div>
-
-            <div className="space-y-4 text-xs">
-              <div className="space-y-1.5">
-                <label className="font-bold text-foreground">1. Google Sheet Web Link *</label>
-                <input
-                  type="text"
-                  placeholder="https://docs.google.com/spreadsheets/d/1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs74OgvE2upms/edit"
-                  value={sheetConfig.google_sheet_url || ''}
-                  onChange={(e) => updateSheetConfig({ google_sheet_url: e.target.value })}
-                  className="w-full bg-background border border-border rounded-xl px-3 py-2 text-foreground focus:ring-1 focus:ring-primary"
-                />
-                <span className="text-[11px] text-muted-foreground">
-                  Ensure the sheet permission is set to <strong>"Anyone with the link can view"</strong>.
-                </span>
-              </div>
-
-              <div className="space-y-1.5">
-                <label className="font-bold text-foreground">2. Google Apps Script Webhook URL (For Two-Way Sync)</label>
-                <input
-                  type="text"
-                  placeholder="https://script.google.com/macros/s/AKfycb.../exec"
-                  value={sheetConfig.apps_script_url || ''}
-                  onChange={(e) => updateSheetConfig({ apps_script_url: e.target.value })}
-                  className="w-full bg-background border border-border rounded-xl px-3 py-2 text-foreground focus:ring-1 focus:ring-primary"
-                />
-                <span className="text-[11px] text-muted-foreground">
-                  Optional: Allows adding/editing on ChromaDiaries to automatically update your Google Sheet rows.
-                </span>
-              </div>
-
-              <div className="p-3 rounded-2xl bg-muted/40 border border-border text-[11px] text-muted-foreground space-y-1">
-                <p className="font-semibold text-foreground">How two-way sync works:</p>
-                <p>• <strong>Pull from Sheet</strong>: Fetches all rows from your Google Sheet and updates ChromaDiaries.</p>
-                <p>• <strong>Push to Sheet</strong>: When you add transactions on ChromaDiaries, they are forwarded to your Sheet Webhook.</p>
-              </div>
-
-              <div className="pt-3 border-t border-border flex items-center justify-between">
-                <button
-                  type="button"
-                  onClick={() => setIsSheetModalOpen(false)}
-                  className="px-4 py-2 rounded-xl border border-border text-foreground hover:bg-muted font-semibold"
-                >
-                  Close
-                </button>
-
-                <div className="flex items-center gap-2">
-                  <button
-                    type="button"
-                    onClick={async () => {
-                      await handleTriggerSync();
-                      setIsSheetModalOpen(false);
-                    }}
-                    disabled={isSyncing || !sheetConfig.google_sheet_url}
-                    className="px-5 py-2 rounded-xl bg-primary text-primary-foreground font-bold flex items-center gap-2 hover:bg-primary/90 transition-all shadow-xs cursor-pointer disabled:opacity-50"
-                  >
-                    <RefreshCw className={cn('h-3.5 w-3.5', isSyncing && 'animate-spin')} />
-                    <span>{isSyncing ? 'Connecting...' : 'Save & Sync Now'}</span>
-                  </button>
-                </div>
               </div>
             </div>
           </div>

@@ -155,9 +155,9 @@ export const INITIAL_STUDENT_DONATIONS: StudentDonation[] = [
 ];
 
 export const INITIAL_FINANCE_SHEET_CONFIG: FinanceSheetConfig = {
-  google_sheet_url: '',
-  google_sheet_csv_url: '',
-  apps_script_url: '',
-  auto_sync: false,
-  last_synced_at: null,
+  google_sheet_url: 'https://docs.google.com/spreadsheets/d/1YtLXElTsedWX3kFPqoE4iJn84ige3-U1ftojhmfcxxM/edit?gid=0#gid=0',
+  google_sheet_csv_url: 'https://docs.google.com/spreadsheets/d/1YtLXElTsedWX3kFPqoE4iJn84ige3-U1ftojhmfcxxM/export?format=csv',
+  apps_script_url: 'https://script.google.com/macros/s/AKfycbzFLHRck8uno6AyP9EKg7ej_8un_tZz22_lh0I1IFD0a76ubiPV1XrMYsqbyfefxCpj/exec',
+  auto_sync: true,
+  last_synced_at: now.toISOString(),
 };

@@ -82,7 +82,7 @@ export default function LoginPage() {
         requested_password: reqPassword.trim() || undefined,
         current_role: 'visitor',
         requested_role: reqRole,
-        requested_department_id: reqDeptId,
+        requested_department_id: reqRole === 'general_member' ? null : reqDeptId,
         reason: reqReason.trim(),
       });
 

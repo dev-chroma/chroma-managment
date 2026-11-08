@@ -46,18 +46,19 @@ export default function RoleRequestsPage() {
   };
 
   // Strict Request Routing:
-  // - Role requests ONLY go to the respective Department Admin (Head).
-  // - Requests do NOT go to the Owner, nor to other department admins.
-  // - Members only see their own submissions.
+  // - Owner gets all requests (from login or in-app)
+  // - Department Admin / Head gets requests specifically for their department
+  // - Members only see their own submissions
   const visibleRequests = roleRequests.filter((req) => {
     let matchesRole = false;
-    if (role === 'admin') {
+    if (role === 'owner') {
+      matchesRole = true;
+    } else if (role === 'admin') {
       matchesRole =
         isDeptMatch(req.requested_department_id, user?.department_id) ||
-        isDeptMatch(req.current_department_id, user?.department_id);
-    } else if (role === 'owner') {
-      // Owner does not receive department role requests; only sees any request they submitted personally
-      matchesRole = req.user_id === user?.id;
+        isDeptMatch(req.current_department_id, user?.department_id) ||
+        req.user_id === user?.id ||
+        (Boolean(req.applicant_email) && req.applicant_email!.toLowerCase() === user?.email.toLowerCase());
     } else {
       matchesRole = (
         req.user_id === user?.id ||
@@ -86,7 +87,7 @@ export default function RoleRequestsPage() {
     return true;
   });
 
-  const isPrivileged = role === 'admin';
+  const isPrivileged = role === 'owner' || role === 'admin';
 
   const handleSubmitRequest = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -97,8 +98,9 @@ export default function RoleRequestsPage() {
       applicant_name: user.full_name,
       applicant_email: user.email,
       current_role: user.system_role,
+      current_department_id: user.department_id || null,
       requested_role: requestedRole,
-      requested_department_id: requestedDeptId,
+      requested_department_id: requestedRole === 'general_member' ? null : requestedDeptId,
       reason,
     });
 
@@ -151,7 +153,7 @@ export default function RoleRequestsPage() {
             <span>Role & Department Requests</span>
           </h1>
           <p className="text-xs text-muted-foreground mt-0.5">
-            Submit elevation requests or department transfers for Department Admin review.
+            Submit elevation requests or department transfers for Owner and Admin review.
           </p>
         </div>
 
@@ -210,6 +212,13 @@ export default function RoleRequestsPage() {
             visibleRequests.map((req) => {
               const requester = allProfiles.find((p) => p.id === req.user_id);
               const targetDept = departments.find((d) => d.id === req.requested_department_id);
+              const isOwnRequest = req.user_id === user?.id || (Boolean(req.applicant_email && user?.email && req.applicant_email.toLowerCase() === user.email.toLowerCase()));
+              const canReview = role === 'owner' ? !isOwnRequest : (
+                role === 'admin' &&
+                !isOwnRequest &&
+                req.requested_role === 'member' &&
+                (isDeptMatch(req.requested_department_id, user?.department_id) || isDeptMatch(req.current_department_id, user?.department_id))
+              );
 
               return (
                 <div key={req.id} className="p-5 space-y-3 hover:bg-muted/20 transition-colors">
@@ -227,12 +236,19 @@ export default function RoleRequestsPage() {
                             (Current: {req.current_role.toUpperCase()})
                           </span>
                         </div>
-                        <div className="text-[11px] text-muted-foreground">
-                          Requesting: <strong className="text-primary uppercase">{req.requested_role}</strong> in{' '}
-                          <strong className="text-foreground">{targetDept?.name || 'Workspace'}</strong>
+                        <div className="text-[11px] text-muted-foreground flex items-center gap-2 flex-wrap mt-0.5">
+                          <span>
+                            Requesting: <strong className="text-primary uppercase">{req.requested_role}</strong> in{' '}
+                            <strong className="text-foreground">{targetDept?.name || 'Workspace'}</strong>
+                          </span>
                           {req.applicant_email && (
-                            <span className="ml-1 text-muted-foreground/75 font-mono">({req.applicant_email})</span>
+                            <span className="font-mono text-muted-foreground/75">({req.applicant_email})</span>
                           )}
+                          <span className="inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-full bg-muted border border-border text-muted-foreground">
+                            {req.requested_role === 'member' && targetDept
+                              ? `Routed to: Owner & ${targetDept.name} Admin`
+                              : 'Routed to: Workspace Owner'}
+                          </span>
                         </div>
                       </div>
                     </div>
@@ -263,109 +279,125 @@ export default function RoleRequestsPage() {
                     </div>
                   )}
 
-                  {/* Action buttons: Department Admin only for their respective department */}
-                  {isPrivileged && (isDeptMatch(req.requested_department_id, user?.department_id) || isDeptMatch(req.current_department_id, user?.department_id)) && req.status === 'submitted' && (
+                  {/* Action buttons / Status indicators for Approvers & Requesters */}
+                  {req.status === 'submitted' && (
                     <div className="pt-2">
-                      {activeReviewId === req.id ? (
-                        <div className="p-4 rounded-xl border border-primary/30 bg-primary/5 space-y-3">
-                          <div className="text-xs font-bold text-foreground flex items-center justify-between">
-                            <span className="flex items-center gap-1.5">
-                              <KeyRound className="h-4 w-4 text-primary" />
-                              <span>Review & Credential Provisioning</span>
-                            </span>
-                            <button
-                              onClick={() => setActiveReviewId(null)}
-                              className="text-muted-foreground hover:text-foreground text-[11px]"
-                            >
-                              Cancel
-                            </button>
-                          </div>
-
-                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                            <div>
-                              <label className="block text-[11px] font-semibold text-muted-foreground mb-1">
-                                Reviewer Remarks / Feedback
-                              </label>
-                              <input
-                                type="text"
-                                value={reviewerRemarks}
-                                onChange={(e) => setReviewerRemarks(e.target.value)}
-                                placeholder="Add remarks or notes..."
-                                className="w-full bg-background border border-border rounded-lg px-2.5 py-1.5 text-xs text-foreground"
-                              />
+                      {canReview ? (
+                        activeReviewId === req.id ? (
+                          <div className="p-4 rounded-xl border border-primary/30 bg-primary/5 space-y-3">
+                            <div className="text-xs font-bold text-foreground flex items-center justify-between">
+                              <span className="flex items-center gap-1.5">
+                                <KeyRound className="h-4 w-4 text-primary" />
+                                <span>Review & Credential Provisioning</span>
+                              </span>
+                              <button
+                                onClick={() => setActiveReviewId(null)}
+                                className="text-muted-foreground hover:text-foreground text-[11px]"
+                              >
+                                Cancel
+                              </button>
                             </div>
 
-                            <div>
-                              <div className="flex items-center justify-between mb-1">
-                                <label className="block text-[11px] font-semibold text-muted-foreground">
-                                  Account Password (Required on Approve)
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                              <div>
+                                <label className="block text-[11px] font-semibold text-muted-foreground mb-1">
+                                  Reviewer Remarks / Feedback
                                 </label>
-                                {req.requested_password && (
+                                <input
+                                  type="text"
+                                  value={reviewerRemarks}
+                                  onChange={(e) => setReviewerRemarks(e.target.value)}
+                                  placeholder="Add remarks or notes..."
+                                  className="w-full bg-background border border-border rounded-lg px-2.5 py-1.5 text-xs text-foreground"
+                                />
+                              </div>
+
+                              <div>
+                                <div className="flex items-center justify-between mb-1">
+                                  <label className="block text-[11px] font-semibold text-muted-foreground">
+                                    Account Password (Required on Approve)
+                                  </label>
+                                  {req.requested_password && (
+                                    <button
+                                      type="button"
+                                      onClick={() => setReviewPassword(req.requested_password!)}
+                                      className="text-[10px] text-primary underline"
+                                    >
+                                      Use applicant&apos;s choice
+                                    </button>
+                                  )}
+                                </div>
+                                <div className="relative">
+                                  <Lock className="absolute left-2.5 top-2 h-3.5 w-3.5 text-muted-foreground" />
+                                  <input
+                                    type={showPassword ? 'text' : 'password'}
+                                    value={reviewPassword}
+                                    onChange={(e) => setReviewPassword(e.target.value)}
+                                    placeholder="Set member password..."
+                                    className="w-full bg-background border border-border rounded-lg pl-8 pr-8 py-1.5 text-xs font-mono text-foreground"
+                                  />
                                   <button
                                     type="button"
-                                    onClick={() => setReviewPassword(req.requested_password!)}
-                                    className="text-[10px] text-primary underline"
+                                    onClick={() => setShowPassword(!showPassword)}
+                                    className="absolute right-2 top-2 text-muted-foreground hover:text-foreground"
                                   >
-                                    Use applicant&apos;s choice
+                                    {showPassword ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
                                   </button>
-                                )}
-                              </div>
-                              <div className="relative">
-                                <Lock className="absolute left-2.5 top-2 h-3.5 w-3.5 text-muted-foreground" />
-                                <input
-                                  type={showPassword ? 'text' : 'password'}
-                                  value={reviewPassword}
-                                  onChange={(e) => setReviewPassword(e.target.value)}
-                                  placeholder="Set member password..."
-                                  className="w-full bg-background border border-border rounded-lg pl-8 pr-8 py-1.5 text-xs font-mono text-foreground"
-                                />
-                                <button
-                                  type="button"
-                                  onClick={() => setShowPassword(!showPassword)}
-                                  className="absolute right-2 top-2 text-muted-foreground hover:text-foreground"
-                                >
-                                  {showPassword ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
-                                </button>
+                                </div>
                               </div>
                             </div>
-                          </div>
 
-                          {req.requested_password && (
-                            <div className="text-[11px] text-muted-foreground flex items-center gap-1.5 bg-background/60 p-2 rounded-lg border border-border">
-                              <span>Applicant proposed initial password:</span>
-                              <strong className="font-mono text-foreground">{req.requested_password}</strong>
+                            {req.requested_password && (
+                              <div className="text-[11px] text-muted-foreground flex items-center gap-1.5 bg-background/60 p-2 rounded-lg border border-border">
+                                <span>Applicant proposed initial password:</span>
+                                <strong className="font-mono text-foreground">{req.requested_password}</strong>
+                              </div>
+                            )}
+
+                            <div className="flex items-center gap-2 justify-end pt-1">
+                              <button
+                                onClick={() => handleReview(req.id, 'rejected')}
+                                className="px-3 py-1.5 rounded-lg border border-rose-300 text-rose-600 dark:text-rose-400 font-semibold hover:bg-rose-500/10 cursor-pointer"
+                              >
+                                Reject Request
+                              </button>
+                              <button
+                                onClick={() => handleReview(req.id, 'approved')}
+                                className="px-4 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-bold cursor-pointer shadow-xs flex items-center gap-1.5"
+                              >
+                                <CheckCircle2 className="h-3.5 w-3.5" />
+                                <span>Approve & Set Password</span>
+                              </button>
                             </div>
-                          )}
-
-                          <div className="flex items-center gap-2 justify-end pt-1">
+                          </div>
+                        ) : (
+                          <div className="flex justify-end">
                             <button
-                              onClick={() => handleReview(req.id, 'rejected')}
-                              className="px-3 py-1.5 rounded-lg border border-rose-300 text-rose-600 dark:text-rose-400 font-semibold hover:bg-rose-500/10 cursor-pointer"
+                              onClick={() => {
+                                setActiveReviewId(req.id);
+                                setReviewPassword(req.requested_password || 'member@123');
+                                setReviewerRemarks(req.reviewer_remarks || '');
+                              }}
+                              className="px-3 py-1 rounded-lg border border-border bg-background hover:bg-muted font-semibold text-foreground text-xs cursor-pointer shadow-xs"
                             >
-                              Reject Request
-                            </button>
-                            <button
-                              onClick={() => handleReview(req.id, 'approved')}
-                              className="px-4 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-bold cursor-pointer shadow-xs flex items-center gap-1.5"
-                            >
-                              <CheckCircle2 className="h-3.5 w-3.5" />
-                              <span>Approve & Set Password</span>
+                              Review & Set Password
                             </button>
                           </div>
+                        )
+                      ) : isOwnRequest ? (
+                        <div className="flex justify-end">
+                          <span className="text-[11px] font-semibold text-muted-foreground bg-muted/60 border border-border px-3 py-1 rounded-lg">
+                            Your Submission (Pending Approval)
+                          </span>
                         </div>
                       ) : (
-                        <div className="flex justify-end">
-                          <button
-                            onClick={() => {
-                              setActiveReviewId(req.id);
-                              setReviewPassword(req.requested_password || 'member@123');
-                              setReviewerRemarks(req.reviewer_remarks || '');
-                            }}
-                            className="px-3 py-1 rounded-lg border border-border bg-background hover:bg-muted font-semibold text-foreground text-xs cursor-pointer"
-                          >
-                            Review & Set Password
-                          </button>
-                        </div>
+                        role === 'admin' && (
+                          <div className="flex justify-end">
+                            <span className="text-[11px] font-semibold text-amber-600 dark:text-amber-400 bg-amber-500/10 border border-amber-500/20 px-3 py-1 rounded-lg">
+                              Pending Workspace Owner Approval
+                            </span>
+                          </div>
+                        )
                       )}
                     </div>
                   )}

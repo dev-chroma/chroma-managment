@@ -98,7 +98,11 @@ interface DataContextType {
   createRoleRequest: (data: Omit<RoleRequest, 'id' | 'status' | 'created_at'>) => Promise<RoleRequest>;
   reviewRoleRequest: (requestId: string, decision: 'approved' | 'rejected', remarks?: string) => Promise<boolean>;
   addAnnouncement: (data: Omit<Announcement, 'id' | 'created_at'>) => Promise<Announcement>;
+  updateAnnouncement: (id: string, updates: Partial<Announcement>) => Promise<boolean>;
+  deleteAnnouncement: (id: string) => Promise<boolean>;
   addMeeting: (data: Omit<Meeting, 'id' | 'created_at'>) => Promise<Meeting>;
+  updateMeeting: (id: string, updates: Partial<Meeting>) => Promise<boolean>;
+  deleteMeeting: (id: string) => Promise<boolean>;
   addResource: (data: Omit<ResourceItem, 'id' | 'created_at'>) => Promise<ResourceItem>;
   deleteResource: (id: string) => Promise<boolean>;
   ledgerEntries: LedgerEntry[];
@@ -1136,6 +1140,35 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
     return ann;
   };
 
+  const updateAnnouncement = async (id: string, updates: Partial<Announcement>): Promise<boolean> => {
+    setAnnouncements((prev) =>
+      prev.map((a) => (a.id === id ? { ...a, ...updates } : a))
+    );
+    if (isSupabaseConfigured()) {
+      const supabase = createClient();
+      if (supabase) {
+        const { department: _d, author: _a, ...dbPayload } = updates as any;
+        supabase.from('announcements').update(dbPayload).eq('id', id).then(({ error }) => {
+          if (error) console.error('Supabase updateAnnouncement error:', error);
+        });
+      }
+    }
+    return true;
+  };
+
+  const deleteAnnouncement = async (id: string): Promise<boolean> => {
+    setAnnouncements((prev) => prev.filter((a) => a.id !== id));
+    if (isSupabaseConfigured()) {
+      const supabase = createClient();
+      if (supabase) {
+        supabase.from('announcements').delete().eq('id', id).then(({ error }) => {
+          if (error) console.error('Supabase deleteAnnouncement error:', error);
+        });
+      }
+    }
+    return true;
+  };
+
   const addMeeting = async (data: Omit<Meeting, 'id' | 'created_at'>): Promise<Meeting> => {
     const mtg: Meeting = {
       ...data,
@@ -1153,6 +1186,35 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
       }
     }
     return mtg;
+  };
+
+  const updateMeeting = async (id: string, updates: Partial<Meeting>): Promise<boolean> => {
+    setMeetings((prev) =>
+      prev.map((m) => (m.id === id ? { ...m, ...updates } : m))
+    );
+    if (isSupabaseConfigured()) {
+      const supabase = createClient();
+      if (supabase) {
+        const { department: _d, creator: _c, ...dbPayload } = updates as any;
+        supabase.from('meetings').update(dbPayload).eq('id', id).then(({ error }) => {
+          if (error) console.error('Supabase updateMeeting error:', error);
+        });
+      }
+    }
+    return true;
+  };
+
+  const deleteMeeting = async (id: string): Promise<boolean> => {
+    setMeetings((prev) => prev.filter((m) => m.id !== id));
+    if (isSupabaseConfigured()) {
+      const supabase = createClient();
+      if (supabase) {
+        supabase.from('meetings').delete().eq('id', id).then(({ error }) => {
+          if (error) console.error('Supabase deleteMeeting error:', error);
+        });
+      }
+    }
+    return true;
   };
 
   const addResource = async (data: Omit<ResourceItem, 'id' | 'created_at'>): Promise<ResourceItem> => {
@@ -2326,7 +2388,11 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
         createRoleRequest,
         reviewRoleRequest,
         addAnnouncement,
+        updateAnnouncement,
+        deleteAnnouncement,
         addMeeting,
+        updateMeeting,
+        deleteMeeting,
         addResource,
         deleteResource,
         ledgerEntries,

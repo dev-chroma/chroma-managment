@@ -60,7 +60,12 @@ export function Sidebar({ isOpen = false, onClose }: SidebarProps) {
   const myPendingTasksCount = tasks.filter((t) => t.assigned_to === user?.id && !t.is_archived).length;
   const pendingRequestsCount = role === 'owner'
     ? roleRequests.filter((r) => r.status === 'submitted').length
-    : roleRequests.filter((r) => r.status === 'submitted' && r.requested_department_id === user?.department_id).length;
+    : role === 'admin'
+      ? roleRequests.filter((r) => r.status === 'submitted' && (
+          r.requested_department_id === user?.department_id ||
+          r.current_department_id === user?.department_id
+        )).length
+      : 0;
 
   // 1. Department Workspace Links (Workspaces Group)
   const allDepartmentLinks = [

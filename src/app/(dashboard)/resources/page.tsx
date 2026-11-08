@@ -34,7 +34,6 @@ export default function ResourceCenterPage() {
   const [category, setCategory] = useState('Brand Assets');
   const [departmentId, setDepartmentId] = useState('');
   const [resourceActionType, setResourceActionType] = useState<'link' | 'download'>('link');
-  const [cardActions, setCardActions] = useState<Record<string, 'link' | 'download'>>({});
 
   // Resource Center Permissions:
   // Members can view and download resources, but CANNOT add or delete.
@@ -171,43 +170,31 @@ export default function ResourceCenterPage() {
                   {format(parseISO(res.created_at), 'MMM dd, yyyy')}
                 </span>
                 <div className="flex items-center gap-2">
-                  {/* Link or Download Action Selector & Trigger */}
-                  <div className="flex items-center gap-1.5">
-                    <select
-                      value={cardActions[res.id] || (res.file_type?.toLowerCase() === 'link' ? 'link' : 'download')}
-                      onChange={(e) => setCardActions({ ...cardActions, [res.id]: e.target.value as 'link' | 'download' })}
-                      className="bg-muted text-[11px] font-semibold border border-border rounded-lg px-2 py-1 cursor-pointer focus:ring-1 focus:ring-primary"
-                      title="Select Link or Download action"
+                  {res.file_type?.toLowerCase() === 'link' ? (
+                    <a
+                      href={res.file_url}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="flex items-center gap-1.5 px-3 py-1.5 bg-primary text-primary-foreground rounded-xl font-bold text-xs hover:bg-primary/90 transition-all shadow-2xs cursor-pointer"
+                      title="View Site"
                     >
-                      <option value="link">Link</option>
-                      <option value="download">Download</option>
-                    </select>
+                      <ExternalLink className="h-3.5 w-3.5" />
+                      <span>View Site</span>
+                    </a>
+                  ) : (
+                    <a
+                      href={res.file_url}
+                      target="_blank"
+                      download
+                      rel="noreferrer"
+                      className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-600 text-white rounded-xl font-bold text-xs hover:bg-emerald-700 transition-all shadow-2xs cursor-pointer"
+                      title="Download File"
+                    >
+                      <Download className="h-3.5 w-3.5" />
+                      <span>Download</span>
+                    </a>
+                  )}
 
-                    {(cardActions[res.id] || (res.file_type?.toLowerCase() === 'link' ? 'link' : 'download')) === 'link' ? (
-                      <a
-                        href={res.file_url}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="flex items-center gap-1 px-3 py-1 bg-primary text-primary-foreground rounded-lg font-bold text-xs hover:bg-primary/90 transition-all shadow-2xs cursor-pointer"
-                        title="View Site"
-                      >
-                        <ExternalLink className="h-3.5 w-3.5" />
-                        <span>View Site</span>
-                      </a>
-                    ) : (
-                      <a
-                        href={res.file_url}
-                        target="_blank"
-                        download
-                        rel="noreferrer"
-                        className="flex items-center gap-1 px-3 py-1 bg-emerald-600 text-white rounded-lg font-bold text-xs hover:bg-emerald-700 transition-all shadow-2xs cursor-pointer"
-                        title="Download File"
-                      >
-                        <Download className="h-3.5 w-3.5" />
-                        <span>Download</span>
-                      </a>
-                    )}
-                  </div>
                   {canAddOrDelete && (
                     <button
                       onClick={() => handleDelete(res)}

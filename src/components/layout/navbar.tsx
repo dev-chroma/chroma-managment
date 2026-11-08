@@ -95,7 +95,12 @@ export function Navbar({ onToggleMobileMenu }: NavbarProps) {
 
   const pendingRequestsCount = role === 'owner' 
     ? roleRequests.filter((r) => r.status === 'submitted').length 
-    : 0;
+    : role === 'admin'
+      ? roleRequests.filter((r) => r.status === 'submitted' && (
+          r.requested_department_id === user?.department_id ||
+          r.current_department_id === user?.department_id
+        )).length
+      : 0;
   const unreadAnnouncementsCount = announcements.length;
 
   // Detect incomplete tasks missing required parameters (Section 6 & Requirement 10)

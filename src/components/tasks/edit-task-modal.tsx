@@ -30,6 +30,7 @@ export function EditTaskModal({
   const [assignedTo, setAssignedTo] = useState('');
   const [deadline, setDeadline] = useState('');
   const [description, setDescription] = useState('');
+  const [eventVenue, setEventVenue] = useState('');
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -52,6 +53,7 @@ export function EditTaskModal({
       setAssignedTo(task.assigned_to || '');
       setDeadline(task.deadline ? task.deadline.slice(0, 10) : '');
       setDescription(task.description || '');
+      setEventVenue(task.custom_fields?.event_venue || '');
       setError(null);
     }
   }, [task, categories]);
@@ -76,6 +78,7 @@ export function EditTaskModal({
         custom_fields: {
           ...task.custom_fields,
           category: category.trim(),
+          ...(department?.slug === 'programe' ? { event_venue: eventVenue.trim() } : {}),
         },
         assigned_to: assignedTo || null,
         deadline: deadline ? new Date(deadline).toISOString() : null,
@@ -193,18 +196,28 @@ export function EditTaskModal({
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            {/* Author Name */}
+            {/* Author Name or Venue */}
             <div>
               <label className="block font-semibold text-foreground mb-1">
-                Author / Creator Name
+                {department?.slug === 'programe' ? 'Event Venue / Platform' : 'Author / Creator Name'}
               </label>
-              <input
-                type="text"
-                value={authorName}
-                onChange={(e) => setAuthorName(e.target.value)}
-                placeholder="Author name"
-                className="w-full bg-background border border-border rounded-xl px-3 py-2 text-foreground focus:ring-1 focus:ring-primary"
-              />
+              {department?.slug === 'programe' ? (
+                <input
+                  type="text"
+                  value={eventVenue}
+                  onChange={(e) => setEventVenue(e.target.value)}
+                  placeholder="e.g. Main Auditorium / Seminar Hall B"
+                  className="w-full bg-background border border-border rounded-xl px-3 py-2 text-foreground focus:ring-1 focus:ring-primary text-xs"
+                />
+              ) : (
+                <input
+                  type="text"
+                  value={authorName}
+                  onChange={(e) => setAuthorName(e.target.value)}
+                  placeholder="Author name"
+                  className="w-full bg-background border border-border rounded-xl px-3 py-2 text-foreground focus:ring-1 focus:ring-primary text-xs"
+                />
+              )}
             </div>
 
             {/* Deadline */}
@@ -217,23 +230,23 @@ export function EditTaskModal({
                 type="date"
                 value={deadline}
                 onChange={(e) => setDeadline(e.target.value)}
-                className="w-full bg-background border border-border rounded-xl px-3 py-2 text-foreground focus:ring-1 focus:ring-primary"
+                className="w-full bg-background border border-border rounded-xl px-3 py-2 text-foreground focus:ring-1 focus:ring-primary text-xs"
               />
             </div>
           </div>
 
-          {/* Profile Link */}
+          {/* Profile Link / Event URL */}
           <div>
             <label className="block font-semibold text-foreground mb-1 flex items-center gap-1.5">
               <LinkIcon className="h-3.5 w-3.5 text-primary" />
-              <span>Author Profile Link</span>
+              <span>{department?.slug === 'programe' ? 'Program Live Link / Portal URL' : 'Author Profile Link'}</span>
             </label>
             <input
               type="url"
               value={profileLink}
               onChange={(e) => setProfileLink(e.target.value)}
-              placeholder="https://www.chromadiaries.in/profile/..."
-              className="w-full bg-background border border-border rounded-xl px-3 py-2 text-foreground font-mono text-[11px] focus:ring-1 focus:ring-primary"
+              placeholder="https://www.chromadiaries.in/..."
+              className="w-full bg-background border border-border rounded-xl px-3 py-2 text-foreground font-mono text-[11px] focus:ring-1 focus:ring-primary text-xs"
             />
           </div>
 

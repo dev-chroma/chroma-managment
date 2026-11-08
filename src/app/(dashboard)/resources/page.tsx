@@ -4,6 +4,7 @@ import React, { useState } from 'react';
 import { useData } from '@/lib/context/data-context';
 import { useAuth } from '@/lib/context/auth-context';
 import { formatBytes } from '@/lib/utils';
+import { ResourceItem } from '@/types/database';
 import {
   FolderArchive,
   Plus,
@@ -16,6 +17,7 @@ import {
   Trash2,
 } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
+import { TwoStepDeleteModal } from '@/components/common/two-step-delete-modal';
 
 export default function ResourceCenterPage() {
   const { resources, departments, addResource, deleteResource } = useData();
@@ -23,6 +25,7 @@ export default function ResourceCenterPage() {
 
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
+  const [resourceToDelete, setResourceToDelete] = useState<ResourceItem | null>(null);
   const [isUploadOpen, setIsUploadOpen] = useState(false);
 
   // New resource state
@@ -50,10 +53,8 @@ export default function ResourceCenterPage() {
     return true;
   });
 
-  const handleDelete = async (resourceId: string) => {
-    if (confirm('Are you sure you want to delete this resource?')) {
-      await deleteResource(resourceId);
-    }
+  const handleDelete = async (resource: ResourceItem) => {
+    setResourceToDelete(resource);
   };
 
   const handleUpload = async (e: React.FormEvent) => {
@@ -179,7 +180,7 @@ export default function ResourceCenterPage() {
                   </a>
                   {canAddOrDelete && (
                     <button
-                      onClick={() => handleDelete(res.id)}
+                      onClick={() => handleDelete(res)}
                       className="p-1 rounded text-muted-foreground hover:text-rose-500 hover:bg-rose-500/10 transition-colors cursor-pointer"
                       title="Delete Resource (Admin/Owner only)"
                     >
@@ -188,9 +189,9 @@ export default function ResourceCenterPage() {
                   )}
                 </div>
               </div>
-            </div>
-          );
-        })}
+    </div>
+  );
+})}
       </div>
 
       {/* Upload Modal */}
@@ -282,6 +283,19 @@ export default function ResourceCenterPage() {
           </div>
         </div>
       )}
-    </div>
+          {resourceToDelete && (
+        <TwoStepDeleteModal
+          isOpen={Boolean(resourceToDelete)}
+          title="Delete Workspace Resource"
+          itemTitle={resourceToDelete.title}
+          itemDetails={`Category: ${resourceToDelete.category} · File: ${resourceToDelete.file_type || 'Document'}`}
+          onClose={() => setResourceToDelete(null)}
+          onConfirmDelete={async () => {
+            await deleteResource(resourceToDelete.id);
+            setResourceToDelete(null);
+          }}
+        />
+      )}
+</div>
   );
 }

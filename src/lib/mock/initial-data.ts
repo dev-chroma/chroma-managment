@@ -190,7 +190,150 @@ export const INITIAL_PROFILES: Profile[] = [
   },
 ];
 
-export const INITIAL_TASKS: Task[] = [];
+export const INITIAL_TASKS: Task[] = [
+  {
+    id: 'prog-task-1',
+    auto_id: 'CD-P-001',
+    department_id: 'd5555555-5555-5555-5555-555555555555',
+    title: 'ChromaDiaries Youth Literature Fest 2026',
+    description: 'Annual flagship youth festival: poetry recitation, author panel, and ChromaDiaries print edition release ceremony.',
+    category: 'Official Programe',
+    status_id: 'p2', // Planned (counts as Progress)
+    assigned_to: 'u0000000-0000-0000-0000-000000000005',
+    deadline: '2026-11-20T18:00:00.000Z',
+    author_name: 'Program Committee',
+    profile_link: 'https://chromadiaries.in/fest2026',
+    is_archived: false,
+    custom_fields: {
+      event_venue: 'Main Campus Auditorium & YouTube Live',
+      program_todos: [
+        { id: 'pt-1-1', text: 'Confirm auditorium booking & AV stage lights', done: true },
+        { id: 'pt-1-2', text: 'Send formal invitation letters to 4 guest authors', done: true },
+        { id: 'pt-1-3', text: 'Print magazine commemorative edition copies', done: false },
+        { id: 'pt-1-4', text: 'Assign student volunteer anchors and stage hosts', done: false },
+      ],
+    },
+    created_at: now.toISOString(),
+    updated_at: now.toISOString(),
+  },
+  {
+    id: 'prog-task-2',
+    auto_id: 'CD-P-002',
+    department_id: 'd5555555-5555-5555-5555-555555555555',
+    title: 'English Creative Writing & Poetry Masterclass',
+    description: 'Interactive session with literary mentors on English prose, poetic meter, and story editing.',
+    category: 'English Programe',
+    status_id: 'p3', // Progress (counts as Progress)
+    assigned_to: 'u0000000-0000-0000-0000-000000000006',
+    deadline: '2026-11-16T15:30:00.000Z',
+    author_name: 'Language Club',
+    profile_link: 'https://chromadiaries.in/masterclass',
+    is_archived: false,
+    custom_fields: {
+      event_venue: 'Seminar Hall B',
+      program_todos: [
+        { id: 'pt-2-1', text: 'Circulate Google Forms registration link to colleges', done: true },
+        { id: 'pt-2-2', text: 'Prepare slide presentation and writing workbooks', done: false },
+        { id: 'pt-2-3', text: 'Arrange mentor honorarium vouchers', done: false },
+      ],
+    },
+    created_at: now.toISOString(),
+    updated_at: now.toISOString(),
+  },
+  {
+    id: 'prog-task-3',
+    auto_id: 'CD-P-003',
+    department_id: 'd5555555-5555-5555-5555-555555555555',
+    title: 'Campus Promotion Tour & Student Enrollment Booths',
+    description: 'Multi-college book stall tour, literary quiz, and membership promotion across campuses.',
+    category: 'Promotion Programe',
+    status_id: 'p4', // Sheduled (counts as Progress)
+    assigned_to: 'u0000000-0000-0000-0000-000000000006',
+    deadline: '2026-11-25T11:00:00.000Z',
+    author_name: 'Promotion Wing',
+    is_archived: false,
+    custom_fields: {
+      event_venue: 'Partner Colleges & Campus Square',
+      program_todos: [
+        { id: 'pt-3-1', text: 'Obtain stall permission letters from 3 campus principals', done: true },
+        { id: 'pt-3-2', text: 'Print roll-up banners and student enrollment forms', done: false },
+        { id: 'pt-3-3', text: 'Prepare literary trivia quiz cards and merchandise', done: false },
+      ],
+    },
+    created_at: now.toISOString(),
+    updated_at: now.toISOString(),
+  },
+  {
+    id: 'prog-task-4',
+    auto_id: 'CD-P-004',
+    department_id: 'd5555555-5555-5555-5555-555555555555',
+    title: 'National Education Day Special Literary Symposium',
+    description: 'Keynote symposium discussing the future of youth literature in educational institutions.',
+    category: 'Special Day Programe',
+    status_id: 'p5', // Completed
+    assigned_to: 'u0000000-0000-0000-0000-000000000005',
+    deadline: '2026-11-11T17:00:00.000Z',
+    completed_at: '2026-11-11T16:45:00.000Z',
+    author_name: 'Education Council',
+    is_archived: false,
+    custom_fields: {
+      event_venue: 'Conference Hall 1',
+      program_todos: [
+        { id: 'pt-4-1', text: 'Keynote speeches delivery by education directors', done: true },
+        { id: 'pt-4-2', text: 'Panel questions and audience interaction round', done: true },
+        { id: 'pt-4-3', text: 'Post-event press release & certificate dispatch', done: true },
+      ],
+    },
+    created_at: now.toISOString(),
+    updated_at: now.toISOString(),
+  },
+  {
+    id: 'prog-task-5',
+    auto_id: 'CD-P-005',
+    department_id: 'd5555555-5555-5555-5555-555555555555',
+    title: 'AI and Trend Creative Writing Panel',
+    description: 'Panel discussion with student creators on modern trends and AI tools in creative literature.',
+    category: 'Trend Programe',
+    status_id: 'p1', // Pending
+    assigned_to: 'u0000000-0000-0000-0000-000000000005',
+    deadline: '2026-11-28T16:00:00.000Z',
+    author_name: 'Tech & Lit Club',
+    is_archived: false,
+    custom_fields: {
+      event_venue: 'Online Google Meet Live',
+      program_todos: [
+        { id: 'pt-5-1', text: 'Draft discussion agenda and panel prompts', done: false },
+        { id: 'pt-5-2', text: 'Publish Instagram & WhatsApp promo story teasers', done: false },
+        { id: 'pt-5-3', text: 'Set up Google Meet recording & stream links', done: false },
+      ],
+    },
+    created_at: now.toISOString(),
+    updated_at: now.toISOString(),
+  },
+  {
+    id: 'prog-task-6',
+    auto_id: 'CD-P-006',
+    department_id: 'd5555555-5555-5555-5555-555555555555',
+    title: 'Inter-College Micro-Fiction & Flash Story Championship',
+    description: 'Flash writing competition with cash prizes, certificates, and editorial publishing.',
+    category: 'Other Programe',
+    status_id: 'p3', // Progress
+    assigned_to: 'u0000000-0000-0000-0000-000000000006',
+    deadline: '2026-11-22T14:00:00.000Z',
+    author_name: 'Championship Wing',
+    is_archived: false,
+    custom_fields: {
+      event_venue: 'Literary Hub Room 4',
+      program_todos: [
+        { id: 'pt-6-1', text: 'Announce competition prompt and word limit guidelines', done: true },
+        { id: 'pt-6-2', text: 'Form 3-member editorial jury for submissions', done: false },
+        { id: 'pt-6-3', text: 'Prepare winners cash prizes and mementos', done: false },
+      ],
+    },
+    created_at: now.toISOString(),
+    updated_at: now.toISOString(),
+  },
+];
 export const INITIAL_ANNOUNCEMENTS: Announcement[] = [];
 export const INITIAL_MEETINGS: Meeting[] = [];
 export const INITIAL_RESOURCES: ResourceItem[] = [];

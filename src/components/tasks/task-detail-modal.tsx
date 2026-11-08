@@ -19,6 +19,7 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { format, parseISO } from 'date-fns';
+import { TwoStepDeleteModal } from '@/components/common/two-step-delete-modal';
 
 interface TaskDetailModalProps {
   task: Task;
@@ -47,6 +48,7 @@ export function TaskDetailModal({
   const [rejectionRemarks, setRejectionRemarks] = useState(task.rejection_reason || '');
   const [showRejectionInput, setShowRejectionInput] = useState(false);
   const [transitionError, setTransitionError] = useState<string | null>(null);
+  const [isDeleteOpen, setIsDeleteOpen] = useState(false);
   const [isUpdating, setIsUpdating] = useState(false);
 
   if (!isOpen) return null;
@@ -102,10 +104,7 @@ export function TaskDetailModal({
 
   const handleArchive = async () => {
     if (!isPrivileged) return;
-    if (confirm('Archive this assignment? It will be removed from the active board but preserved in historical reports.')) {
-      await archiveTask(task.id);
-      onClose();
-    }
+    setIsDeleteOpen(true);
   };
 
   const badgeStyle = getStatusBadgeClasses(currentStatus);
@@ -377,7 +376,21 @@ export function TaskDetailModal({
             Done
           </button>
         </div>
-      </div>
+              {isDeleteOpen && (
+          <TwoStepDeleteModal
+            isOpen={isDeleteOpen}
+            title="Archive / Delete Task Assignment"
+            itemTitle={task.title}
+            itemDetails={`Auto ID: ${task.auto_id} · Department: ${department.name}`}
+            onClose={() => setIsDeleteOpen(false)}
+            onConfirmDelete={async () => {
+              await archiveTask(task.id);
+              setIsDeleteOpen(false);
+              onClose();
+            }}
+          />
+        )}
+</div>
     </div>
   );
 }

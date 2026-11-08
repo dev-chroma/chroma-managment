@@ -26,6 +26,7 @@ import {
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
 import { INITIAL_PROFILES } from '@/lib/mock/initial-data';
+import { TwoStepDeleteModal } from '@/components/common/two-step-delete-modal';
 
 export default function WorkspaceTodoPage() {
   const { todos, addTodo, updateTodo, deleteTodo, toggleTodoStatus, departments } = useData();
@@ -40,6 +41,7 @@ export default function WorkspaceTodoPage() {
   // Modals state
   const [isAddOpen, setIsAddOpen] = useState(false);
   const [editingTodo, setEditingTodo] = useState<WorkspaceTodo | null>(null);
+  const [todoToDelete, setTodoToDelete] = useState<WorkspaceTodo | null>(null);
 
   // Available profiles to assign to
   const assignableUsers = useMemo(() => {
@@ -389,13 +391,9 @@ export default function WorkspaceTodoPage() {
                   </button>
 
                   <button
-                    onClick={() => {
-                      if (confirm(`Delete "${item.title}"?`)) {
-                        deleteTodo(item.id);
-                      }
-                    }}
+                    onClick={() => setTodoToDelete(item)}
                     className="p-1.5 rounded-lg text-muted-foreground hover:text-rose-500 hover:bg-rose-500/10 cursor-pointer"
-                    title="Delete Item"
+                    title="Delete Item (2-Step Verification)"
                   >
                     <Trash2 className="h-3.5 w-3.5" />
                   </button>
@@ -559,6 +557,20 @@ export default function WorkspaceTodoPage() {
             </form>
           </div>
         </div>
+      )}
+      {/* 2-Step Delete Verification Modal */}
+      {todoToDelete && (
+        <TwoStepDeleteModal
+          isOpen={Boolean(todoToDelete)}
+          title="Delete Workspace To-Do"
+          itemTitle={todoToDelete.title}
+          itemDetails={`Priority: ${todoToDelete.priority.toUpperCase()} · Status: ${todoToDelete.status}`}
+          onClose={() => setTodoToDelete(null)}
+          onConfirmDelete={async () => {
+            await deleteTodo(todoToDelete.id);
+            setTodoToDelete(null);
+          }}
+        />
       )}
     </div>
   );

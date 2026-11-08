@@ -33,6 +33,7 @@ import {
 import Link from 'next/link';
 import { cn } from '@/lib/utils';
 import { UserAvatar } from '@/components/common/user-avatar';
+import { TwoStepDeleteModal } from '@/components/common/two-step-delete-modal';
 import { AvatarPicker } from '@/components/common/avatar-picker';
 
 export default function TeamMembersPage() {
@@ -48,6 +49,7 @@ export default function TeamMembersPage() {
   const [isAddOpen, setIsAddOpen] = useState(false);
   const [viewingMember, setViewingMember] = useState<Profile | null>(null);
   const [editingMember, setEditingMember] = useState<Profile | null>(null);
+  const [memberToDelete, setMemberToDelete] = useState<Profile | null>(null);
 
   // Form state for adding member
   const [fullName, setFullName] = useState('');
@@ -102,9 +104,9 @@ export default function TeamMembersPage() {
         >
           Return to Dashboard
         </button>
-      </div>
-    );
-  }
+    </div>
+  );
+}
 
   const isPrivileged = role === 'owner' || role === 'admin';
 
@@ -220,30 +222,27 @@ export default function TeamMembersPage() {
       alert('The primary organization Owner account cannot be deleted.');
       return;
     }
-
-    // Role boundary: Admin can only delete members of their own department
     if (role === 'admin' && member.department_id !== user?.department_id) {
       alert('You can only manage and delete members of your assigned department.');
       return;
     }
+    setMemberToDelete(member);
+  };
 
-    if (!confirm(`Are you sure you want to remove ${member.full_name} (${member.email}) from ChromaDiaries? Tasks assigned to this member will be unassigned.`)) {
-      return;
-    }
-
-    // Unassign tasks assigned to this user
+  const confirmDeleteMember = async () => {
+    if (!memberToDelete) return;
+    const member = memberToDelete;
     const userTasks = tasks.filter((t) => t.assigned_to === member.id);
     for (const t of userTasks) {
       await updateTask(t.id, { assigned_to: null });
     }
-
     const res = await deleteAccount(member.id);
     if (res.error) {
       alert(res.error);
       return;
     }
-
     showNotification(`Member ${member.full_name} removed from workspace.`);
+    setMemberToDelete(null);
   };
 
   return (
@@ -924,6 +923,16 @@ export default function TeamMembersPage() {
           </div>
         </div>
       )}
-    </div>
+          {memberToDelete && (
+        <TwoStepDeleteModal
+          isOpen={Boolean(memberToDelete)}
+          title="Delete / Deactivate Workspace Member"
+          itemTitle={memberToDelete.full_name}
+          itemDetails={`Email: ${memberToDelete.email} · Role: ${memberToDelete.system_role.toUpperCase()}`}
+          onClose={() => setMemberToDelete(null)}
+          onConfirmDelete={confirmDeleteMember}
+        />
+      )}
+</div>
   );
 }

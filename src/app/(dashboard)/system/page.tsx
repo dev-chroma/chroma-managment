@@ -22,6 +22,7 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { exportAuditLogsToExcel, exportAuditLogsToPdf } from '@/lib/services/export-service';
+import { TwoStepDeleteModal } from '@/components/common/two-step-delete-modal';
 
 export default function SystemControlPage() {
   const { role, user } = useAuth();
@@ -44,6 +45,7 @@ export default function SystemControlPage() {
   const [activeTab, setActiveTab] = useState<'statuses' | 'targets' | 'categories' | 'audit'>('statuses');
   const [newCategoryName, setNewCategoryName] = useState('');
   const [categorySuccess, setCategorySuccess] = useState<string | null>(null);
+  const [catToDelete, setCatToDelete] = useState<{ deptSlug: string; deptName: string; category: string } | null>(null);
 
   // New status form state
   const [newStatusName, setNewStatusName] = useState('');
@@ -72,9 +74,9 @@ export default function SystemControlPage() {
         <p className="text-xs text-muted-foreground">
           System Control is accessible only to the organization Owner. Please switch persona to Owner in the sidebar persona dropdown to access global settings.
         </p>
-      </div>
-    );
-  }
+    </div>
+  );
+}
 
   const currentDeptStatuses = statuses
     .filter((s) => s.department_id === selectedDeptId && s.is_active)
@@ -216,12 +218,8 @@ export default function SystemControlPage() {
               setTimeout(() => setCategorySuccess(null), 3000);
             };
 
-            const handleRemoveCat = async (cat: string) => {
-              if (confirm(`Remove "${cat}" from ${activeDept.name} dropdown options?`)) {
-                await removeCategoryFromDepartment(activeDept.slug, cat);
-                setCategorySuccess(`Removed "${cat}" from ${activeDept.name}.`);
-                setTimeout(() => setCategorySuccess(null), 3000);
-              }
+            const handleRemoveCat = (cat: string) => {
+              setCatToDelete({ deptSlug: activeDept.slug, deptName: activeDept.name, category: cat });
             };
 
             return (
@@ -640,6 +638,21 @@ export default function SystemControlPage() {
           </div>
         </div>
       )}
-    </div>
+          {catToDelete && (
+        <TwoStepDeleteModal
+          isOpen={Boolean(catToDelete)}
+          title={`Remove Category from ${catToDelete.deptName}`}
+          itemTitle={catToDelete.category}
+          itemDetails={`Department: ${catToDelete.deptName} (${catToDelete.deptSlug})`}
+          onClose={() => setCatToDelete(null)}
+          onConfirmDelete={async () => {
+            await removeCategoryFromDepartment(catToDelete.deptSlug, catToDelete.category);
+            setCategorySuccess(`Removed "${catToDelete.category}" from ${catToDelete.deptName}.`);
+            setCatToDelete(null);
+            setTimeout(() => setCategorySuccess(null), 3000);
+          }}
+        />
+      )}
+</div>
   );
 }

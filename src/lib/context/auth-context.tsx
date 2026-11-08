@@ -81,6 +81,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         }
       }
 
+      // Ensure all INITIAL_PROFILES exist in accounts
+      INITIAL_PROFILES.forEach((initP) => {
+        if (!accounts.some((a) => a.email.toLowerCase() === initP.email.toLowerCase())) {
+          accounts.push({
+            ...initP,
+            password: initP.system_role === 'admin' ? 'admin@123' : 'member@123',
+          });
+        }
+      });
+
       // Check saved session
       const savedUser = localStorage.getItem(STORAGE_KEY_USER);
       if (savedUser) {

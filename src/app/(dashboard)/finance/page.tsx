@@ -40,6 +40,7 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
+import { TwoStepDeleteModal } from '@/components/common/two-step-delete-modal';
 
 const CONNECTED_SHEET_URL = 'https://docs.google.com/spreadsheets/d/1YtLXElTsedWX3kFPqoE4iJn84ige3-U1ftojhmfcxxM/edit?gid=0#gid=0';
 
@@ -91,6 +92,63 @@ export default function FinancialWorkspacePage() {
   const [portalAdditionFilter, setPortalAdditionFilter] = useState<'all' | 'Added' | 'Not Added'>('all');
 
   // Modals state
+  const [deleteTarget, setDeleteTarget] = useState<{
+    isOpen: boolean;
+    title: string;
+    itemTitle: string;
+    itemDetails?: string;
+    onConfirm: () => Promise<any> | any;
+  } | null>(null);
+
+  const [isSyncingDonations, setIsSyncingDonations] = useState<string | null>(null);
+  const [syncFeedback, setSyncFeedback] = useState<string | null>(null);
+
+  const handleSyncDonationSheet = async (sheet: 'SS1' | 'SS2') => {
+    setIsSyncingDonations(sheet);
+    setSyncFeedback(null);
+    try {
+      const res = await syncStudentDonationsFromSheet(sheet);
+      if (res.success) {
+        setSyncFeedback(`Successfully synced ${res.count} student records from ${sheet}!`);
+      } else {
+        setSyncFeedback(res.error || `Failed to sync ${sheet}.`);
+      }
+    } catch (err: any) {
+      setSyncFeedback(err?.message || `Error syncing ${sheet}.`);
+    } finally {
+      setIsSyncingDonations(null);
+      setTimeout(() => setSyncFeedback(null), 5000);
+    }
+  };
+
+  const handlePushDonationsToSheet = async (sheet: 'SS1' | 'SS2') => {
+    setIsSyncingDonations(`push_${sheet}`);
+    setSyncFeedback(null);
+    try {
+      const targetStudents = studentDonations.filter((d) => d.sheet_name === sheet);
+      const res = await fetch('/api/finance/sync-sheet', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'sync_student_donations',
+          sheet,
+          students: targetStudents,
+        }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setSyncFeedback(`Successfully pushed ${targetStudents.length} records to Google Sheet tab ${sheet}!`);
+      } else {
+        setSyncFeedback(data.error || 'Failed to push to Google Sheet.');
+      }
+    } catch (err: any) {
+      setSyncFeedback(err?.message || 'Error pushing to sheet.');
+    } finally {
+      setIsSyncingDonations(null);
+      setTimeout(() => setSyncFeedback(null), 5000);
+    }
+  };
+
   const [isAddTransactionOpen, setIsAddTransactionOpen] = useState(false);
   const [isSubEntryMode, setIsSubEntryMode] = useState(false);
   const [editingTransaction, setEditingTransaction] = useState<LedgerEntry | null>(null);
@@ -643,12 +701,16 @@ export default function FinancialWorkspacePage() {
                               </button>
                               <button
                                 onClick={() => {
-                                  if (confirm(`Are you sure you want to delete "${row.item}"?`)) {
-                                    deleteLedgerEntry(row.id);
-                                  }
+                                  setDeleteTarget({
+                                    isOpen: true,
+                                    title: 'Delete Ledger Entry',
+                                    itemTitle: row.item,
+                                    itemDetails: `${row.serial_no ? `Entry #${row.serial_no}` : 'Sub-entry'} · ${row.credit ? `Credit: ₹${row.credit}` : `Debit: ₹${row.debit}`} · ${row.date}`,
+                                    onConfirm: () => deleteLedgerEntry(row.id),
+                                  });
                                 }}
                                 className="p-1.5 rounded-lg text-muted-foreground hover:text-rose-500 hover:bg-rose-500/10 transition-colors cursor-pointer"
-                                title="Delete Transaction"
+                                title="Delete Transaction (2-Step Verification)"
                               >
                                 <Trash2 className="h-3.5 w-3.5" />
                               </button>
@@ -883,8 +945,17 @@ export default function FinancialWorkspacePage() {
                             </button>
                             {moneyHoldings.length > 3 && (
                               <button
-                                onClick={() => deleteMoneyHolding(h.id)}
+                                onClick={() => {
+                                  setDeleteTarget({
+                                    isOpen: true,
+                                    title: 'Delete Money Holding Position',
+                                    itemTitle: h.account_name,
+                                    itemDetails: `Type: ${h.account_type.replace('_', ' ')} · Balance: ₹${h.balance.toLocaleString('en-IN')}${h.custodian_name ? ` · Custodian: ${h.custodian_name}` : ''}`,
+                                    onConfirm: () => deleteMoneyHolding(h.id),
+                                  });
+                                }}
                                 className="p-1 rounded text-muted-foreground hover:text-rose-500 cursor-pointer"
+                                title="Delete Holding (2-Step Verification)"
                               >
                                 <Trash2 className="h-3.5 w-3.5" />
                               </button>
@@ -970,8 +1041,49 @@ export default function FinancialWorkspacePage() {
               </button>
             </div>
 
-            <div className="flex items-center gap-2">
+            <div className="flex flex-wrap items-center gap-2">
+              <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-700 dark:text-emerald-300 text-xs font-semibold">
+                <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
+                <span>Sheet Connected: SS1 & SS2</span>
+                <a
+                  href={CONNECTED_SHEET_URL}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="hover:underline text-[11px] flex items-center gap-0.5 ml-1 text-emerald-600 dark:text-emerald-400"
+                  title="Open connected Google Sheet in new tab"
+                >
+                  <ExternalLink className="h-3 w-3" />
+                </a>
+              </div>
+
+              {isFinancialController && (
+                <>
+                  <button
+                    type="button"
+                    onClick={() => handleSyncDonationSheet(donationSheetTab === 'SS2' ? 'SS2' : 'SS1')}
+                    disabled={Boolean(isSyncingDonations)}
+                    className="px-3 py-1.5 rounded-xl border border-primary/30 bg-primary/10 hover:bg-primary/20 text-primary text-xs font-bold flex items-center gap-1.5 cursor-pointer shadow-2xs transition-all disabled:opacity-50"
+                    title={`Pull latest live data from Google Sheet ${donationSheetTab === 'SS2' ? 'SS2' : 'SS1'}`}
+                  >
+                    <RefreshCw className={cn('h-3.5 w-3.5', isSyncingDonations && 'animate-spin')} />
+                    <span>Sync {donationSheetTab === 'SS2' ? 'SS2' : 'SS1'} from Sheet</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => handlePushDonationsToSheet(donationSheetTab === 'SS2' ? 'SS2' : 'SS1')}
+                    disabled={Boolean(isSyncingDonations)}
+                    className="px-3 py-1.5 rounded-xl border border-border bg-card hover:bg-muted text-foreground text-xs font-semibold flex items-center gap-1.5 cursor-pointer shadow-2xs transition-all disabled:opacity-50"
+                    title={`Push local records to Google Sheet ${donationSheetTab === 'SS2' ? 'SS2' : 'SS1'}`}
+                  >
+                    <Download className="h-3.5 w-3.5 rotate-180" />
+                    <span>Push to Sheet</span>
+                  </button>
+                </>
+              )}
+
               <button
+                type="button"
                 onClick={() => exportAllStudentReceiptsPdf(filteredDonations, `ChromaDiaries_${donationSheetTab}_Receipts`)}
                 className="px-3 py-1.5 rounded-xl border border-border bg-card hover:bg-muted text-foreground text-xs font-semibold flex items-center gap-1.5 cursor-pointer shadow-2xs"
               >
@@ -980,6 +1092,23 @@ export default function FinancialWorkspacePage() {
               </button>
             </div>
           </div>
+
+          {/* Sync Feedback Toast Banner */}
+          {syncFeedback && (
+            <div className="p-3.5 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-800 dark:text-emerald-200 text-xs font-semibold flex items-center justify-between animate-in fade-in">
+              <div className="flex items-center gap-2">
+                <CheckCircle2 className="h-4 w-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
+                <span>{syncFeedback}</span>
+              </div>
+              <button
+                type="button"
+                onClick={() => setSyncFeedback(null)}
+                className="p-1 rounded-md text-muted-foreground hover:text-foreground cursor-pointer"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+          )}
 
           {/* Donation KPI Summary Cards */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-xs">
@@ -1219,12 +1348,16 @@ export default function FinancialWorkspacePage() {
                                   </button>
                                   <button
                                     onClick={() => {
-                                      if (confirm(`Are you sure you want to delete ${d.student_name}?`)) {
-                                        deleteStudentDonation(d.id);
-                                      }
+                                      setDeleteTarget({
+                                        isOpen: true,
+                                        title: 'Delete Student Donation Record',
+                                        itemTitle: d.student_name,
+                                        itemDetails: `Ad.No: ${d.admission_no || d.serial_no} · ${d.sheet_name || 'SS1'} · Pledged: ₹${d.pledged_amount} · Paid: ₹${d.collected_amount}`,
+                                        onConfirm: () => deleteStudentDonation(d.id),
+                                      });
                                     }}
                                     className="p-1 rounded text-muted-foreground hover:text-rose-500 cursor-pointer"
-                                    title="Delete Student"
+                                    title="Delete Student (2-Step Verification)"
                                   >
                                     <Trash2 className="h-3.5 w-3.5" />
                                   </button>
@@ -2054,6 +2187,17 @@ export default function FinancialWorkspacePage() {
             </form>
           </div>
         </div>
+      )}
+      {/* 2-Step Delete Verification Modal */}
+      {deleteTarget && (
+        <TwoStepDeleteModal
+          isOpen={deleteTarget.isOpen}
+          title={deleteTarget.title}
+          itemTitle={deleteTarget.itemTitle}
+          itemDetails={deleteTarget.itemDetails}
+          onClose={() => setDeleteTarget(null)}
+          onConfirmDelete={deleteTarget.onConfirm}
+        />
       )}
     </div>
   );

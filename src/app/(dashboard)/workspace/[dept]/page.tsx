@@ -45,7 +45,7 @@ export default function DepartmentWorkspacePage() {
   const router = useRouter();
   const deptSlug = (params?.dept as DepartmentSlug) || 'editing';
 
-  const { departments, statuses, tasks, getDepartmentBySlug, getStatusesForDepartment, getCategoriesForDepartment, toggleTaskPause, deleteTask, updateTask } = useData();
+  const { departments, statuses, tasks, getDepartmentBySlug, getStatusesForDepartment, getCategoriesForDepartment, toggleTaskPause, deleteTask, updateTask, toggleTaskTodo, addTaskTodo } = useData();
   const { allProfiles, user, role } = useAuth();
 
   const department = getDepartmentBySlug(deptSlug);
@@ -56,6 +56,7 @@ export default function DepartmentWorkspacePage() {
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [selectedAssignee, setSelectedAssignee] = useState<string>('all');
   const [viewMode, setViewMode] = useState<'table' | 'cards'>('table');
+  const [newTodoInput, setNewTodoInput] = useState<Record<string, string>>({});
 
   // Modals state
   const [isCreateOpen, setIsCreateOpen] = useState(false);
@@ -271,6 +272,32 @@ export default function DepartmentWorkspacePage() {
         </div>
       </div>
 
+      {/* Programe Department Rule & Coordination Banner */}
+      {deptSlug === 'programe' && (
+        <div className="p-4 rounded-3xl bg-linear-to-r from-sky-500/10 via-indigo-500/10 to-emerald-500/10 border border-sky-500/30 flex flex-col md:flex-row md:items-center justify-between gap-3 text-xs shadow-xs animate-in fade-in">
+          <div className="flex items-center gap-3">
+            <div className="h-9 w-9 rounded-2xl bg-sky-500/20 text-sky-600 dark:text-sky-400 flex items-center justify-center shrink-0 font-bold text-base">
+              🎯
+            </div>
+            <div>
+              <div className="font-extrabold text-foreground text-sm flex flex-wrap items-center gap-2">
+                <span>Programe Department Telemetry Active</span>
+                <span className="text-[10px] px-2 py-0.5 rounded-full bg-sky-500/20 text-sky-700 dark:text-sky-300 font-mono font-bold">
+                  Rule: Planned, Progress, Sheduled = Progress
+                </span>
+              </div>
+              <p className="text-muted-foreground text-[11px] mt-0.5">
+                All programmes in Planned, Progress, and Sheduled stages are counted as active Progress. Completed programs count as Finished.
+              </p>
+            </div>
+          </div>
+          <div className="flex items-center gap-2 shrink-0 border-t md:border-t-0 pt-2 md:pt-0 border-border/40">
+            <span className="text-[11px] text-muted-foreground">Coordinator Admin:</span>
+            <span className="font-bold text-foreground font-mono">programe.admin@chromadiaries.in</span>
+          </div>
+        </div>
+      )}
+
       {/* Member Personal Pending-Work Progress Bar (Section 6.5) - Only for Members, NOT Admin or Owner */}
       {role !== 'owner' && role !== 'admin' && (
         <MemberWorkloadBar
@@ -441,96 +468,221 @@ export default function DepartmentWorkspacePage() {
           )}
         </div>
       ) : viewMode === 'cards' ? (
-        /* Sleek Linear Horizontal Task Bar Shape */
-        <div className="space-y-2">
+        /* Sleek Linear Horizontal Task Bar Shape / Rich Program Cards */
+        <div className="space-y-3">
           {filteredTasks.map((task) => {
             const statusObj = statuses.find((s) => s.id === task.status_id);
             const assignee = allProfiles.find((p) => p.id === task.assigned_to);
             const badge = getStatusBadgeClasses(statusObj);
             const isOverdue = task.deadline && isBefore(parseISO(task.deadline), new Date());
-            const displayId = task.auto_id && (task.auto_id.startsWith('CD-W-') || task.auto_id.startsWith('CD-M-') || task.auto_id.startsWith('CD-V-') || task.auto_id.startsWith('CD-O-'))
+            const displayId = task.auto_id && (task.auto_id.startsWith('CD-W-') || task.auto_id.startsWith('CD-M-') || task.auto_id.startsWith('CD-V-') || task.auto_id.startsWith('CD-O-') || task.auto_id.startsWith('CD-P-'))
               ? task.auto_id
-              : `${deptSlug === 'editing' ? 'CD-W' : deptSlug === 'media' ? 'CD-M' : deptSlug === 'video' ? 'CD-V' : 'CD-O'}-${(task.auto_id?.replace(/\D/g, '') || '001').slice(-3).padStart(3, '0')}`;
+              : `${deptSlug === 'editing' ? 'CD-W' : deptSlug === 'media' ? 'CD-M' : deptSlug === 'video' ? 'CD-V' : deptSlug === 'programe' ? 'CD-P' : 'CD-O'}-${(task.auto_id?.replace(/\D/g, '') || '001').slice(-3).padStart(3, '0')}`;
+
+            const programTodos: Array<{ id: string; text: string; done: boolean }> = task.custom_fields?.program_todos || [];
+            const completedTodosCount = programTodos.filter((t) => t.done).length;
+            const todoPercentage = programTodos.length > 0 ? Math.round((completedTodosCount / programTodos.length) * 100) : 0;
+            const isProgrameInProg = deptSlug === 'programe' && (statusObj?.slug === 'planned' || statusObj?.slug === 'progress' || statusObj?.slug === 'sheduled');
 
             return (
               <div
                 key={task.id}
                 onClick={() => setSelectedTask(task)}
-                className="bg-card border border-border rounded-xl px-4 py-3 hover:border-primary/50 transition-all cursor-pointer flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-2xs"
+                className="bg-card border border-border rounded-2xl p-4 hover:border-primary/50 transition-all cursor-pointer flex flex-col gap-3 shadow-2xs"
               >
-                <div className="flex items-center gap-3 min-w-0">
-                  <span className="font-mono text-xs font-bold text-emerald-600 dark:text-emerald-400 shrink-0">
-                    {displayId}
-                  </span>
-                  <div className="min-w-0">
-                    <h3 className="font-semibold text-xs text-foreground truncate">
-                      {task.title}
-                    </h3>
-                    <div className="flex items-center gap-2 text-[11px] text-muted-foreground mt-0.5">
-                      {task.author_name && (
-                        <span>Author: <strong className="text-foreground">{task.author_name}</strong></span>
-                      )}
-                      <span>Category: <strong className="text-foreground">{task.category || 'General'}</strong></span>
-                      {task.deadline && (
-                        <span className={cn('font-mono', isOverdue ? 'text-rose-500 font-bold' : '')}>
-                          Due {format(parseISO(task.deadline), 'MMM dd')}
+                {/* Top Bar: ID, Category, Venue, Status, Actions */}
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className="font-mono text-xs font-black text-emerald-600 dark:text-emerald-400 shrink-0 px-2 py-0.5 rounded-lg bg-emerald-500/10 border border-emerald-500/20">
+                      {displayId}
+                    </span>
+                    <span className="text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-primary/10 text-primary border border-primary/20">
+                      {task.category || 'General'}
+                    </span>
+                    {task.custom_fields?.event_venue && (
+                      <span className="text-[11px] font-medium text-muted-foreground flex items-center gap-1 bg-muted/50 px-2 py-0.5 rounded-md">
+                        <span>📍</span>
+                        <span className="truncate max-w-[200px]">{task.custom_fields.event_venue}</span>
+                      </span>
+                    )}
+                    {task.author_name && deptSlug !== 'programe' && (
+                      <span className="text-[11px] text-muted-foreground">
+                        Author: <strong className="text-foreground">{task.author_name}</strong>
+                      </span>
+                    )}
+                  </div>
+
+                  <div className="flex items-center gap-2 shrink-0 self-end sm:self-auto">
+                    {task.is_paused && (
+                      <span className="text-[10px] font-black uppercase px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/30">
+                        Paused
+                      </span>
+                    )}
+
+                    <div className="flex items-center gap-1">
+                      <span className={cn('text-[11px] font-bold px-2.5 py-0.5 rounded-full border', badge.bg, badge.text, badge.border)}>
+                        {statusObj?.name || 'Status'}
+                      </span>
+                      {isProgrameInProg && (
+                        <span className="text-[9px] font-mono font-bold px-1.5 py-0.2 rounded bg-sky-500/15 text-sky-700 dark:text-sky-300 border border-sky-500/30" title="Counts as In-Progress Telemetry">
+                          Progress
                         </span>
+                      )}
+                    </div>
+
+                    {/* Actions */}
+                    <div className="flex items-center gap-1 ml-1" onClick={(e) => e.stopPropagation()}>
+                      <button
+                        onClick={() => setTaskToEdit(task)}
+                        title="Edit Task"
+                        className="p-1 rounded-lg text-muted-foreground hover:text-primary hover:bg-primary/10 transition-colors cursor-pointer"
+                      >
+                        <Edit2 className="h-3.5 w-3.5" />
+                      </button>
+                      <button
+                        onClick={() => toggleTaskPause(task.id)}
+                        title={task.is_paused ? 'Resume Task' : 'Pause Task'}
+                        className={cn(
+                          'p-1 rounded-lg transition-colors cursor-pointer',
+                          task.is_paused
+                            ? 'text-amber-500 bg-amber-500/10'
+                            : 'text-muted-foreground hover:text-amber-500 hover:bg-amber-500/10'
+                        )}
+                      >
+                        {task.is_paused ? <Play className="h-3.5 w-3.5" /> : <Pause className="h-3.5 w-3.5" />}
+                      </button>
+                      {(role === 'owner' || role === 'admin') && (
+                        <button
+                          onClick={() => setTaskToDelete(task)}
+                          title="Delete Task (2-Step Verification)"
+                          className="p-1 rounded-lg text-muted-foreground hover:text-rose-500 hover:bg-rose-500/10 transition-colors cursor-pointer"
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </button>
                       )}
                     </div>
                   </div>
                 </div>
 
-                <div className="flex items-center gap-2 shrink-0 self-end sm:self-center">
-                  <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                {/* Title & Description */}
+                <div className="space-y-1">
+                  <h3 className="font-bold text-sm text-foreground">
+                    {task.title}
+                  </h3>
+                  {task.description && (
+                    <p className="text-xs text-muted-foreground line-clamp-2 leading-relaxed">
+                      {task.description}
+                    </p>
+                  )}
+                </div>
+
+                {/* Programe To-Do Checklist Feature (Section 6.5) */}
+                {deptSlug === 'programe' && (
+                  <div className="p-3 rounded-xl bg-muted/30 border border-border/70 space-y-2.5 text-xs" onClick={(e) => e.stopPropagation()}>
+                    <div className="flex items-center justify-between text-[11px] font-semibold text-muted-foreground">
+                      <span className="flex items-center gap-1.5 text-foreground font-bold">
+                        <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500" />
+                        <span>Program To-Do Checklist</span>
+                      </span>
+                      <span>
+                        {completedTodosCount} of {programTodos.length} done ({todoPercentage}%)
+                      </span>
+                    </div>
+
+                    {/* Progress Bar */}
+                    <div className="h-1.5 w-full bg-muted rounded-full overflow-hidden">
+                      <div
+                        className="h-full bg-emerald-500 rounded-full transition-all duration-300"
+                        style={{ width: `${todoPercentage}%` }}
+                      />
+                    </div>
+
+                    {/* Checklist Items */}
+                    {programTodos.length > 0 && (
+                      <div className="space-y-1.5 pt-1">
+                        {programTodos.map((pt) => (
+                          <label
+                            key={pt.id}
+                            className="flex items-start gap-2 p-1.5 rounded-lg hover:bg-muted/50 cursor-pointer transition-colors"
+                          >
+                            <input
+                              type="checkbox"
+                              checked={pt.done}
+                              onChange={() => toggleTaskTodo(task.id, pt.id)}
+                              className="mt-0.5 rounded text-emerald-600 focus:ring-emerald-500 cursor-pointer h-3.5 w-3.5"
+                            />
+                            <span className={cn('text-xs leading-snug', pt.done ? 'line-through text-muted-foreground' : 'text-foreground font-medium')}>
+                              {pt.text}
+                            </span>
+                          </label>
+                        ))}
+                      </div>
+                    )}
+
+                    {/* Quick Inline Add Sub-task / To-Do Input */}
+                    {(role === 'owner' || role === 'admin' || task.assigned_to === user?.id) && (
+                      <div className="flex items-center gap-2 pt-1">
+                        <input
+                          type="text"
+                          value={newTodoInput[task.id] || ''}
+                          onChange={(e) =>
+                            setNewTodoInput((prev) => ({ ...prev, [task.id]: e.target.value }))
+                          }
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') {
+                              e.preventDefault();
+                              if (newTodoInput[task.id]?.trim()) {
+                                addTaskTodo(task.id, newTodoInput[task.id]);
+                                setNewTodoInput((prev) => ({ ...prev, [task.id]: '' }));
+                              }
+                            }
+                          }}
+                          placeholder="+ Add program checklist item (press Enter)..."
+                          className="grow bg-background border border-border rounded-lg px-2.5 py-1 text-xs text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => {
+                            if (newTodoInput[task.id]?.trim()) {
+                              addTaskTodo(task.id, newTodoInput[task.id]);
+                              setNewTodoInput((prev) => ({ ...prev, [task.id]: '' }));
+                            }
+                          }}
+                          className="px-2.5 py-1 rounded-lg bg-primary/10 hover:bg-primary/20 text-primary font-bold text-xs cursor-pointer shrink-0"
+                        >
+                          Add
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* Footer: Assignee & Deadline */}
+                <div className="flex items-center justify-between text-xs pt-1 border-t border-border/50 text-muted-foreground">
+                  <div className="flex items-center gap-2">
                     <UserAvatar
                       src={assignee?.avatar_url}
                       name={assignee?.full_name}
                       size="xs"
                     />
-                    <span className="text-[11px] font-medium text-foreground">{assignee?.full_name || 'Unassigned'}</span>
-                  </div>
-
-                  {task.is_paused && (
-                    <span className="text-[10px] font-black uppercase px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/30">
-                      Paused
+                    <span className="text-[11px] font-semibold text-foreground">
+                      {assignee?.full_name || 'Unassigned'}
                     </span>
-                  )}
-
-                  <span className={cn('text-[11px] font-semibold px-2.5 py-0.5 rounded-full border', badge.bg, badge.text, badge.border)}>
-                    {statusObj?.name || 'Status'}
-                  </span>
-
-                  {/* Actions in Card */}
-                  <div className="flex items-center gap-1 ml-1" onClick={(e) => e.stopPropagation()}>
-                    <button
-                      onClick={() => setTaskToEdit(task)}
-                      title="Edit Task"
-                      className="p-1 rounded-lg text-muted-foreground hover:text-primary hover:bg-primary/10 transition-colors cursor-pointer"
-                    >
-                      <Edit2 className="h-3.5 w-3.5" />
-                    </button>
-                    <button
-                      onClick={() => toggleTaskPause(task.id)}
-                      title={task.is_paused ? 'Resume Task' : 'Pause Task'}
-                      className={cn(
-                        'p-1 rounded-lg transition-colors cursor-pointer',
-                        task.is_paused
-                          ? 'text-amber-500 bg-amber-500/10'
-                          : 'text-muted-foreground hover:text-amber-500 hover:bg-amber-500/10'
-                      )}
-                    >
-                      {task.is_paused ? <Play className="h-3.5 w-3.5" /> : <Pause className="h-3.5 w-3.5" />}
-                    </button>
-                    {(role === 'owner' || role === 'admin') && (
-                      <button
-                        onClick={() => setTaskToDelete(task)}
-                        title="Delete Task (2-Step Verification)"
-                        className="p-1 rounded-lg text-muted-foreground hover:text-rose-500 hover:bg-rose-500/10 transition-colors cursor-pointer"
-                      >
-                        <Trash2 className="h-3.5 w-3.5" />
-                      </button>
+                    {assignee?.system_role && (
+                      <span className="text-[10px] text-muted-foreground capitalize">
+                        ({assignee.system_role})
+                      </span>
                     )}
                   </div>
+
+                  {task.deadline && (
+                    <div className="flex items-center gap-1.5 font-mono text-[11px]">
+                      <Clock className="h-3 w-3" />
+                      <span className={cn(isOverdue ? 'text-rose-500 font-bold' : 'text-foreground')}>
+                        Due {format(parseISO(task.deadline), 'MMM dd, yyyy')}
+                      </span>
+                    </div>
+                  )}
                 </div>
               </div>
             );
@@ -545,8 +697,8 @@ export default function DepartmentWorkspacePage() {
                 <tr className="border-b border-border bg-muted/40 text-muted-foreground font-bold tracking-wider text-[11px] uppercase">
                   <th className="py-3.5 px-4 font-bold text-foreground">ID</th>
                   <th className="py-3.5 px-4 font-bold text-foreground">TITLE</th>
-                  <th className="py-3.5 px-4 font-bold text-foreground">AUTHOR</th>
-                  <th className="py-3.5 px-4 font-bold text-foreground">PROFILE LINK</th>
+                  <th className="py-3.5 px-4 font-bold text-foreground">{deptSlug === 'programe' ? 'EVENT VENUE' : 'AUTHOR'}</th>
+                  <th className="py-3.5 px-4 font-bold text-foreground">{deptSlug === 'programe' ? 'CHECKLIST / TODOS' : 'PROFILE LINK'}</th>
                   <th className="py-3.5 px-4 font-bold text-foreground">CATEGORY</th>
                   <th className="py-3.5 px-4 font-bold text-foreground">STATUS</th>
                   <th className="py-3.5 px-4 font-bold text-foreground">ASSIGNEE</th>
@@ -559,9 +711,14 @@ export default function DepartmentWorkspacePage() {
                   const statusObj = statuses.find((s) => s.id === task.status_id);
                   const assignee = allProfiles.find((p) => p.id === task.assigned_to);
                   const badge = getStatusBadgeClasses(statusObj);
-                  const displayId = task.auto_id && (task.auto_id.startsWith('CD-W-') || task.auto_id.startsWith('CD-M-') || task.auto_id.startsWith('CD-V-') || task.auto_id.startsWith('CD-O-'))
+                  const displayId = task.auto_id && (task.auto_id.startsWith('CD-W-') || task.auto_id.startsWith('CD-M-') || task.auto_id.startsWith('CD-V-') || task.auto_id.startsWith('CD-O-') || task.auto_id.startsWith('CD-P-'))
                     ? task.auto_id
-                    : `${deptSlug === 'editing' ? 'CD-W' : deptSlug === 'media' ? 'CD-M' : deptSlug === 'video' ? 'CD-V' : 'CD-O'}-${(task.auto_id?.replace(/\D/g, '') || '001').slice(-3).padStart(3, '0')}`;
+                    : `${deptSlug === 'editing' ? 'CD-W' : deptSlug === 'media' ? 'CD-M' : deptSlug === 'video' ? 'CD-V' : deptSlug === 'programe' ? 'CD-P' : 'CD-O'}-${(task.auto_id?.replace(/\D/g, '') || '001').slice(-3).padStart(3, '0')}`;
+
+                  const programTodos: Array<{ id: string; text: string; done: boolean }> = task.custom_fields?.program_todos || [];
+                  const completedTodosCount = programTodos.filter((t) => t.done).length;
+                  const todoPercentage = programTodos.length > 0 ? Math.round((completedTodosCount / programTodos.length) * 100) : 0;
+                  const isProgrameInProg = deptSlug === 'programe' && (statusObj?.slug === 'planned' || statusObj?.slug === 'progress' || statusObj?.slug === 'sheduled');
 
                   return (
                     <tr
@@ -569,7 +726,7 @@ export default function DepartmentWorkspacePage() {
                       onClick={() => setSelectedTask(task)}
                       className="hover:bg-muted/40 cursor-pointer transition-colors group"
                     >
-                      {/* ID in bold green text like CD-W-001 in Image 3 */}
+                      {/* ID in bold green text */}
                       <td className="py-3.5 px-4 font-mono font-bold text-emerald-700 dark:text-emerald-400 whitespace-nowrap">
                         {displayId}
                       </td>
@@ -586,14 +743,33 @@ export default function DepartmentWorkspacePage() {
                         </div>
                       </td>
 
-                      {/* AUTHOR */}
+                      {/* AUTHOR OR VENUE */}
                       <td className="py-3.5 px-4 text-muted-foreground whitespace-nowrap">
-                        {task.author_name || '—'}
+                        {deptSlug === 'programe' ? (
+                          <div className="flex items-center gap-1.5 text-xs text-foreground font-medium">
+                            <span>📍</span>
+                            <span className="truncate max-w-[180px]">{task.custom_fields?.event_venue || 'Auditorium'}</span>
+                          </div>
+                        ) : (
+                          task.author_name || '—'
+                        )}
                       </td>
 
-                      {/* PROFILE LINK */}
+                      {/* PROFILE LINK OR CHECKLIST */}
                       <td className="py-3.5 px-4 text-muted-foreground max-w-[220px] truncate font-mono text-[11px]">
-                        {task.profile_link ? (
+                        {deptSlug === 'programe' ? (
+                          programTodos.length > 0 ? (
+                            <div className="flex items-center gap-2">
+                              <span className="font-semibold text-foreground text-xs">{completedTodosCount}/{programTodos.length}</span>
+                              <div className="w-16 h-1.5 bg-muted rounded-full overflow-hidden">
+                                <div className="h-full bg-emerald-500 rounded-full" style={{ width: `${todoPercentage}%` }} />
+                              </div>
+                              <span className="text-[10px] text-muted-foreground">({todoPercentage}%)</span>
+                            </div>
+                          ) : (
+                            <span className="text-muted-foreground italic font-sans text-xs">No checklist</span>
+                          )
+                        ) : task.profile_link ? (
                           <a
                             href={task.profile_link}
                             target="_blank"
@@ -612,14 +788,23 @@ export default function DepartmentWorkspacePage() {
 
                       {/* CATEGORY */}
                       <td className="py-3.5 px-4 text-muted-foreground whitespace-nowrap font-medium">
-                        {task.category || 'General'}
+                        <span className="px-2 py-0.5 rounded-md bg-muted/60 text-foreground font-semibold text-[11px]">
+                          {task.category || 'General'}
+                        </span>
                       </td>
 
                       {/* STATUS */}
                       <td className="py-3.5 px-4 whitespace-nowrap">
-                        <span className={cn('text-[11px] font-semibold px-2.5 py-0.5 rounded-full border', badge.bg, badge.text, badge.border)}>
-                          {statusObj?.name}
-                        </span>
+                        <div className="flex items-center gap-1">
+                          <span className={cn('text-[11px] font-semibold px-2.5 py-0.5 rounded-full border', badge.bg, badge.text, badge.border)}>
+                            {statusObj?.name}
+                          </span>
+                          {isProgrameInProg && (
+                            <span className="text-[9px] font-mono font-bold px-1.5 py-0.2 rounded bg-sky-500/15 text-sky-700 dark:text-sky-300 border border-sky-500/30" title="Telemetry: Planned, Progress, Sheduled = Progress">
+                              Progress
+                            </span>
+                          )}
+                        </div>
                       </td>
 
                       {/* ASSIGNEE */}

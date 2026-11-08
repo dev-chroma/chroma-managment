@@ -107,6 +107,8 @@ interface DataContextType {
   toggleTodoStatus: (id: string) => Promise<boolean>;
   syncStudentDonationsFromSheet: (sheetName: 'SS1' | 'SS2') => Promise<{ success: boolean; count: number; error?: string }>;
   pushToGoogleSheet: (webhookUrl?: string) => Promise<{ success: boolean; error?: string }>;
+  toggleTaskTodo: (taskId: string, todoId: string) => Promise<boolean>;
+  addTaskTodo: (taskId: string, text: string) => Promise<boolean>;
 }
 
 const DataContext = createContext<DataContextType | undefined>(undefined);
@@ -115,7 +117,22 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
   const { user } = useAuth();
   const [departments, setDepartments] = useState<Department[]>(INITIAL_DEPARTMENTS);
   const [statuses, setStatuses] = useState<TaskStatus[]>(INITIAL_STATUSES);
-  const [tasks, setTasks] = useState<Task[]>(INITIAL_TASKS);
+  const [tasks, setTasks] = useState<Task[]>(() => {
+    if (typeof window !== 'undefined') {
+      const stored = localStorage.getItem('chromadiaries_tasks');
+      if (stored) {
+        try {
+          const parsed: Task[] = JSON.parse(stored);
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            const existingIds = new Set(parsed.map((t) => t.id));
+            const missingInitials = INITIAL_TASKS.filter((t) => !existingIds.has(t.id));
+            return [...parsed, ...missingInitials];
+          }
+        } catch {}
+      }
+    }
+    return INITIAL_TASKS;
+  });
   const [activityLogs, setActivityLogs] = useState<TaskActivityLog[]>([]);
   const [announcements, setAnnouncements] = useState<Announcement[]>(INITIAL_ANNOUNCEMENTS);
   const [meetings, setMeetings] = useState<Meeting[]>(INITIAL_MEETINGS);
@@ -581,6 +598,52 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
       is_paused: !isPaused,
       custom_fields: { ...task.custom_fields, is_paused: !isPaused },
     });
+  };
+
+  const toggleTaskTodo = async (taskId: string, todoId: string): Promise<boolean> => {
+    setTasks((prev) =>
+      prev.map((t) => {
+        if (t.id !== taskId) return t;
+        const currentTodos = t.custom_fields?.program_todos || [];
+        const updatedTodos = currentTodos.map((pt: any) =>
+          pt.id === todoId ? { ...pt, done: !pt.done } : pt
+        );
+        return {
+          ...t,
+          custom_fields: {
+            ...t.custom_fields,
+            program_todos: updatedTodos,
+          },
+          updated_at: new Date().toISOString(),
+        };
+      })
+    );
+    return true;
+  };
+
+  const addTaskTodo = async (taskId: string, text: string): Promise<boolean> => {
+    const cleanText = text.trim();
+    if (!cleanText) return false;
+    setTasks((prev) =>
+      prev.map((t) => {
+        if (t.id !== taskId) return t;
+        const currentTodos = t.custom_fields?.program_todos || [];
+        const newTodo = {
+          id: `pt-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
+          text: cleanText,
+          done: false,
+        };
+        return {
+          ...t,
+          custom_fields: {
+            ...t.custom_fields,
+            program_todos: [...currentTodos, newTodo],
+          },
+          updated_at: new Date().toISOString(),
+        };
+      })
+    );
+    return true;
   };
 
   // Section 7.3: Dynamic status addition updates entire system automatically
@@ -1179,6 +1242,8 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
         updateTodo,
         deleteTodo,
         toggleTodoStatus,
+        toggleTaskTodo,
+        addTaskTodo,
       }}
     >
       {children}

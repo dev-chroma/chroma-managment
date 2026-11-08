@@ -54,6 +54,7 @@ import {
 import { useAuth } from './auth-context';
 import { isTaskQualifyingFinished } from '@/lib/services/workload-engine';
 import { createClient, isSupabaseConfigured } from '@/lib/supabase/client';
+import { sortTasksDescending } from '@/lib/utils';
 
 const generateUUID = (): string => {
   if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
@@ -176,12 +177,12 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
           if (Array.isArray(parsed) && parsed.length > 0) {
             const existingIds = new Set(parsed.map((t) => t.id));
             const missingInitials = INITIAL_TASKS.filter((t) => !existingIds.has(t.id));
-            return [...parsed, ...missingInitials];
+            return [...parsed, ...missingInitials].sort(sortTasksDescending);
           }
         } catch {}
       }
     }
-    return INITIAL_TASKS;
+    return [...INITIAL_TASKS].sort(sortTasksDescending);
   });
   const [activityLogs, setActivityLogs] = useState<TaskActivityLog[]>([]);
   const [announcements, setAnnouncements] = useState<Announcement[]>(INITIAL_ANNOUNCEMENTS);
@@ -448,7 +449,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
 
         const { data: taskData, error: taskError } = await supabase.from('tasks').select('*');
         if (!taskError && taskData && taskData.length > 0) {
-          setTasks(taskData as Task[]);
+          setTasks((taskData as Task[]).sort(sortTasksDescending));
         }
 
         const { data: annData, error: annError } = await supabase.from('announcements').select('*');
@@ -631,7 +632,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
       .sort((a, b) => a.display_order - b.display_order);
 
   const getTasksForDepartment = (departmentId: string) =>
-    tasks.filter((t) => t.department_id === departmentId);
+    tasks.filter((t) => t.department_id === departmentId).sort(sortTasksDescending);
 
   const getDeptPrefix = (slug?: string) => {
     switch (slug) {
@@ -689,7 +690,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
       updated_at: new Date().toISOString(),
     };
 
-    setTasks((prev) => [newTask, ...prev]);
+    setTasks((prev) => [newTask, ...prev].sort(sortTasksDescending));
 
     // Create activity log
     const log: TaskActivityLog = {
@@ -789,7 +790,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
       });
     }
 
-    setTasks((prev) => [...createdTasks, ...prev]);
+    setTasks((prev) => [...createdTasks, ...prev].sort(sortTasksDescending));
     setActivityLogs((prev) => [...createdLogs, ...prev]);
 
     // Sync to Supabase if live

@@ -1653,9 +1653,12 @@ export default function FinancialWorkspacePage() {
             {/* Voucher Card Simulation */}
             <div className="p-5 rounded-2xl border-2 border-primary/30 bg-muted/15 space-y-4 text-xs">
               <div className="flex justify-between items-start">
-                <div>
-                  <div className="font-extrabold text-base text-primary">ChromaDiaries</div>
-                  <div className="text-[11px] text-muted-foreground">Official Donation Receipt</div>
+                <div className="flex items-center gap-3">
+                  <img src="/logo.png" alt="ChromaDiaries" className="h-9 object-contain" />
+                  <div>
+                    <div className="font-extrabold text-base text-primary">ChromaDiaries</div>
+                    <div className="text-[11px] text-muted-foreground">Official Donation Receipt</div>
+                  </div>
                 </div>
                 <div className="text-right">
                   <span className="font-mono font-bold text-foreground bg-card px-2 py-1 rounded-md border border-border text-[11px]">
@@ -1701,6 +1704,34 @@ export default function FinancialWorkspacePage() {
                   <strong className={receiptViewingStudent.pledged_amount - receiptViewingStudent.collected_amount > 0 ? 'text-rose-500' : 'text-emerald-600'}>
                     ₹{Math.max(0, receiptViewingStudent.pledged_amount - receiptViewingStudent.collected_amount)}
                   </strong>
+                </div>
+              </div>
+
+              {/* Authorized Signatory of GM */}
+              <div className="flex justify-between items-end pt-3 border-t border-dashed border-border/80">
+                <div>
+                  <span className={cn(
+                    'inline-block px-3 py-1 rounded-full text-[10px] font-extrabold uppercase',
+                    receiptViewingStudent.collected_amount >= receiptViewingStudent.pledged_amount
+                      ? 'bg-emerald-500/10 text-emerald-600'
+                      : receiptViewingStudent.collected_amount > 0
+                      ? 'bg-amber-500/10 text-amber-600'
+                      : 'bg-rose-500/10 text-rose-600'
+                  )}>
+                    {receiptViewingStudent.collected_amount >= receiptViewingStudent.pledged_amount
+                      ? 'PAID FULLY'
+                      : receiptViewingStudent.collected_amount > 0
+                      ? 'PARTIALLY PAID'
+                      : 'PAYMENT PENDING'}
+                  </span>
+                  <div className="text-[9px] text-muted-foreground mt-1">
+                    Verified ChromaDiaries Computer Generated Voucher
+                  </div>
+                </div>
+                <div className="text-center min-w-[140px]">
+                  <img src="/sign.png" alt="GM Signature" className="h-10 object-contain mx-auto block mb-0.5" />
+                  <div className="border-t border-border pt-1 font-bold text-[10px] text-foreground">General Manager (GM)</div>
+                  <div className="text-[9px] text-muted-foreground">Authorized Signatory</div>
                 </div>
               </div>
             </div>

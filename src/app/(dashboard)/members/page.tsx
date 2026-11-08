@@ -31,7 +31,7 @@ import {
   UserX,
 } from 'lucide-react';
 import Link from 'next/link';
-import { cn } from '@/lib/utils';
+import { cn, sortTasksDescending } from '@/lib/utils';
 import { UserAvatar } from '@/components/common/user-avatar';
 import { TwoStepDeleteModal } from '@/components/common/two-step-delete-modal';
 import { AvatarPicker } from '@/components/common/avatar-picker';
@@ -574,7 +574,9 @@ export default function TeamMembersPage() {
                 </p>
               </div>
             ) : (() => {
-              const mTasks = tasks.filter((t) => t.assigned_to === viewingMember.id && !t.is_archived);
+              const mTasks = tasks
+                .filter((t) => t.assigned_to === viewingMember.id && !t.is_archived)
+                .sort(sortTasksDescending);
               return (
                 <div className="space-y-2 text-xs">
                   <span className="font-semibold text-foreground flex items-center gap-1.5">

@@ -6,6 +6,7 @@
 import { Task, TaskStatus, Department, Profile, WeeklyTarget, ActivityLog, LedgerEntry, StudentDonation, MoneyHolding } from '@/types/database';
 import { isTaskQualifyingFinished, classifyTaskStatus, evaluateTaskTiming } from './workload-engine';
 import { format, parseISO } from 'date-fns';
+import { CHROMA_LOGO_BASE64, GM_SIGN_BASE64 } from '@/lib/assets/brand-assets';
 
 /**
  * Generates and triggers a browser download for a structured Excel-compatible CSV
@@ -324,9 +325,12 @@ export function exportAnalysisToPdf({
       </head>
       <body>
         <div class="header">
-          <div>
-            <div class="title">ChromaDiaries Workspace</div>
-            <div class="subtitle">Executive Operational Telemetry & Department Auditing Report</div>
+          <div style="display: flex; align-items: center; gap: 14px;">
+            <img src="${CHROMA_LOGO_BASE64}" alt="ChromaDiaries" style="height: 48px; max-width: 190px; object-fit: contain;" />
+            <div>
+              <div class="title">ChromaDiaries Workspace</div>
+              <div class="subtitle">Executive Operational Telemetry & Department Auditing Report</div>
+            </div>
           </div>
           <div style="text-align: right; font-size: 11px; color: #64748b;">
             <div>${format(new Date(), 'EEEE, MMMM dd, yyyy')}</div>
@@ -403,8 +407,20 @@ export function exportAnalysisToPdf({
           </tbody>
         </table>
 
-        <div class="footer">
-          Generated automatically by ChromaDiaries Workspace Studio • Confidential Executive Telemetry
+        <div style="margin-top: 32px; padding-top: 14px; border-top: 1px solid #e2e8f0; display: flex; justify-content: space-between; align-items: flex-end; page-break-inside: avoid;">
+          <div style="font-size: 10px; color: #94a3b8;">
+            <div>Generated automatically by ChromaDiaries Workspace Studio (www.chromadiaries.in)</div>
+            <div>Confidential Executive Telemetry • Official System Verification</div>
+          </div>
+          <div style="text-align: center; min-width: 180px;">
+            <img src="${GM_SIGN_BASE64}" alt="GM Signature" style="height: 52px; max-width: 160px; object-fit: contain; margin: 0 auto 4px auto; display: block;" />
+            <div style="border-top: 1.5px solid #0f172a; padding-top: 4px; font-size: 11px; font-weight: 700; color: #0f172a;">
+              General Manager (GM)
+            </div>
+            <div style="font-size: 9px; color: #64748b; font-weight: 600;">
+              Authorized Signatory • Executive Oversight
+            </div>
+          </div>
         </div>
 
         <script>
@@ -535,9 +551,12 @@ export function exportTasksToPdf(
       </head>
       <body>
         <div class="header">
-          <div>
-            <div class="title">${departmentName} Workspace</div>
-            <div class="subtitle">Official Assignment Inventory & Workload Telemetry</div>
+          <div style="display: flex; align-items: center; gap: 14px;">
+            <img src="${CHROMA_LOGO_BASE64}" alt="ChromaDiaries" style="height: 44px; max-width: 170px; object-fit: contain;" />
+            <div>
+              <div class="title">${departmentName} Workspace</div>
+              <div class="subtitle">Official Assignment Inventory & Workload Telemetry</div>
+            </div>
           </div>
           <div style="text-align: right; font-size: 11px; color: #64748b;">
             <div>Total Tasks: <strong>${tasks.length}</strong></div>
@@ -562,8 +581,20 @@ export function exportTasksToPdf(
           </tbody>
         </table>
 
-        <div class="footer">
-          Generated automatically by ChromaDiaries Workspace Studio (www.chromadiaries.in)
+        <div style="margin-top: 24px; padding-top: 12px; border-top: 1px solid #e2e8f0; display: flex; justify-content: space-between; align-items: flex-end; page-break-inside: avoid;">
+          <div style="font-size: 10px; color: #94a3b8;">
+            <div>Generated automatically by ChromaDiaries Workspace Studio (www.chromadiaries.in)</div>
+            <div>Official ${departmentName} Assignment Record</div>
+          </div>
+          <div style="text-align: center; min-width: 180px;">
+            <img src="${GM_SIGN_BASE64}" alt="GM Signature" style="height: 50px; max-width: 150px; object-fit: contain; margin: 0 auto 4px auto; display: block;" />
+            <div style="border-top: 1.5px solid #0f172a; padding-top: 4px; font-size: 11px; font-weight: 700; color: #0f172a;">
+              General Manager (GM)
+            </div>
+            <div style="font-size: 9px; color: #64748b; font-weight: 600;">
+              Authorized Signatory • Department Operations
+            </div>
+          </div>
         </div>
 
         <script>
@@ -643,9 +674,12 @@ export function exportAuditLogsToPdf(logs: ActivityLog[]) {
       </head>
       <body>
         <div class="header">
-          <div>
-            <div class="title">ChromaDiaries System Audit Logs</div>
-            <div style="font-size: 11px; color: #64748b; margin-top: 2px;">Governance and Task Activity Trails</div>
+          <div style="display: flex; align-items: center; gap: 14px;">
+            <img src="${CHROMA_LOGO_BASE64}" alt="ChromaDiaries" style="height: 44px; max-width: 170px; object-fit: contain;" />
+            <div>
+              <div class="title">ChromaDiaries System Audit Logs</div>
+              <div style="font-size: 11px; color: #64748b; margin-top: 2px;">Governance and Task Activity Trails</div>
+            </div>
           </div>
           <div style="text-align: right; font-size: 11px; color: #64748b;">
             <div>Events: <strong>${logs.length}</strong></div>
@@ -668,8 +702,20 @@ export function exportAuditLogsToPdf(logs: ActivityLog[]) {
           </tbody>
         </table>
 
-        <div class="footer">
-          ChromaDiaries Workspace Governance • www.chromadiaries.in
+        <div style="margin-top: 24px; padding-top: 12px; border-top: 1px solid #e2e8f0; display: flex; justify-content: space-between; align-items: flex-end; page-break-inside: avoid;">
+          <div style="font-size: 10px; color: #94a3b8;">
+            <div>ChromaDiaries Workspace Governance • www.chromadiaries.in</div>
+            <div>Official Security & Audit Ledger</div>
+          </div>
+          <div style="text-align: center; min-width: 180px;">
+            <img src="${GM_SIGN_BASE64}" alt="GM Signature" style="height: 50px; max-width: 150px; object-fit: contain; margin: 0 auto 4px auto; display: block;" />
+            <div style="border-top: 1.5px solid #0f172a; padding-top: 4px; font-size: 11px; font-weight: 700; color: #0f172a;">
+              General Manager (GM)
+            </div>
+            <div style="font-size: 9px; color: #64748b; font-weight: 600;">
+              Authorized Signatory • System Integrity
+            </div>
+          </div>
         </div>
 
         <script>
@@ -777,9 +823,12 @@ export function exportLedgerToPdf(
       </head>
       <body>
         <div class="header">
-          <div>
-            <div class="title">ChromaDiaries • Income and Expense Ledger</div>
-            <div style="font-size: 11px; color: #64748b; margin-top: 2px;">Official Financial Records & General Journal</div>
+          <div style="display: flex; align-items: center; gap: 14px;">
+            <img src="${CHROMA_LOGO_BASE64}" alt="ChromaDiaries" style="height: 46px; max-width: 180px; object-fit: contain;" />
+            <div>
+              <div class="title">Income and Expense Ledger</div>
+              <div style="font-size: 11px; color: #64748b; margin-top: 2px;">Official Financial Records & General Journal</div>
+            </div>
           </div>
           <div style="text-align: right; font-size: 10px; color: #64748b;">
             <div>Generated: <strong>${format(new Date(), 'EEEE, MMMM dd, yyyy HH:mm')}</strong></div>
@@ -819,9 +868,20 @@ export function exportLedgerToPdf(
           </tbody>
         </table>
 
-        <div class="footer">
-          <span>ChromaDiaries Studio Operations • Official Financial Ledger</span>
-          <span>Confidential Internal Document</span>
+        <div style="margin-top: 28px; padding-top: 12px; border-top: 1px solid #cbd5e1; display: flex; justify-content: space-between; align-items: flex-end; page-break-inside: avoid;">
+          <div style="font-size: 9px; color: #94a3b8;">
+            <div>ChromaDiaries Studio Operations • Official Financial Ledger</div>
+            <div>Confidential Internal Document</div>
+          </div>
+          <div style="text-align: center; min-width: 180px;">
+            <img src="${GM_SIGN_BASE64}" alt="GM Signature" style="height: 52px; max-width: 160px; object-fit: contain; margin: 0 auto 4px auto; display: block;" />
+            <div style="border-top: 1.5px solid #0f172a; padding-top: 4px; font-size: 11px; font-weight: 700; color: #0f172a;">
+              General Manager (GM)
+            </div>
+            <div style="font-size: 9px; color: #64748b; font-weight: 600;">
+              Authorized Signatory • Financial Controller
+            </div>
+          </div>
         </div>
 
         <script>
@@ -935,9 +995,12 @@ export function exportStudentDonationsToPdf(donations: StudentDonation[]) {
       </head>
       <body>
         <div class="header">
-          <div>
-            <div class="title">ChromaDiaries • Student Donations Control Report</div>
-            <div style="font-size: 11px; color: #64748b; margin-top: 2px;">Fundraising Accountability & Contributor Ledger</div>
+          <div style="display: flex; align-items: center; gap: 14px;">
+            <img src="${CHROMA_LOGO_BASE64}" alt="ChromaDiaries" style="height: 46px; max-width: 180px; object-fit: contain;" />
+            <div>
+              <div class="title">Student Donations Control Report</div>
+              <div style="font-size: 11px; color: #64748b; margin-top: 2px;">Fundraising Accountability & Contributor Ledger</div>
+            </div>
           </div>
           <div style="text-align: right; font-size: 10px; color: #64748b;">
             <div>Generated: <strong>${format(new Date(), 'EEEE, MMMM dd, yyyy HH:mm')}</strong></div>
@@ -979,9 +1042,20 @@ export function exportStudentDonationsToPdf(donations: StudentDonation[]) {
           </tbody>
         </table>
 
-        <div class="footer">
-          <span>ChromaDiaries Student Campaign Oversight</span>
-          <span>Confidential Internal Document</span>
+        <div style="margin-top: 28px; padding-top: 12px; border-top: 1px solid #cbd5e1; display: flex; justify-content: space-between; align-items: flex-end; page-break-inside: avoid;">
+          <div style="font-size: 9px; color: #94a3b8;">
+            <div>ChromaDiaries Student Campaign Oversight • Official Document</div>
+            <div>Confidential Internal Records</div>
+          </div>
+          <div style="text-align: center; min-width: 180px;">
+            <img src="${GM_SIGN_BASE64}" alt="GM Signature" style="height: 52px; max-width: 160px; object-fit: contain; margin: 0 auto 4px auto; display: block;" />
+            <div style="border-top: 1.5px solid #0f172a; padding-top: 4px; font-size: 11px; font-weight: 700; color: #0f172a;">
+              General Manager (GM)
+            </div>
+            <div style="font-size: 9px; color: #64748b; font-weight: 600;">
+              Authorized Signatory • Campaign Controller
+            </div>
+          </div>
         </div>
 
         <script>
@@ -1039,10 +1113,13 @@ export function exportSingleStudentReceiptPdf(student: StudentDonation) {
       <body>
         <div class="receipt-box">
           <div class="header">
-            <div>
-              <div class="logo-title">ChromaDiaries</div>
-              <div class="subtitle">Centralized Literary Magazine & Student Welfare</div>
-              <div class="subtitle">Official Donation Receipt • 250 Donation Fund</div>
+            <div style="display: flex; align-items: center; gap: 14px;">
+              <img src="${CHROMA_LOGO_BASE64}" alt="ChromaDiaries" style="height: 48px; max-width: 170px; object-fit: contain;" />
+              <div>
+                <div class="logo-title">ChromaDiaries</div>
+                <div class="subtitle">Centralized Literary Magazine & Student Welfare</div>
+                <div class="subtitle" style="font-weight: 700; color: #059669;">Official Donation Receipt • 250 Donation Fund</div>
+              </div>
             </div>
             <div style="text-align: right;">
               <div class="receipt-tag">${student.receipt_no || `REC-${student.sheet_name || 'SS1'}-${student.admission_no || 'GEN'}`}</div>
@@ -1095,8 +1172,12 @@ export function exportSingleStudentReceiptPdf(student: StudentDonation) {
                 Verified ChromaDiaries Computer Generated Voucher • www.chromadiaries.in
               </div>
             </div>
-            <div>
-              <div class="sign-line">Authorized Signatory<br><span style="font-size: 9px; font-weight: 500; color: #64748b;">Financial Controller</span></div>
+            <div style="text-align: center;">
+              <img src="${GM_SIGN_BASE64}" alt="GM Signature" style="height: 50px; max-width: 150px; object-fit: contain; margin: 0 auto 2px auto; display: block;" />
+              <div class="sign-line" style="margin-top: 2px; width: 170px;">
+                General Manager (GM)<br>
+                <span style="font-size: 9px; font-weight: 500; color: #64748b;">Authorized Signatory • ChromaDiaries</span>
+              </div>
             </div>
           </div>
         </div>
@@ -1187,9 +1268,12 @@ export function exportAllStudentReceiptsPdf(donations: StudentDonation[], title 
       </head>
       <body>
         <div class="header">
-          <div>
-            <h2 style="margin: 0; color: #059669; font-size: 18px;">ChromaDiaries • All Student Donation Slips</h2>
-            <div style="font-size: 10px; color: #64748b;">Consolidated Student Receipts Directory (${donations.length} Students)</div>
+          <div style="display: flex; align-items: center; gap: 14px;">
+            <img src="${CHROMA_LOGO_BASE64}" alt="ChromaDiaries" style="height: 44px; max-width: 170px; object-fit: contain;" />
+            <div>
+              <h2 style="margin: 0; color: #059669; font-size: 18px;">All Student Donation Slips</h2>
+              <div style="font-size: 10px; color: #64748b;">Consolidated Student Receipts Directory (${donations.length} Students)</div>
+            </div>
           </div>
           <div style="text-align: right; font-size: 10px; color: #64748b;">
             <div>Printed: ${format(new Date(), 'dd-MM-yyyy HH:mm')}</div>
@@ -1197,6 +1281,17 @@ export function exportAllStudentReceiptsPdf(donations: StudentDonation[], title 
           </div>
         </div>
         ${slipsHtml}
+        <div style="margin-top: 24px; padding-top: 12px; border-top: 1px solid #cbd5e1; display: flex; justify-content: space-between; align-items: flex-end; page-break-inside: avoid;">
+          <div style="font-size: 10px; color: #94a3b8;">
+            <div>ChromaDiaries Student Campaign Directory • Verified Slips</div>
+            <div>Official Fundraising Oversight</div>
+          </div>
+          <div style="text-align: center; min-width: 180px;">
+            <img src="${GM_SIGN_BASE64}" alt="GM Signature" style="height: 50px; max-width: 150px; object-fit: contain; margin: 0 auto 4px auto; display: block;" />
+            <div style="border-top: 1.5px solid #0f172a; padding-top: 4px; font-size: 11px; font-weight: 700; color: #0f172a;">General Manager (GM)</div>
+            <div style="font-size: 9px; color: #64748b; font-weight: 600;">Authorized Signatory • Campaign Oversight</div>
+          </div>
+        </div>
         <script>
           window.onload = function() { window.print(); };
         </script>

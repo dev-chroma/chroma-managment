@@ -7,9 +7,9 @@ export const metadata: Metadata = {
   title: 'ChromaDiaries Workspace - Centralized Management Platform',
   description: 'Team management, dynamic workflow engine, and carry-forward performance analytics for ChromaDiaries web magazine.',
   icons: {
-    icon: '/icon.png',
-    shortcut: '/favicon.ico',
-    apple: '/main.png',
+    icon: '/white.png',
+    shortcut: '/white.png',
+    apple: '/white.png',
   },
 };
 

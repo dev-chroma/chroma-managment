@@ -37,7 +37,7 @@ import {
   Play,
   Trash2,
 } from 'lucide-react';
-import { cn } from '@/lib/utils';
+import { cn, sortTasksDescending } from '@/lib/utils';
 import { format, parseISO, isBefore } from 'date-fns';
 
 export default function DepartmentWorkspacePage() {
@@ -65,10 +65,12 @@ export default function DepartmentWorkspacePage() {
   const [taskToEdit, setTaskToEdit] = useState<Task | null>(null);
   const [taskToDelete, setTaskToDelete] = useState<Task | null>(null);
 
-  // Filter tasks belonging to this department
+  // Filter tasks belonging to this department, ordered descending: CD-W-005, CD-W-004, CD-W-003, ...
   const departmentTasks = useMemo(() => {
     if (!department) return [];
-    return tasks.filter((t) => t.department_id === department.id && !t.is_archived);
+    return tasks
+      .filter((t) => t.department_id === department.id && !t.is_archived)
+      .sort(sortTasksDescending);
   }, [tasks, department]);
 
   // Strict rule: A designer/media workspace must not show editing categories
@@ -124,7 +126,7 @@ export default function DepartmentWorkspacePage() {
       if (selectedAssignee !== 'all' && t.assigned_to !== selectedAssignee) return false;
 
       return true;
-    });
+    }).sort(sortTasksDescending);
   }, [departmentTasks, activeTab, searchQuery, selectedCategory, selectedAssignee, statuses, deptStatuses, deptSlug, user]);
 
   if (!department) {

@@ -25,7 +25,7 @@ import {
   AlertCircle,
   X,
 } from 'lucide-react';
-import { cn } from '@/lib/utils';
+import { cn, sortTasksDescending } from '@/lib/utils';
 import { format, parseISO } from 'date-fns';
 
 export default function MemberProfilePage() {
@@ -72,14 +72,16 @@ export default function MemberProfilePage() {
 
   const canEdit = user?.id === profile.id || role === 'owner';
   const isLeadership = profile.system_role === 'owner' || profile.system_role === 'admin';
-  const memberTasks = tasks.filter((t) => 
-    !t.is_archived && (
-      t.assigned_to === profile.id || 
-      (profile.username && t.assigned_to === profile.username) || 
-      t.assignee?.id === profile.id ||
-      (profile.email && t.assignee?.email === profile.email)
+  const memberTasks = tasks
+    .filter((t) => 
+      !t.is_archived && (
+        t.assigned_to === profile.id || 
+        (profile.username && t.assigned_to === profile.username) || 
+        t.assignee?.id === profile.id ||
+        (profile.email && t.assignee?.email === profile.email)
+      )
     )
-  );
+    .sort(sortTasksDescending);
   const primaryDept = departments.find((d) => d.id === profile.department_id) || departments[0];
 
   const handleSaveProfile = async (e?: React.FormEvent) => {

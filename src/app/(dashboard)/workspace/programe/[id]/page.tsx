@@ -41,6 +41,7 @@ import {
 import { UserAvatar } from '@/components/common/user-avatar';
 import { TwoStepDeleteModal } from '@/components/common/two-step-delete-modal';
 import * as XLSX from 'xlsx';
+import { format } from 'date-fns';
 
 interface PageProps {
   params: Promise<{ id: string }>;
@@ -607,6 +608,21 @@ export default function IndividualProgrammeWorkspacePage({ params }: PageProps) 
 
   return (
     <div className="p-4 md:p-8 space-y-6 max-w-7xl mx-auto print:p-0">
+      {/* Printable Header with ChromaDiaries Logo */}
+      <div className="hidden print:flex justify-between items-center pb-4 mb-6 border-b-2 border-emerald-600">
+        <div className="flex items-center gap-3">
+          <img src="/logo.png" alt="ChromaDiaries" className="h-10 object-contain" />
+          <div>
+            <div className="text-lg font-black text-emerald-700">ChromaDiaries Programme Dossier</div>
+            <div className="text-[11px] text-gray-500 font-mono">{programme.unique_code} • {programme.category}</div>
+          </div>
+        </div>
+        <div className="text-right text-[11px] text-gray-500">
+          <div>Generated: {format(new Date(), 'EEEE, MMMM dd, yyyy')}</div>
+          <div className="font-bold text-emerald-600">Official Programme Documentation</div>
+        </div>
+      </div>
+
       {/* 1. Header Bar */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 print:hidden">
         <div>
@@ -1940,6 +1956,18 @@ export default function IndividualProgrammeWorkspacePage({ params }: PageProps) 
           </div>
         </div>
       )}
+      {/* Printable Footer with GM Signature */}
+      <div className="hidden print:flex justify-between items-end pt-6 mt-8 border-t border-gray-300 page-break-inside-avoid">
+        <div className="text-[10px] text-gray-500">
+          <div>ChromaDiaries Workspace Studio • Official Programme Directorate</div>
+          <div>Confidential Internal Project Ledger</div>
+        </div>
+        <div className="text-center min-w-[180px]">
+          <img src="/sign.png" alt="GM Signature" className="h-12 object-contain mx-auto mb-1 block" />
+          <div className="border-t border-gray-900 pt-1 text-xs font-bold text-gray-900">General Manager (GM)</div>
+          <div className="text-[9px] text-gray-600 font-semibold">Authorized Signatory • ChromaDiaries</div>
+        </div>
+      </div>
     </div>
   );
 }

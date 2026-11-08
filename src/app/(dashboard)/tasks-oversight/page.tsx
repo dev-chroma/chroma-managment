@@ -15,6 +15,7 @@ import { DeleteTaskModal } from '@/components/tasks/delete-task-modal';
 import { BulkImportModal } from '@/components/tasks/bulk-import-modal';
 import { UserAvatar } from '@/components/common/user-avatar';
 import { exportTasksToCSV, downloadExcelCsv } from '@/lib/services/export-service';
+import { CHROMA_LOGO_BASE64, GM_SIGN_BASE64 } from '@/lib/assets/brand-assets';
 import {
   Layers,
   Search,
@@ -36,7 +37,7 @@ import {
   ShieldAlert,
 } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
-import { cn } from '@/lib/utils';
+import { cn, sortTasksDescending } from '@/lib/utils';
 
 export default function TasksOversightPage() {
   const { user, role, allProfiles } = useAuth();
@@ -129,7 +130,7 @@ export default function TasksOversightPage() {
       }
 
       return true;
-    });
+    }).sort(sortTasksDescending);
   }, [
     tasks,
     statuses,
@@ -261,9 +262,12 @@ export default function TasksOversightPage() {
         </head>
         <body>
           <div class="header">
-            <div>
-              <div class="title">ChromaDiaries Workspace - Task Oversight Report</div>
-              <div style="color: #64748b; font-size: 10px;">Manager: ${user?.full_name || 'Admin'} (${role.toUpperCase()}) • Generated ${format(new Date(), 'EEEE, MMMM dd, yyyy HH:mm')}</div>
+            <div style="display: flex; align-items: center; gap: 14px;">
+              <img src="${CHROMA_LOGO_BASE64}" alt="ChromaDiaries" style="height: 46px; max-width: 180px; object-fit: contain;" />
+              <div>
+                <div class="title">Task Oversight Report</div>
+                <div style="color: #64748b; font-size: 10px;">Manager: ${user?.full_name || 'Admin'} (${role.toUpperCase()}) • Generated ${format(new Date(), 'EEEE, MMMM dd, yyyy HH:mm')}</div>
+              </div>
             </div>
             <div style="font-weight: bold; color: #059669;">Official Operational Ledger</div>
           </div>
@@ -294,6 +298,17 @@ export default function TasksOversightPage() {
               ${rowsHtml}
             </tbody>
           </table>
+          <div style="margin-top: 24px; padding-top: 12px; border-top: 1px solid #cbd5e1; display: flex; justify-content: space-between; align-items: flex-end; page-break-inside: avoid;">
+            <div style="font-size: 10px; color: #94a3b8;">
+              <div>ChromaDiaries Workspace Studio (www.chromadiaries.in) • Central Task Oversight</div>
+              <div>Confidential Internal Document</div>
+            </div>
+            <div style="text-align: center; min-width: 180px;">
+              <img src="${GM_SIGN_BASE64}" alt="GM Signature" style="height: 50px; max-width: 150px; object-fit: contain; margin: 0 auto 4px auto; display: block;" />
+              <div style="border-top: 1.5px solid #0f172a; padding-top: 4px; font-size: 11px; font-weight: 700; color: #0f172a;">General Manager (GM)</div>
+              <div style="font-size: 9px; color: #64748b; font-weight: 600;">Authorized Signatory • Operations Oversight</div>
+            </div>
+          </div>
           <script>window.onload = function() { window.print(); };</script>
         </body>
       </html>

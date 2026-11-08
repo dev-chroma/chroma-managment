@@ -9,7 +9,7 @@ import { getStatusBadgeClasses } from '@/lib/services/status-engine';
 import { isTaskQualifyingFinished } from '@/lib/services/workload-engine';
 import { Task } from '@/types/database';
 import { Layers, Calendar, CheckCircle2, AlertTriangle, Clock, Search, X } from 'lucide-react';
-import { cn } from '@/lib/utils';
+import { cn, sortTasksDescending } from '@/lib/utils';
 import { format, parseISO, isBefore } from 'date-fns';
 
 export default function MyTasksPage() {
@@ -20,11 +20,13 @@ export default function MyTasksPage() {
   const [filterTab, setFilterTab] = useState<'all' | 'in_progress' | 'completed' | 'overdue'>('all');
   const [searchQuery, setSearchQuery] = useState('');
 
-  const myTasks = tasks.filter(
-    (t) =>
-      !t.is_archived &&
-      (t.assigned_to === user?.id || (user?.username && t.assigned_to === user?.username))
-  );
+  const myTasks = tasks
+    .filter(
+      (t) =>
+        !t.is_archived &&
+        (t.assigned_to === user?.id || (user?.username && t.assigned_to === user?.username))
+    )
+    .sort(sortTasksDescending);
   const primaryDept = departments[0];
   const now = new Date();
 
@@ -65,7 +67,7 @@ export default function MyTasksPage() {
       }
 
       return true;
-    });
+    }).sort(sortTasksDescending);
   }, [myTasks, filterTab, searchQuery, departments, statuses, now]);
 
   return (

@@ -21,6 +21,7 @@ import {
   Users,
   Compass,
   AlertTriangle,
+  Landmark,
 } from 'lucide-react';
 import { useAuth } from '@/lib/context/auth-context';
 import { useData } from '@/lib/context/data-context';
@@ -34,7 +35,7 @@ interface NavbarProps {
 export function Navbar({ onToggleMobileMenu }: NavbarProps) {
   const router = useRouter();
   const { role, user, logout, allProfiles } = useAuth();
-  const { announcements, roleRequests, tasks, departments } = useData();
+  const { announcements, roleRequests, tasks, departments, studentDonations, ledgerEntries } = useData();
 
   const [showNotifications, setShowNotifications] = useState(false);
   const [showProfileMenu, setShowProfileMenu] = useState(false);
@@ -109,7 +110,38 @@ export function Navbar({ onToggleMobileMenu }: NavbarProps) {
     return isMissingDeadline || isMissingLink || isMissingAssignee || isMissingDesc;
   });
 
-  const totalNotifications = pendingRequestsCount + unreadAnnouncementsCount + incompleteTasks.length;
+  // Financial Clearance Notification for Owner and Finance Admin (Saturday night, last day of month/year, or incomplete parameters)
+  const financeDept = departments.find((d) => d.slug === 'finance');
+  const isFinanceAdmin =
+    role === 'admin' &&
+    (user?.department_id === financeDept?.id ||
+      user?.email?.toLowerCase().includes('finance') ||
+      user?.username?.toLowerCase().includes('finance'));
+  const isFinanceAuthorized = role === 'owner' || isFinanceAdmin;
+
+  const now = new Date();
+  const isSaturdayNight = now.getDay() === 6; // All Saturday / Saturday night
+  const isLastDayOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate() === now.getDate();
+  const isLastDayOfYear = now.getMonth() === 11 && now.getDate() === 31;
+
+  const incompleteDonationsCount = (studentDonations || []).filter(
+    (d) => d.addition_status === 'Not Added' || (Number(d.collected_amount || 0) > 0 && !d.receipt_no?.trim())
+  ).length;
+
+  const incompleteLedgerCount = (ledgerEntries || []).filter(
+    (e) => !e.item?.trim() || !e.date || ((!e.credit || e.credit === 0) && (!e.debit || e.debit === 0))
+  ).length;
+
+  const hasIncompleteFinancialData = incompleteDonationsCount > 0 || incompleteLedgerCount > 0;
+
+  const showFinancialClearanceNotification =
+    isFinanceAuthorized && (isSaturdayNight || isLastDayOfMonth || isLastDayOfYear || hasIncompleteFinancialData);
+
+  const totalNotifications =
+    pendingRequestsCount +
+    unreadAnnouncementsCount +
+    incompleteTasks.length +
+    (showFinancialClearanceNotification ? 1 : 0);
 
   // Real-time Global Search results
   const query = navSearch.trim().toLowerCase();
@@ -378,6 +410,35 @@ export function Navbar({ onToggleMobileMenu }: NavbarProps) {
               </div>
 
               <div className="py-2 space-y-2 max-h-64 overflow-y-auto">
+                {showFinancialClearanceNotification && (
+                  <Link
+                    href="/finance"
+                    onClick={() => setShowNotifications(false)}
+                    className="block p-2.5 rounded-xl bg-emerald-500/10 border border-emerald-500/25 text-xs hover:bg-emerald-500/15 transition-colors"
+                  >
+                    <div className="font-semibold text-emerald-700 dark:text-emerald-300 flex items-center justify-between">
+                      <div className="flex items-center gap-1.5 min-w-0 pr-1">
+                        <Landmark className="h-3.5 w-3.5 shrink-0 text-emerald-600 dark:text-emerald-400" />
+                        <span className="truncate">Ledger and other financial data clearerness Day</span>
+                      </div>
+                      <span className="text-[9px] uppercase font-bold px-1.5 py-0.5 rounded-md bg-emerald-500/20 text-emerald-800 dark:text-emerald-300 shrink-0">
+                        {isLastDayOfYear ? 'Year End' : isLastDayOfMonth ? 'Month End' : isSaturdayNight ? 'Saturday Night' : 'Audit'}
+                      </span>
+                    </div>
+                    <div className="text-muted-foreground text-[11px] mt-1 leading-relaxed">
+                      {hasIncompleteFinancialData ? (
+                        <>
+                          Clearance required: {incompleteDonationsCount > 0 ? `${incompleteDonationsCount} unadded donation(s)` : ''}
+                          {incompleteDonationsCount > 0 && incompleteLedgerCount > 0 ? ' and ' : ''}
+                          {incompleteLedgerCount > 0 ? `${incompleteLedgerCount} pending ledger item(s)` : ''}.
+                        </>
+                      ) : (
+                        'Scheduled financial clearance day. Reconcile ledger entries, student donation statuses, and book vouchers.'
+                      )}
+                    </div>
+                  </Link>
+                )}
+
                 {incompleteTasks.length > 0 && (
                   <Link
                     href={role === 'owner' || role === 'admin' ? '/tasks-oversight' : '/my-tasks'}

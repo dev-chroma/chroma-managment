@@ -233,6 +233,39 @@ export default function FinancialWorkspacePage() {
   const [syncStatusMsg, setSyncStatusMsg] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
   const [isScriptModalOpen, setIsScriptModalOpen] = useState(false);
   const [isScriptCopied, setIsScriptCopied] = useState(false);
+  const [dismissClearanceBanner, setDismissClearanceBanner] = useState(false);
+
+  const { isClearanceDue, clearanceReason, incompleteCount, incompleteDonationsCount, incompleteLedgerCount } = useMemo(() => {
+    const now = new Date();
+    const isSatNight = now.getDay() === 6;
+    const isMonthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate() === now.getDate();
+    const isYearEnd = now.getMonth() === 11 && now.getDate() === 31;
+
+    const unaddedDonations = studentDonations.filter(
+      (d) => d.addition_status === 'Not Added' || (Number(d.collected_amount || 0) > 0 && !d.receipt_no?.trim())
+    ).length;
+
+    const incompleteLedgers = ledgerEntries.filter(
+      (e) => !e.item?.trim() || !e.date || ((!e.credit || e.credit === 0) && (!e.debit || e.debit === 0))
+    ).length;
+
+    const incomplete = unaddedDonations + incompleteLedgers;
+    const due = isSatNight || isMonthEnd || isYearEnd || incomplete > 0;
+
+    let reason = '';
+    if (isYearEnd) reason = 'Year-End Closing';
+    else if (isMonthEnd) reason = 'Month-End Closing';
+    else if (isSatNight) reason = 'Saturday Night Clearance';
+    else if (incomplete > 0) reason = 'Reconciliation Required';
+
+    return {
+      isClearanceDue: due,
+      clearanceReason: reason,
+      incompleteCount: incomplete,
+      incompleteDonationsCount: unaddedDonations,
+      incompleteLedgerCount: incompleteLedgers,
+    };
+  }, [studentDonations, ledgerEntries]);
 
   // Database is fetched live from Supabase via DataContext on mount.
   // Manual sync can be triggered anytime using the 'Sync Sheet' button.
@@ -519,6 +552,37 @@ export default function FinancialWorkspacePage() {
             className="p-1 rounded-lg hover:bg-black/5 dark:hover:bg-white/5 cursor-pointer"
           >
             <X className="h-3.5 w-3.5" />
+          </button>
+        </div>
+      )}
+
+      {/* Financial Clearance Day Banner */}
+      {isClearanceDue && !dismissClearanceBanner && (
+        <div className="p-3.5 rounded-2xl border border-emerald-500/30 bg-emerald-500/10 text-emerald-950 dark:text-emerald-200 text-xs flex items-center justify-between gap-3 animate-in fade-in">
+          <div className="flex items-center gap-2.5">
+            <span className="p-2 rounded-xl bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 shrink-0">
+              <Landmark className="h-4 w-4" />
+            </span>
+            <div>
+              <div className="font-bold flex items-center gap-2 flex-wrap">
+                <span>Ledger and other financial data clearerness Day</span>
+                <span className="text-[10px] font-bold uppercase px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-800 dark:text-emerald-300">
+                  {clearanceReason}
+                </span>
+              </div>
+              <p className="text-[11px] text-muted-foreground mt-0.5">
+                {incompleteCount > 0
+                  ? `Clearance action required: ${incompleteDonationsCount > 0 ? `${incompleteDonationsCount} unadded donation(s)` : ''}${incompleteDonationsCount > 0 && incompleteLedgerCount > 0 ? ', ' : ''}${incompleteLedgerCount > 0 ? `${incompleteLedgerCount} pending ledger item(s)` : ''}. Please reconcile records to ensure clean ledger balances.`
+                  : 'All Saturday night and month/year-end accounts must be finalized and audited. All ledger entries and student collections are currently up to date.'}
+              </p>
+            </div>
+          </div>
+          <button
+            onClick={() => setDismissClearanceBanner(true)}
+            className="p-1 rounded-lg hover:bg-black/5 dark:hover:bg-white/5 cursor-pointer text-muted-foreground hover:text-foreground shrink-0"
+            title="Dismiss notice"
+          >
+            <X className="h-4 w-4" />
           </button>
         </div>
       )}

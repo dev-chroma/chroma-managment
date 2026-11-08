@@ -63,15 +63,19 @@ export function exportAnalysisToExcel({
   rows.push(['Report Type', 'Comprehensive Department Telemetry & Member Accountability']);
   rows.push([]);
 
-  // SECTION 1: High-Level Executive Summary
-  const activeTasks = tasks.filter((t) => !t.is_archived);
+  // Exclude Finance department from operational analysis report
+  const operationalDepartments = departments.filter((d) => d.slug !== 'finance');
+  const operationalDeptIds = new Set(operationalDepartments.map((d) => d.id));
+  const activeTasks = tasks.filter((t) => !t.is_archived && operationalDeptIds.has(t.department_id));
+  const activeMembers = members.filter((m) => !m.department_id || operationalDeptIds.has(m.department_id));
+
   let totalFinished = 0;
   let totalOverdue = 0;
   let totalInProgress = 0;
   const now = new Date();
 
   for (const t of activeTasks) {
-    const dept = departments.find((d) => d.id === t.department_id);
+    const dept = operationalDepartments.find((d) => d.id === t.department_id);
     const { isFinished } = isTaskQualifyingFinished(t, statuses, dept?.slug || 'editing');
     if (isFinished) {
       totalFinished++;
@@ -95,7 +99,7 @@ export function exportAnalysisToExcel({
   // SECTION 2: Department Performance Breakdown
   rows.push(['=== 2. DEPARTMENT PERFORMANCE BREAKDOWN ===']);
   rows.push(['Department Name', 'Slug', 'Weekly Target', 'Total Tasks', 'Completed', 'In Progress', 'Completion Rate']);
-  for (const dept of departments) {
+  for (const dept of operationalDepartments) {
     const deptTasks = activeTasks.filter((t) => t.department_id === dept.id);
     const target = weeklyTargets[dept.id] || dept.default_weekly_target || 3;
     let deptFinished = 0;
@@ -135,7 +139,7 @@ export function exportAnalysisToExcel({
   const categoryCounts: Record<string, { dept: string; total: number; finished: number }> = {};
   for (const t of activeTasks) {
     const cat = t.custom_fields?.category || 'Uncategorized';
-    const dept = departments.find((d) => d.id === t.department_id);
+    const dept = operationalDepartments.find((d) => d.id === t.department_id);
     const { isFinished } = isTaskQualifyingFinished(t, statuses, dept?.slug || 'editing');
     if (!categoryCounts[cat]) {
       categoryCounts[cat] = { dept: dept?.name || 'Workspace', total: 0, finished: 0 };
@@ -151,11 +155,11 @@ export function exportAnalysisToExcel({
   // SECTION 4: Team Member Delivery Ledger
   rows.push(['=== 4. MEMBER PRODUCTIVITY LEDGER ===']);
   rows.push(['Member Name', 'Email', 'Role', 'Assigned Tasks', 'Finished Work', 'Pending Work']);
-  for (const m of members) {
+  for (const m of activeMembers) {
     const mTasks = activeTasks.filter((t) => t.assigned_to === m.id || t.assigned_to === m.username);
     let mFinished = 0;
     for (const mt of mTasks) {
-      const dept = departments.find((d) => d.id === mt.department_id);
+      const dept = operationalDepartments.find((d) => d.id === mt.department_id);
       const { isFinished } = isTaskQualifyingFinished(mt, statuses, dept?.slug || 'editing');
       if (isFinished) mFinished++;
     }
@@ -167,9 +171,9 @@ export function exportAnalysisToExcel({
   rows.push(['=== 5. ALL ASSIGNMENTS INVENTORY ===']);
   rows.push(['Task ID', 'Title', 'Department', 'Category', 'Status', 'Author', 'Assignee', 'Deadline', 'Created At']);
   for (const t of activeTasks) {
-    const dept = departments.find((d) => d.id === t.department_id);
+    const dept = operationalDepartments.find((d) => d.id === t.department_id);
     const st = statuses.find((s) => s.id === t.status_id);
-    const assignee = members.find((m) => m.id === t.assigned_to || m.username === t.assigned_to);
+    const assignee = activeMembers.find((m) => m.id === t.assigned_to || m.username === t.assigned_to);
     rows.push([
       t.auto_id || t.id.slice(0, 8),
       t.title,
@@ -202,14 +206,19 @@ export function exportAnalysisToPdf({
   members: Profile[];
   weeklyTargets: Record<string, number>;
 }) {
-  const activeTasks = tasks.filter((t) => !t.is_archived);
+  // Exclude Finance department from operational analysis report
+  const operationalDepartments = departments.filter((d) => d.slug !== 'finance');
+  const operationalDeptIds = new Set(operationalDepartments.map((d) => d.id));
+  const activeTasks = tasks.filter((t) => !t.is_archived && operationalDeptIds.has(t.department_id));
+  const activeMembers = members.filter((m) => !m.department_id || operationalDeptIds.has(m.department_id));
+
   let totalFinished = 0;
   let totalOverdue = 0;
   let totalInProgress = 0;
   const now = new Date();
 
   for (const t of activeTasks) {
-    const dept = departments.find((d) => d.id === t.department_id);
+    const dept = operationalDepartments.find((d) => d.id === t.department_id);
     const { isFinished } = isTaskQualifyingFinished(t, statuses, dept?.slug || 'editing');
     if (isFinished) {
       totalFinished++;
@@ -231,7 +240,7 @@ export function exportAnalysisToPdf({
     return;
   }
 
-  const deptRowsHtml = departments
+  const deptRowsHtml = operationalDepartments
     .map((dept) => {
       const deptTasks = activeTasks.filter((t) => t.department_id === dept.id);
       let dFinished = 0;
@@ -253,12 +262,12 @@ export function exportAnalysisToPdf({
     })
     .join('');
 
-  const membersRowsHtml = members
+  const membersRowsHtml = activeMembers
     .map((m) => {
       const mTasks = activeTasks.filter((t) => t.assigned_to === m.id || t.assigned_to === m.username);
       let mFin = 0;
       for (const mt of mTasks) {
-        const dept = departments.find((d) => d.id === mt.department_id);
+        const dept = operationalDepartments.find((d) => d.id === mt.department_id);
         const { isFinished } = isTaskQualifyingFinished(mt, statuses, dept?.slug || 'editing');
         if (isFinished) mFin++;
       }
@@ -275,7 +284,7 @@ export function exportAnalysisToPdf({
     })
     .join('');
 
-  const onTimeRowsHtml = departments
+  const onTimeRowsHtml = operationalDepartments
     .map((dept) => {
       const deptTasks = activeTasks.filter((t) => t.department_id === dept.id);
       let onTime = 0;

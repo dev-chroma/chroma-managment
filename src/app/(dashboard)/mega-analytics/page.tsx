@@ -67,13 +67,22 @@ export default function MegaAnalyticsPage() {
     );
   }
 
-  const filteredDepartments = selectedDeptId === 'all' 
-    ? departments 
-    : departments.filter((d) => d.id === selectedDeptId);
+  // Exclude Finance department from analysis
+  const analysisDepartments = departments.filter((d) => d.slug !== 'finance');
+  const analysisDeptIds = new Set(analysisDepartments.map((d) => d.id));
 
-  // Include members, general_members, and department administrators (e.g. Finance Admin, Programme Coordinator)
+  const filteredDepartments = selectedDeptId === 'all' 
+    ? analysisDepartments 
+    : analysisDepartments.filter((d) => d.id === selectedDeptId);
+
+  // Filter tasks to operational departments (excluding finance)
+  const analysisTasks = tasks.filter((t) => analysisDeptIds.has(t.department_id));
+
+  // Include members, general_members, and department administrators (excluding finance)
   const qualifyingMembers = allProfiles.filter(
-    (m) => m.system_role === 'member' || m.system_role === 'general_member' || m.system_role === 'admin'
+    (m) =>
+      (m.system_role === 'member' || m.system_role === 'general_member' || m.system_role === 'admin') &&
+      (!m.department_id || analysisDeptIds.has(m.department_id) || m.system_role === 'general_member')
   );
 
   const displayedMembers = qualifyingMembers.filter((m) => {
@@ -84,17 +93,17 @@ export default function MegaAnalyticsPage() {
   // Compute Carry-forward calculation results for qualifying members only
   const memberWorkloadResults = displayedMembers.map((member) => {
     // Find member's primary department (or infer from assignments)
-    const memberTasks = tasks.filter((t) => t.assigned_to === member.id && !t.is_archived);
-    const primaryDeptId = memberTasks[0]?.department_id || departments[0]?.id;
-    const dept = departments.find((d) => d.id === primaryDeptId) || departments[0];
-    const target = weeklyTargets[dept.id] || dept.default_weekly_target;
+    const memberTasks = analysisTasks.filter((t) => t.assigned_to === member.id && !t.is_archived);
+    const primaryDeptId = memberTasks[0]?.department_id || analysisDepartments[0]?.id;
+    const dept = analysisDepartments.find((d) => d.id === primaryDeptId) || analysisDepartments[0];
+    const target = (dept && weeklyTargets[dept.id]) || dept?.default_weekly_target || 3;
 
     const result = calculateMemberCarryForward(
       member.id,
-      dept.slug,
-      dept.id,
+      dept?.slug || 'editing',
+      dept?.id || '',
       target,
-      tasks,
+      analysisTasks,
       statuses,
       targetWeekDate
     );
@@ -133,7 +142,7 @@ export default function MegaAnalyticsPage() {
               onClick={() =>
                 exportAnalysisToPdf({
                   departments: filteredDepartments,
-                  tasks,
+                  tasks: analysisTasks,
                   statuses,
                   members: qualifyingMembers,
                   weeklyTargets,
@@ -150,7 +159,7 @@ export default function MegaAnalyticsPage() {
               onClick={() =>
                 exportAnalysisToExcel({
                   departments: filteredDepartments,
-                  tasks,
+                  tasks: analysisTasks,
                   statuses,
                   members: qualifyingMembers,
                   weeklyTargets,
@@ -171,7 +180,7 @@ export default function MegaAnalyticsPage() {
             className="bg-card border border-border rounded-xl px-3 py-2 text-xs font-semibold text-foreground shadow-xs focus:ring-1 focus:ring-primary cursor-pointer"
           >
             <option value="all">All Departments</option>
-            {departments.map((d) => (
+            {analysisDepartments.map((d) => (
               <option key={d.id} value={d.id}>{d.name}</option>
             ))}
           </select>
@@ -230,7 +239,7 @@ export default function MegaAnalyticsPage() {
               </thead>
               <tbody className="divide-y divide-border/60">
                 {filteredDepartments.map((dept) => {
-                  const deptTasks = tasks.filter((t) => t.department_id === dept.id && !t.is_archived);
+                  const deptTasks = analysisTasks.filter((t) => t.department_id === dept.id && !t.is_archived);
                   let onTime = 0;
                   let delayed = 0;
                   let finished = 0;
@@ -305,7 +314,7 @@ export default function MegaAnalyticsPage() {
               </thead>
               <tbody className="divide-y divide-border/60">
                 {displayedMembers.map((member) => {
-                  const mTasks = tasks.filter((t) => (t.assigned_to === member.id || t.assigned_to === member.username) && !t.is_archived);
+                  const mTasks = analysisTasks.filter((t) => (t.assigned_to === member.id || t.assigned_to === member.username) && !t.is_archived);
                   const dept = departments.find((d) => d.id === member.department_id) || departments[0];
                   let onTime = 0;
                   let delayed = 0;
@@ -372,7 +381,7 @@ export default function MegaAnalyticsPage() {
 
       {/* High-level Summary Metrics */}
       <SummaryCards
-        tasks={tasks.filter((t) => !t.is_archived && (selectedDeptId === 'all' || t.department_id === selectedDeptId))}
+        tasks={analysisTasks.filter((t) => !t.is_archived && (selectedDeptId === 'all' || t.department_id === selectedDeptId))}
         statuses={statuses}
         departments={filteredDepartments}
         members={qualifyingMembers}
@@ -382,7 +391,7 @@ export default function MegaAnalyticsPage() {
       <ExecutiveTelemetry
         departments={filteredDepartments}
         statuses={statuses}
-        tasks={tasks}
+        tasks={analysisTasks}
         members={qualifyingMembers}
         weeklyTargets={weeklyTargets}
       />
@@ -525,7 +534,7 @@ export default function MegaAnalyticsPage() {
               </thead>
               <tbody className="divide-y divide-border/60">
                 {filteredDepartments.map((dept) => {
-                  const deptTasks = tasks.filter((t) => t.department_id === dept.id && !t.is_archived);
+                  const deptTasks = analysisTasks.filter((t) => t.department_id === dept.id && !t.is_archived);
                   let onTime = 0;
                   let delayed = 0;
                   let finished = 0;
@@ -600,7 +609,7 @@ export default function MegaAnalyticsPage() {
               </thead>
               <tbody className="divide-y divide-border/60">
                 {displayedMembers.map((member) => {
-                  const mTasks = tasks.filter((t) => (t.assigned_to === member.id || t.assigned_to === member.username) && !t.is_archived);
+                  const mTasks = analysisTasks.filter((t) => (t.assigned_to === member.id || t.assigned_to === member.username) && !t.is_archived);
                   const dept = departments.find((d) => d.id === member.department_id) || departments[0];
                   let onTime = 0;
                   let delayed = 0;
@@ -674,7 +683,7 @@ export default function MegaAnalyticsPage() {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
           {filteredDepartments.map((dept) => {
             const deptStatuses = statuses.filter((s) => s.department_id === dept.id);
-            const deptTasks = tasks.filter((t) => t.department_id === dept.id);
+            const deptTasks = analysisTasks.filter((t) => t.department_id === dept.id);
             const metrics = calculateDepartmentMetrics(deptTasks, deptStatuses, dept.slug);
 
             return (

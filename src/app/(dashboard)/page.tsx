@@ -129,11 +129,13 @@ export default function DashboardPage() {
                 <button
                   onClick={() => {
                     setShowExportMenu(false);
+                    const filteredDepts = departments.filter((d) => d.slug !== 'finance');
+                    const filteredDeptIds = new Set(filteredDepts.map((d) => d.id));
                     exportAnalysisToPdf({
-                      departments,
-                      tasks,
+                      departments: filteredDepts,
+                      tasks: tasks.filter((t) => filteredDeptIds.has(t.department_id)),
                       statuses,
-                      members: allProfiles,
+                      members: allProfiles.filter((m) => !m.department_id || filteredDeptIds.has(m.department_id)),
                       weeklyTargets,
                     });
                   }}
@@ -146,11 +148,13 @@ export default function DashboardPage() {
                 <button
                   onClick={() => {
                     setShowExportMenu(false);
+                    const filteredDepts = departments.filter((d) => d.slug !== 'finance');
+                    const filteredDeptIds = new Set(filteredDepts.map((d) => d.id));
                     exportAnalysisToExcel({
-                      departments,
-                      tasks,
+                      departments: filteredDepts,
+                      tasks: tasks.filter((t) => filteredDeptIds.has(t.department_id)),
                       statuses,
-                      members: allProfiles,
+                      members: allProfiles.filter((m) => !m.department_id || filteredDeptIds.has(m.department_id)),
                       weeklyTargets,
                     });
                   }}
@@ -339,7 +343,7 @@ export default function DashboardPage() {
 
         {activeStudioTab === 'distribution' ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {departments.map((dept) => {
+            {departments.filter((d) => d.slug !== 'finance').map((dept) => {
               const deptStatuses = statuses.filter((s) => s.department_id === dept.id);
               const deptTasks = tasks.filter((t) => t.department_id === dept.id);
               return (

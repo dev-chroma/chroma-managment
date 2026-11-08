@@ -33,6 +33,8 @@ export default function ResourceCenterPage() {
   const [fileUrl, setFileUrl] = useState('');
   const [category, setCategory] = useState('Brand Assets');
   const [departmentId, setDepartmentId] = useState('');
+  const [resourceActionType, setResourceActionType] = useState<'link' | 'download'>('link');
+  const [cardActions, setCardActions] = useState<Record<string, 'link' | 'download'>>({});
 
   // Resource Center Permissions:
   // Members can view and download resources, but CANNOT add or delete.
@@ -69,8 +71,8 @@ export default function ResourceCenterPage() {
       file_url: fileUrl,
       category,
       department_id: targetDeptId,
-      file_type: 'PDF',
-      file_size: 2400000,
+      file_type: resourceActionType === 'link' ? 'Link' : 'Download',
+      file_size: resourceActionType === 'link' ? undefined : 2400000,
       uploaded_by: user?.id || null,
     });
 
@@ -169,15 +171,43 @@ export default function ResourceCenterPage() {
                   {format(parseISO(res.created_at), 'MMM dd, yyyy')}
                 </span>
                 <div className="flex items-center gap-2">
-                  <a
-                    href={res.file_url}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="flex items-center gap-1.5 font-semibold text-primary hover:underline cursor-pointer"
-                  >
-                    <span>Download</span>
-                    <Download className="h-3.5 w-3.5" />
-                  </a>
+                  {/* Link or Download Action Selector & Trigger */}
+                  <div className="flex items-center gap-1.5">
+                    <select
+                      value={cardActions[res.id] || (res.file_type?.toLowerCase() === 'link' ? 'link' : 'download')}
+                      onChange={(e) => setCardActions({ ...cardActions, [res.id]: e.target.value as 'link' | 'download' })}
+                      className="bg-muted text-[11px] font-semibold border border-border rounded-lg px-2 py-1 cursor-pointer focus:ring-1 focus:ring-primary"
+                      title="Select Link or Download action"
+                    >
+                      <option value="link">Link</option>
+                      <option value="download">Download</option>
+                    </select>
+
+                    {(cardActions[res.id] || (res.file_type?.toLowerCase() === 'link' ? 'link' : 'download')) === 'link' ? (
+                      <a
+                        href={res.file_url}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="flex items-center gap-1 px-3 py-1 bg-primary text-primary-foreground rounded-lg font-bold text-xs hover:bg-primary/90 transition-all shadow-2xs cursor-pointer"
+                        title="View Site"
+                      >
+                        <ExternalLink className="h-3.5 w-3.5" />
+                        <span>View Site</span>
+                      </a>
+                    ) : (
+                      <a
+                        href={res.file_url}
+                        target="_blank"
+                        download
+                        rel="noreferrer"
+                        className="flex items-center gap-1 px-3 py-1 bg-emerald-600 text-white rounded-lg font-bold text-xs hover:bg-emerald-700 transition-all shadow-2xs cursor-pointer"
+                        title="Download File"
+                      >
+                        <Download className="h-3.5 w-3.5" />
+                        <span>Download</span>
+                      </a>
+                    )}
+                  </div>
                   {canAddOrDelete && (
                     <button
                       onClick={() => handleDelete(res)}
@@ -207,6 +237,23 @@ export default function ResourceCenterPage() {
 
             <form onSubmit={handleUpload} className="space-y-3.5 text-xs">
               <div>
+                <label className="block font-semibold text-foreground mb-1">Resource Action / Type *</label>
+                <select
+                  value={resourceActionType}
+                  onChange={(e) => setResourceActionType(e.target.value as 'link' | 'download')}
+                  className="w-full bg-background border border-border rounded-lg px-3 py-2 text-foreground focus:outline-none focus:ring-1 focus:ring-primary cursor-pointer font-semibold"
+                >
+                  <option value="link">Web Link / Site (Action: View Site)</option>
+                  <option value="download">File Asset / Storage (Action: Download)</option>
+                </select>
+                <p className="text-[10px] text-muted-foreground mt-1">
+                  {resourceActionType === 'link'
+                    ? 'Selected Link: Button will show "View Site" to visit the webpage or external tool.'
+                    : 'Selected Download: Button will show "Download" to save the file.'}
+                </p>
+              </div>
+
+              <div>
                 <label className="block font-semibold text-foreground mb-1">Resource Title *</label>
                 <input
                   type="text"
@@ -219,13 +266,15 @@ export default function ResourceCenterPage() {
               </div>
 
               <div>
-                <label className="block font-semibold text-foreground mb-1">File Storage URL / Link *</label>
+                <label className="block font-semibold text-foreground mb-1">
+                  {resourceActionType === 'link' ? 'Website URL / Web Link *' : 'File Storage URL / Download Link *'}
+                </label>
                 <input
                   type="url"
                   required
                   value={fileUrl}
                   onChange={(e) => setFileUrl(e.target.value)}
-                  placeholder="https://... (Supabase storage or Drive link)"
+                  placeholder={resourceActionType === 'link' ? 'https://... (Website or Drive link)' : 'https://... (Direct file download link)'}
                   className="w-full bg-background border border-border rounded-lg px-3 py-2 text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
                 />
               </div>

@@ -67,6 +67,17 @@ const generateUUID = (): string => {
   });
 };
 
+const toValidUUIDOrNull = (val?: string | null, depts?: Department[]): string | null => {
+  if (!val || typeof val !== 'string' || !val.trim()) return null;
+  const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+  if (uuidRegex.test(val)) return val;
+  if (depts) {
+    const d = depts.find((dept) => dept.slug === val || dept.id === val);
+    if (d && uuidRegex.test(d.id)) return d.id;
+  }
+  return null;
+};
+
 interface DataContextType {
   departments: Department[];
   statuses: TaskStatus[];
@@ -649,6 +660,74 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
     };
 
     loadLive();
+
+    // Supabase Realtime subscription for instant updates across devices/tabs
+    let roleReqChannel: any = null;
+    if (isSupabaseConfigured()) {
+      const supabase = createClient();
+      if (supabase) {
+        roleReqChannel = supabase
+          .channel('public:role_requests')
+          .on(
+            'postgres_changes',
+            { event: '*', schema: 'public', table: 'role_requests' },
+            (payload) => {
+              if (payload.eventType === 'INSERT') {
+                const newReq = payload.new as RoleRequest;
+                setRoleRequests((prev) => {
+                  if (prev.some((r) => r.id === newReq.id)) return prev;
+                  const updated = [newReq, ...prev];
+                  if (typeof window !== 'undefined') {
+                    localStorage.setItem('chromadiaries_role_requests', JSON.stringify(updated));
+                  }
+                  return updated;
+                });
+              } else if (payload.eventType === 'UPDATE') {
+                const updatedReq = payload.new as RoleRequest;
+                setRoleRequests((prev) => {
+                  const updated = prev.map((r) => (r.id === updatedReq.id ? { ...r, ...updatedReq } : r));
+                  if (typeof window !== 'undefined') {
+                    localStorage.setItem('chromadiaries_role_requests', JSON.stringify(updated));
+                  }
+                  return updated;
+                });
+              } else if (payload.eventType === 'DELETE') {
+                const oldId = (payload.old as any)?.id;
+                if (oldId) {
+                  setRoleRequests((prev) => {
+                    const updated = prev.filter((r) => r.id !== oldId);
+                    if (typeof window !== 'undefined') {
+                      localStorage.setItem('chromadiaries_role_requests', JSON.stringify(updated));
+                    }
+                    return updated;
+                  });
+                }
+              }
+            }
+          )
+          .subscribe();
+      }
+    }
+
+    const handleStorage = (e: StorageEvent) => {
+      if (e.key === 'chromadiaries_role_requests' && e.newValue) {
+        try {
+          const parsed = JSON.parse(e.newValue);
+          if (Array.isArray(parsed)) {
+            setRoleRequests(parsed);
+          }
+        } catch {}
+      }
+    };
+    window.addEventListener('storage', handleStorage);
+
+    return () => {
+      window.removeEventListener('storage', handleStorage);
+      if (roleReqChannel && isSupabaseConfigured()) {
+        const supabase = createClient();
+        if (supabase) supabase.removeChannel(roleReqChannel);
+      }
+    };
   }, []);
 
   const getDepartmentBySlug = (slug: string) => departments.find((d) => d.slug === slug);
@@ -1084,15 +1163,22 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
     data: Omit<RoleRequest, 'id' | 'status' | 'created_at'>
   ): Promise<RoleRequest> => {
     const generatedId = generateUUID();
+    const targetDeptId = toValidUUIDOrNull(data.requested_department_id, departments);
+    const currDeptId = toValidUUIDOrNull(data.current_department_id, departments);
+    const validUserId = toValidUUIDOrNull(data.user_id);
 
     const req: RoleRequest = {
       ...data,
       id: generatedId,
+      user_id: validUserId || undefined,
+      requested_department_id: targetDeptId,
+      current_department_id: currDeptId,
       status: 'submitted',
       created_at: new Date().toISOString(),
     };
+
     setRoleRequests((prev) => {
-      const updated = [req, ...prev];
+      const updated = [req, ...prev.filter((r) => r.id !== generatedId)];
       if (typeof window !== 'undefined') {
         localStorage.setItem('chromadiaries_role_requests', JSON.stringify(updated));
       }
@@ -1102,11 +1188,28 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
     if (isSupabaseConfigured()) {
       const supabase = createClient();
       if (supabase) {
-        // Strip nested relation fields if any before inserting to SQL table
-        const { user: _u, requested_department: _d, requested_password: _rp, ...dbPayload } = req;
-        supabase.from('role_requests').insert([dbPayload]).then(({ error }) => {
-          if (error) console.error('Supabase role_request insert error:', error);
-        });
+        try {
+          const dbPayload = {
+            id: generatedId,
+            user_id: validUserId,
+            applicant_name: data.applicant_name?.trim() || null,
+            applicant_email: data.applicant_email?.trim() || null,
+            requested_password: data.requested_password?.trim() || null,
+            current_role: data.current_role || 'visitor',
+            requested_role: data.requested_role,
+            current_department_id: currDeptId,
+            requested_department_id: targetDeptId,
+            reason: data.reason.trim(),
+            status: 'submitted',
+            created_at: req.created_at,
+          };
+          const { error } = await supabase.from('role_requests').insert([dbPayload]);
+          if (error) {
+            console.error('Supabase role_request insert error:', error);
+          }
+        } catch (err) {
+          console.error('Supabase role_request insert exception:', err);
+        }
       }
     }
     return req;
@@ -1117,15 +1220,18 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
     decision: 'approved' | 'rejected',
     remarks?: string
   ): Promise<boolean> => {
+    const decDate = new Date().toISOString();
+    const reviewerId = toValidUUIDOrNull(user?.id);
+
     setRoleRequests((prev) => {
       const updated = prev.map((r) =>
         r.id === requestId
           ? {
               ...r,
               status: decision,
-              reviewed_by: user?.id || null,
+              reviewed_by: reviewerId || null,
               reviewer_remarks: remarks || '',
-              decision_date: new Date().toISOString(),
+              decision_date: decDate,
             }
           : r
       );
@@ -1134,21 +1240,24 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
       }
       return updated;
     });
+
     if (isSupabaseConfigured()) {
       const supabase = createClient();
       if (supabase) {
-        supabase
-          .from('role_requests')
-          .update({
-            status: decision,
-            reviewed_by: user?.id || null,
-            reviewer_remarks: remarks || '',
-            decision_date: new Date().toISOString(),
-          })
-          .eq('id', requestId)
-          .then(({ error }) => {
-            if (error) console.error('Supabase reviewRoleRequest error:', error);
-          });
+        try {
+          const { error } = await supabase
+            .from('role_requests')
+            .update({
+              status: decision,
+              reviewed_by: reviewerId,
+              reviewer_remarks: remarks || '',
+              decision_date: decDate,
+            })
+            .eq('id', requestId);
+          if (error) console.error('Supabase reviewRoleRequest error:', error);
+        } catch (err) {
+          console.error('Supabase reviewRoleRequest exception:', err);
+        }
       }
     }
     return true;

@@ -47,22 +47,29 @@ export default function RoleRequestsPage() {
 
   // Strict Request Routing:
   // - Owner gets all requests (from login or in-app)
-  // - Department Admin / Head gets requests specifically for their department
+  // - Department Admin / Head gets requests specifically for their department members
   // - Members only see their own submissions
   const visibleRequests = roleRequests.filter((req) => {
     let matchesRole = false;
     if (role === 'owner') {
       matchesRole = true;
     } else if (role === 'admin') {
-      matchesRole =
-        isDeptMatch(req.requested_department_id, user?.department_id) ||
-        isDeptMatch(req.current_department_id, user?.department_id) ||
-        req.user_id === user?.id ||
-        (Boolean(req.applicant_email) && req.applicant_email!.toLowerCase() === user?.email.toLowerCase());
+      const isOwnReq = Boolean(
+        (req.user_id && user?.id && req.user_id === user.id) ||
+        (req.applicant_email && user?.email && req.applicant_email.toLowerCase() === user.email.toLowerCase())
+      );
+      if (isOwnReq) {
+        matchesRole = true;
+      } else {
+        const matchesDept =
+          isDeptMatch(req.requested_department_id, user?.department_id) ||
+          isDeptMatch(req.current_department_id, user?.department_id);
+        matchesRole = matchesDept && req.requested_role === 'member';
+      }
     } else {
-      matchesRole = (
-        req.user_id === user?.id ||
-        (Boolean(req.applicant_email) && req.applicant_email!.toLowerCase() === user?.email.toLowerCase())
+      matchesRole = Boolean(
+        (req.user_id && user?.id && req.user_id === user.id) ||
+        (req.applicant_email && user?.email && req.applicant_email.toLowerCase() === user.email.toLowerCase())
       );
     }
 
@@ -211,8 +218,11 @@ export default function RoleRequestsPage() {
           ) : (
             visibleRequests.map((req) => {
               const requester = allProfiles.find((p) => p.id === req.user_id);
-              const targetDept = departments.find((d) => d.id === req.requested_department_id);
-              const isOwnRequest = req.user_id === user?.id || (Boolean(req.applicant_email && user?.email && req.applicant_email.toLowerCase() === user.email.toLowerCase()));
+              const targetDept = departments.find((d) => d.id === req.requested_department_id || d.slug === req.requested_department_id);
+              const isOwnRequest = Boolean(
+                (req.user_id && user?.id && req.user_id === user.id) ||
+                (req.applicant_email && user?.email && req.applicant_email.toLowerCase() === user.email.toLowerCase())
+              );
               const canReview = role === 'owner' ? !isOwnRequest : (
                 role === 'admin' &&
                 !isOwnRequest &&
@@ -233,7 +243,7 @@ export default function RoleRequestsPage() {
                         <div className="font-bold text-foreground flex items-center gap-2">
                           <span>{requester?.full_name || req.applicant_name || 'Guest Applicant'}</span>
                           <span className="text-[10px] font-mono text-muted-foreground">
-                            (Current: {req.current_role.toUpperCase()})
+                            (Current: {(req.current_role || 'visitor').toUpperCase()})
                           </span>
                         </div>
                         <div className="text-[11px] text-muted-foreground flex items-center gap-2 flex-wrap mt-0.5">

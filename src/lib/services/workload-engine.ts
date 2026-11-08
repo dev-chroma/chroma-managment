@@ -132,6 +132,25 @@ export function classifyTaskStatus(
     return 'in_progress';
   }
 
+  // 3. Programe: Planned, Progress, Sheduled = Progress; Completed = Completed; Pending = Pending
+  if (departmentSlug === 'programe') {
+    if (slug === 'completed' || name === 'completed') {
+      return 'completed';
+    }
+    if (
+      slug === 'planned' ||
+      slug === 'progress' ||
+      slug === 'sheduled' ||
+      name.includes('planned') ||
+      name.includes('progress') ||
+      name.includes('sheduled') ||
+      name.includes('scheduled')
+    ) {
+      return 'in_progress';
+    }
+    return 'pending';
+  }
+
   if (currentStatus?.counts_as_completed || currentStatus?.is_terminal) return 'completed';
   if (currentStatus?.status_type === 'in_progress') return 'in_progress';
   return 'pending';

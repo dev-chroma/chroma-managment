@@ -72,6 +72,7 @@ export function TaskCreateModal({
       if (department.slug === 'media') custom_fields.dimensions = customField1;
       if (department.slug === 'video') custom_fields.footage_url = customField1;
       if (department.slug === 'outreach') custom_fields.contact_info = customField1;
+      if (department.slug === 'programe') custom_fields.event_venue = customField1;
 
       await createTask({
         department_id: department.id,
@@ -229,6 +230,19 @@ export function TaskCreateModal({
             </div>
           )}
 
+          {department.slug === 'programe' && (
+            <div>
+              <label className="block font-semibold text-foreground mb-1">Venue / Event Platform / Program Note</label>
+              <input
+                type="text"
+                value={customField1}
+                onChange={(e) => setCustomField1(e.target.value)}
+                placeholder="e.g. Main Auditorium / Zoom / Instagram Live / Literary Club"
+                className="w-full bg-background border border-border rounded-lg px-3 py-2 text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
+              />
+            </div>
+          )}
+
           {/* Category & Assignee */}
           <div className="grid grid-cols-2 gap-3">
             <div>
@@ -236,6 +250,7 @@ export function TaskCreateModal({
                 {department.slug === 'editing' ? 'Writing Category *' :
                  department.slug === 'media' ? 'Poster Type / Category *' :
                  department.slug === 'video' ? 'Video Format / Category *' :
+                 department.slug === 'programe' ? 'Programe Category *' :
                  'Institution Category *'}
               </label>
               <select

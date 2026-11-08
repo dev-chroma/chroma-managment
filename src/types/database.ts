@@ -4,7 +4,7 @@
 
 export type SystemRole = 'owner' | 'admin' | 'member' | 'general_member';
 
-export type DepartmentSlug = 'editing' | 'media' | 'video' | 'outreach';
+export type DepartmentSlug = 'editing' | 'media' | 'video' | 'outreach' | 'programe' | 'finance';
 
 export type StatusType = 
   | 'initial' 
@@ -211,12 +211,17 @@ export interface LedgerEntry {
 
 export interface StudentDonation {
   id: string;
+  serial_no?: number | null;
+  admission_no?: string | number | null;
   student_name: string;
   student_id?: string | null;
+  sheet_name?: 'SS1' | 'SS2' | string;
   batch_or_class?: string | null;
   phone?: string | null;
   pledged_amount: number;
   collected_amount: number;
+  balance?: number;
+  addition_status?: 'Added' | 'Not Added';
   status: 'paid' | 'partial' | 'pending';
   payment_mode?: 'Cash' | 'UPI' | 'Fampay' | 'Bank Transfer' | 'Other';
   receipt_no?: string | null;
@@ -224,6 +229,22 @@ export interface StudentDonation {
   remarks?: string | null;
   created_at: string;
   updated_at: string;
+}
+
+export interface WorkspaceTodo {
+  id: string;
+  title: string;
+  description?: string;
+  assigned_to: string; // profile id
+  assigned_by: string; // profile id
+  department_id?: string | null;
+  due_date?: string | null;
+  priority: 'low' | 'medium' | 'high';
+  status: 'pending' | 'in_progress' | 'completed';
+  created_at: string;
+  updated_at: string;
+  assignee?: Profile;
+  creator?: Profile;
 }
 
 export interface MoneyHolding {

@@ -1,9 +1,23 @@
 // =============================================================================
-// CHROMADIARIES WORKSPACE - INITIAL DATA (CLEAN SLATE)
-// Only Owner (Admin) and empty workspaces
+// CHROMADIARIES WORKSPACE - INITIAL DATA
 // =============================================================================
 
-import { Department, TaskStatus, Profile, Task, WeeklyTarget, Announcement, ResourceItem, Meeting, RoleRequest, DepartmentSlug, LedgerEntry, StudentDonation, MoneyHolding, FinanceSheetConfig } from '@/types/database';
+import {
+  Department,
+  TaskStatus,
+  Profile,
+  Task,
+  Announcement,
+  ResourceItem,
+  Meeting,
+  RoleRequest,
+  DepartmentSlug,
+  LedgerEntry,
+  StudentDonation,
+  MoneyHolding,
+  FinanceSheetConfig,
+  WorkspaceTodo,
+} from '@/types/database';
 
 const now = new Date();
 
@@ -12,6 +26,8 @@ export const DEFAULT_DEPARTMENT_CATEGORIES: Record<DepartmentSlug, string[]> = {
   media: ['Promotion Poster', 'Writings Poster', 'Brand Poster', 'Other Poster', 'Programe Poster'],
   video: ['Promotion Video', 'Talk Video', 'AI Video'],
   outreach: ['DH Insitution', 'Islamic Institution', 'Other Insitution', 'CIC Institutuin', 'SNEC Inistutuin'],
+  programe: ['Promotion Programe', 'English Programe', 'Trend Programe', 'Special Day Programe', 'Official Programe', 'Other Programe'],
+  finance: ['Ledger Entry', 'Student Donation', 'Hospitality', 'Stationery', 'Marketing & Ads', 'Subscriptions'],
 };
 
 export const INITIAL_DEPARTMENTS: Department[] = [
@@ -59,6 +75,28 @@ export const INITIAL_DEPARTMENTS: Department[] = [
     created_at: now.toISOString(),
     updated_at: now.toISOString(),
   },
+  {
+    id: 'd5555555-5555-5555-5555-555555555555',
+    name: 'Programe Team',
+    slug: 'programe',
+    description: 'Plan, schedule, coordinate, and execute all youth literary and special programmes.',
+    responsible_role_title: 'Program Coordinator',
+    default_weekly_target: 2,
+    is_active: true,
+    created_at: now.toISOString(),
+    updated_at: now.toISOString(),
+  },
+  {
+    id: 'd6666666-6666-6666-6666-666666666666',
+    name: 'Finance Team',
+    slug: 'finance',
+    description: 'Centralized financial management, ledger bookkeeping, and donation control.',
+    responsible_role_title: 'Financial Controller',
+    default_weekly_target: 1,
+    is_active: true,
+    created_at: now.toISOString(),
+    updated_at: now.toISOString(),
+  },
 ];
 
 export const INITIAL_STATUSES: TaskStatus[] = [
@@ -93,6 +131,13 @@ export const INITIAL_STATUSES: TaskStatus[] = [
   { id: 'o4', department_id: 'd4444444-4444-4444-4444-444444444444', name: 'Well Progressed', slug: 'well-progressed', color: '#3b82f6', display_order: 4, status_type: 'in_progress', is_terminal: false, counts_as_completed: false, is_active: true, created_at: now.toISOString(), updated_at: now.toISOString() },
   { id: 'o5', department_id: 'd4444444-4444-4444-4444-444444444444', name: 'Ended', slug: 'ended', color: '#64748b', display_order: 5, status_type: 'completed', is_terminal: true, counts_as_completed: true, is_active: true, created_at: now.toISOString(), updated_at: now.toISOString() },
   { id: 'o6', department_id: 'd4444444-4444-4444-4444-444444444444', name: 'Completed', slug: 'completed', color: '#10b981', display_order: 6, status_type: 'completed', is_terminal: true, counts_as_completed: true, is_active: true, created_at: now.toISOString(), updated_at: now.toISOString() },
+
+  // Programe Team: Planned, progress, sheduled = Progress; Completed = Completed; Pending = Pending
+  { id: 'p1', department_id: 'd5555555-5555-5555-5555-555555555555', name: 'Pending', slug: 'pending', color: '#94a3b8', display_order: 1, status_type: 'pending', is_terminal: false, counts_as_completed: false, is_active: true, created_at: now.toISOString(), updated_at: now.toISOString() },
+  { id: 'p2', department_id: 'd5555555-5555-5555-5555-555555555555', name: 'Planned', slug: 'planned', color: '#38bdf8', display_order: 2, status_type: 'in_progress', is_terminal: false, counts_as_completed: false, is_active: true, created_at: now.toISOString(), updated_at: now.toISOString() },
+  { id: 'p3', department_id: 'd5555555-5555-5555-5555-555555555555', name: 'Progress', slug: 'progress', color: '#f59e0b', display_order: 3, status_type: 'in_progress', is_terminal: false, counts_as_completed: false, is_active: true, created_at: now.toISOString(), updated_at: now.toISOString() },
+  { id: 'p4', department_id: 'd5555555-5555-5555-5555-555555555555', name: 'Sheduled', slug: 'sheduled', color: '#818cf8', display_order: 4, status_type: 'in_progress', is_terminal: false, counts_as_completed: false, is_active: true, created_at: now.toISOString(), updated_at: now.toISOString() },
+  { id: 'p5', department_id: 'd5555555-5555-5555-5555-555555555555', name: 'Completed', slug: 'completed', color: '#10b981', display_order: 5, status_type: 'completed', is_terminal: true, counts_as_completed: true, is_active: true, created_at: now.toISOString(), updated_at: now.toISOString() },
 ];
 
 export const INITIAL_PROFILES: Profile[] = [
@@ -107,15 +152,49 @@ export const INITIAL_PROFILES: Profile[] = [
     created_at: now.toISOString(),
     updated_at: now.toISOString(),
   },
+  {
+    id: 'u0000000-0000-0000-0000-000000000005',
+    email: 'programe.admin@chromadiaries.in',
+    full_name: 'Program Coordinator Admin',
+    avatar_url: '/profile-icon.png',
+    phone: '+91 80755 85732',
+    bio: 'Programe Department Admin & Coordinator',
+    system_role: 'admin',
+    department_id: 'd5555555-5555-5555-5555-555555555555',
+    created_at: now.toISOString(),
+    updated_at: now.toISOString(),
+  },
+  {
+    id: 'u0000000-0000-0000-0000-000000000006',
+    email: 'programe.member@chromadiaries.in',
+    full_name: 'Program Team Member',
+    avatar_url: '/profile-icon.png',
+    phone: '+91 80866 36371',
+    bio: 'Programe Execution & Event Member',
+    system_role: 'member',
+    department_id: 'd5555555-5555-5555-5555-555555555555',
+    created_at: now.toISOString(),
+    updated_at: now.toISOString(),
+  },
+  {
+    id: 'u0000000-0000-0000-0000-000000000007',
+    email: 'finance@chromadiaries.in',
+    full_name: 'Financial Controller',
+    avatar_url: '/profile-icon.png',
+    phone: '+91 98471 00000',
+    bio: 'Financial Department Administrator',
+    system_role: 'admin',
+    department_id: 'd6666666-6666-6666-6666-666666666666',
+    created_at: now.toISOString(),
+    updated_at: now.toISOString(),
+  },
 ];
 
-// Clean slate: no dummy tasks, dummy announcements, meetings, resources, or requests
 export const INITIAL_TASKS: Task[] = [];
 export const INITIAL_ANNOUNCEMENTS: Announcement[] = [];
 export const INITIAL_MEETINGS: Meeting[] = [];
 export const INITIAL_RESOURCES: ResourceItem[] = [];
 export const INITIAL_ROLE_REQUESTS: RoleRequest[] = [];
-
 
 // =============================================================================
 // FINANCIAL WORKSPACE INITIAL DATA
@@ -146,12 +225,161 @@ export const INITIAL_MONEY_HOLDINGS: MoneyHolding[] = [
   { id: 'hold-debt', account_name: 'Debt / Receivables', account_type: 'debt', balance: 1000, custodian_name: 'Pending Debts / Receivables', notes: 'Debt to be collected / recovered', updated_at: now.toISOString() },
 ];
 
+// Student data parsed directly from user's SS1 and SS2 Google Sheets
+const rawSS1Data: Array<{ no: number; ad: number; name: string; amt: number; paid: number; status: 'Added' | 'Not Added' }> = [
+  { no: 1, ad: 1008, name: 'MUHAMMED MINHAJ.KT', amt: 250, paid: 250, status: 'Added' },
+  { no: 2, ad: 1013, name: 'MOHAMMED SAHAD', amt: 250, paid: 250, status: 'Added' },
+  { no: 3, ad: 1024, name: 'FADHIL KP', amt: 250, paid: 0, status: 'Added' },
+  { no: 4, ad: 1040, name: 'MOHAMMED RIFAD.K', amt: 250, paid: 100, status: 'Added' },
+  { no: 5, ad: 1050, name: 'MUHAMMED SINAN. PC', amt: 250, paid: 0, status: 'Added' },
+  { no: 6, ad: 1051, name: 'MUHAMMED HISHAM T', amt: 250, paid: 0, status: 'Added' },
+  { no: 7, ad: 1053, name: 'AMEEN T', amt: 250, paid: 250, status: 'Added' },
+  { no: 8, ad: 1056, name: 'MUHAMMED SHADIN NM', amt: 250, paid: 250, status: 'Added' },
+  { no: 9, ad: 1058, name: 'MUHAMMED JALAL .AT', amt: 250, paid: 200, status: 'Not Added' },
+  { no: 10, ad: 1059, name: 'AFSAL', amt: 250, paid: 0, status: 'Added' },
+  { no: 11, ad: 1063, name: 'MOHAMMED RISHADH.T', amt: 250, paid: 250, status: 'Added' },
+  { no: 12, ad: 1064, name: 'MOHAMED SHAMIL.M', amt: 250, paid: 0, status: 'Added' },
+  { no: 13, ad: 1066, name: 'HASHIM MOHAMED KP', amt: 250, paid: 250, status: 'Added' },
+  { no: 14, ad: 1068, name: 'MUHAMMED UVAIS EK', amt: 250, paid: 0, status: 'Added' },
+  { no: 15, ad: 1070, name: 'MUHAMMED MUZAMMIL .BK', amt: 250, paid: 250, status: 'Added' },
+  { no: 16, ad: 1071, name: 'SAYYID ZUHAIR', amt: 250, paid: 0, status: 'Added' },
+  { no: 17, ad: 1072, name: 'MOHAMMED SINAN TP', amt: 250, paid: 0, status: 'Added' },
+  { no: 18, ad: 1073, name: 'MUHAMMED MUSTHAFA', amt: 250, paid: 0, status: 'Added' },
+  { no: 19, ad: 1074, name: 'MUAD.M', amt: 250, paid: 0, status: 'Added' },
+  { no: 20, ad: 1075, name: 'MUHAMMED HASHIM.P', amt: 250, paid: 0, status: 'Added' },
+  { no: 21, ad: 1076, name: 'MUHAMMED MINHAJ KK', amt: 250, paid: 0, status: 'Added' },
+  { no: 22, ad: 1078, name: 'MUHAMMED RABIEUE', amt: 250, paid: 250, status: 'Added' },
+  { no: 23, ad: 1082, name: 'MOHAMED SANEEN P', amt: 250, paid: 250, status: 'Added' },
+  { no: 24, ad: 1084, name: 'ASIM MOHAMED', amt: 250, paid: 250, status: 'Added' },
+  { no: 25, ad: 1085, name: 'MUHAMMED NAFIH', amt: 250, paid: 0, status: 'Added' },
+  { no: 26, ad: 1086, name: 'MOHAMMED NIDAL', amt: 250, paid: 0, status: 'Added' },
+  { no: 27, ad: 1087, name: 'MUHAMMED SHAMIL.A', amt: 250, paid: 0, status: 'Added' },
+  { no: 28, ad: 1088, name: 'MOHAMMED NAEEM K', amt: 250, paid: 250, status: 'Added' },
+  { no: 29, ad: 1090, name: 'MUHAMMED BASSAM', amt: 250, paid: 250, status: 'Added' },
+];
+
+const rawSS2Data: Array<{ no: number; ad: number; name: string; amt: number; paid: number; status: 'Added' | 'Not Added' }> = [
+  { no: 1, ad: 970, name: 'ABDUL BASIT PARAMBADEN', amt: 250, paid: 0, status: 'Added' },
+  { no: 2, ad: 975, name: 'MUHAMMED SANIH EK', amt: 250, paid: 120, status: 'Added' },
+  { no: 3, ad: 998, name: 'MUHAMMED RINSHAD P', amt: 250, paid: 0, status: 'Added' },
+  { no: 4, ad: 1004, name: 'MUHAMMED VASIL CS', amt: 250, paid: 250, status: 'Added' },
+  { no: 5, ad: 1005, name: 'MUHAMMED SINAN MK', amt: 250, paid: 250, status: 'Added' },
+  { no: 6, ad: 1006, name: 'AFLAH AHAMMED C', amt: 250, paid: 0, status: 'Added' },
+  { no: 7, ad: 1010, name: 'SHABEER ALI PV', amt: 250, paid: 250, status: 'Added' },
+  { no: 8, ad: 1012, name: 'MOHAMMED RUBAIB OP', amt: 250, paid: 250, status: 'Added' },
+  { no: 9, ad: 1016, name: 'ABDUL NAFIH KOTTAMBARA', amt: 250, paid: 0, status: 'Added' },
+  { no: 10, ad: 1018, name: 'MUHAMMED AJUMAL', amt: 250, paid: 250, status: 'Added' },
+  { no: 11, ad: 1019, name: 'MOHAMMED IHSAN C', amt: 250, paid: 0, status: 'Added' },
+  { no: 12, ad: 1021, name: 'AHMED JURAIJ KT', amt: 250, paid: 0, status: 'Added' },
+  { no: 13, ad: 1022, name: 'MUHAMMAD NASEEF K', amt: 250, paid: 100, status: 'Added' },
+  { no: 14, ad: 1023, name: 'ABDUL BASITH KK', amt: 250, paid: 250, status: 'Added' },
+  { no: 15, ad: 1025, name: 'MUHAMMED ASLAH PALASSERI', amt: 250, paid: 250, status: 'Added' },
+  { no: 16, ad: 1026, name: 'MUHAMMED RABEEH T', amt: 250, paid: 0, status: 'Added' },
+  { no: 17, ad: 1028, name: 'SHINAS MOHAMED', amt: 250, paid: 250, status: 'Added' },
+  { no: 18, ad: 1030, name: 'NIHAL ABOOBACKER', amt: 250, paid: 250, status: 'Added' },
+  { no: 19, ad: 1031, name: 'MUHAMMAD SAHAL N', amt: 250, paid: 250, status: 'Added' },
+  { no: 20, ad: 1033, name: 'MUHAMMED SHAJEEH POOKODAN', amt: 250, paid: 0, status: 'Added' },
+  { no: 21, ad: 1035, name: 'MUHAMMED SABEEH MK', amt: 250, paid: 250, status: 'Added' },
+  { no: 22, ad: 1036, name: 'SABEEH AHMAD NK', amt: 250, paid: 250, status: 'Added' },
+  { no: 23, ad: 1037, name: 'MUHAMMED SHIFIN M', amt: 250, paid: 250, status: 'Added' },
+  { no: 24, ad: 1038, name: 'MUHAMMED SALIM KP', amt: 250, paid: 0, status: 'Added' },
+  { no: 25, ad: 1039, name: 'SALMAN NASOOH NANATH', amt: 250, paid: 250, status: 'Added' },
+  { no: 26, ad: 1041, name: 'MUHAMMED SHAMMAS', amt: 250, paid: 0, status: 'Added' },
+  { no: 27, ad: 1168, name: 'MOHAMMED HITHBAN P', amt: 250, paid: 0, status: 'Added' },
+  { no: 28, ad: 1211, name: 'MUHAMMED MUNAVVAR', amt: 250, paid: 250, status: 'Added' },
+  { no: 29, ad: 1223, name: 'MUHAMMED FAHEEM THEKKAN', amt: 250, paid: 250, status: 'Added' },
+];
+
 export const INITIAL_STUDENT_DONATIONS: StudentDonation[] = [
-  { id: 'sd-1', student_name: 'Naseef Rahman', student_id: 'CD-STU-001', batch_or_class: 'Grade 12-A', phone: '+91 98471 23456', pledged_amount: 500, collected_amount: 500, status: 'paid', payment_mode: 'UPI', receipt_no: 'REC-2026-01', date: '2026-07-06', remarks: '250 Donation Fund campaign', created_at: now.toISOString(), updated_at: now.toISOString() },
-  { id: 'sd-2', student_name: 'Faheem Jalal', student_id: 'CD-STU-002', batch_or_class: 'Batch 2026', phone: '+91 80866 55432', pledged_amount: 400, collected_amount: 300, status: 'partial', payment_mode: 'Cash', receipt_no: 'REC-2026-02', date: '2026-11-06', remarks: '₹100 pending balance', created_at: now.toISOString(), updated_at: now.toISOString() },
-  { id: 'sd-3', student_name: 'Ameen K.', student_id: 'CD-STU-003', batch_or_class: 'Literature Club', phone: '+91 97441 99887', pledged_amount: 250, collected_amount: 250, status: 'paid', payment_mode: 'Fampay', receipt_no: 'REC-2026-03', date: '2026-07-06', remarks: 'Paid via Fampay app', created_at: now.toISOString(), updated_at: now.toISOString() },
-  { id: 'sd-4', student_name: 'Shibli Farooq', student_id: 'CD-STU-004', batch_or_class: 'Grade 11-B', phone: '+91 94002 11223', pledged_amount: 500, collected_amount: 0, status: 'pending', payment_mode: 'Cash', receipt_no: null, date: '2026-11-07', remarks: 'Pledged for magazine print issue', created_at: now.toISOString(), updated_at: now.toISOString() },
-  { id: 'sd-5', student_name: 'Hashim C.P.', student_id: 'CD-STU-005', batch_or_class: 'Batch 2026', phone: '+91 80755 85732', pledged_amount: 1000, collected_amount: 1000, status: 'paid', payment_mode: 'Bank Transfer', receipt_no: 'REC-2026-04', date: '2026-06-03', remarks: 'Party Fund sponsorship', created_at: now.toISOString(), updated_at: now.toISOString() },
+  ...rawSS1Data.map((d) => {
+    const bal = d.amt - d.paid;
+    const status: 'paid' | 'partial' | 'pending' = d.paid >= d.amt ? 'paid' : d.paid > 0 ? 'partial' : 'pending';
+    return {
+      id: `sd-ss1-${d.ad}`,
+      serial_no: d.no,
+      admission_no: String(d.ad),
+      student_name: d.name,
+      student_id: `AD-${d.ad}`,
+      sheet_name: 'SS1',
+      batch_or_class: 'SS1 Batch',
+      pledged_amount: d.amt,
+      collected_amount: d.paid,
+      balance: bal,
+      addition_status: d.status,
+      status,
+      payment_mode: (d.paid > 0 ? 'Cash' : undefined) as any,
+      receipt_no: d.paid > 0 ? `REC-SS1-${d.ad}` : null,
+      date: '2026-07-06',
+      remarks: d.status === 'Not Added' ? 'Pending addition to ledger' : 'Verified donation record',
+      created_at: '2026-07-06T10:00:00.000Z',
+      updated_at: '2026-07-06T10:00:00.000Z',
+    };
+  }),
+  ...rawSS2Data.map((d) => {
+    const bal = d.amt - d.paid;
+    const status: 'paid' | 'partial' | 'pending' = d.paid >= d.amt ? 'paid' : d.paid > 0 ? 'partial' : 'pending';
+    return {
+      id: `sd-ss2-${d.ad}`,
+      serial_no: d.no,
+      admission_no: String(d.ad),
+      student_name: d.name,
+      student_id: `AD-${d.ad}`,
+      sheet_name: 'SS2',
+      batch_or_class: 'SS2 Batch',
+      pledged_amount: d.amt,
+      collected_amount: d.paid,
+      balance: bal,
+      addition_status: d.status,
+      status,
+      payment_mode: (d.paid > 0 ? 'Cash' : undefined) as any,
+      receipt_no: d.paid > 0 ? `REC-SS2-${d.ad}` : null,
+      date: '2026-07-06',
+      remarks: d.status === 'Not Added' ? 'Pending addition to ledger' : 'Verified donation record',
+      created_at: '2026-07-06T10:00:00.000Z',
+      updated_at: '2026-07-06T10:00:00.000Z',
+    };
+  }),
+];
+
+export const INITIAL_TODOS: WorkspaceTodo[] = [
+  {
+    id: 'todo-1',
+    title: 'Review and verify cash holdings with bank statement',
+    description: 'Perform monthly physical cash verification with General Manager and bank book.',
+    assigned_to: 'a0000000-0000-0000-0000-000000000001',
+    assigned_by: 'a0000000-0000-0000-0000-000000000001',
+    priority: 'high',
+    status: 'in_progress',
+    due_date: '2026-11-12',
+    created_at: now.toISOString(),
+    updated_at: now.toISOString(),
+  },
+  {
+    id: 'todo-2',
+    title: 'Finalize English Programe schedule and speaker list',
+    description: 'Coordinate with literary club mentors for dates and topic confirmations.',
+    assigned_to: 'u0000000-0000-0000-0000-000000000005',
+    assigned_by: 'a0000000-0000-0000-0000-000000000001',
+    department_id: 'd5555555-5555-5555-5555-555555555555',
+    priority: 'high',
+    status: 'pending',
+    due_date: '2026-11-15',
+    created_at: now.toISOString(),
+    updated_at: now.toISOString(),
+  },
+  {
+    id: 'todo-3',
+    title: 'Follow up on pending donation collections for SS1 & SS2',
+    description: 'Check receipt status for students with partial or pending balances.',
+    assigned_to: 'u0000000-0000-0000-0000-000000000007',
+    assigned_by: 'a0000000-0000-0000-0000-000000000001',
+    department_id: 'd6666666-6666-6666-6666-666666666666',
+    priority: 'medium',
+    status: 'completed',
+    due_date: '2026-11-10',
+    created_at: now.toISOString(),
+    updated_at: now.toISOString(),
+  },
 ];
 
 export const INITIAL_FINANCE_SHEET_CONFIG: FinanceSheetConfig = {

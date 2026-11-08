@@ -16,6 +16,7 @@ import {
   StudentDonation,
   MoneyHolding,
   FinanceSheetConfig,
+  WorkspaceTodo,
 } from '@/types/database';
 import {
   INITIAL_DEPARTMENTS,
@@ -30,6 +31,7 @@ import {
   INITIAL_MONEY_HOLDINGS,
   INITIAL_STUDENT_DONATIONS,
   INITIAL_FINANCE_SHEET_CONFIG,
+  INITIAL_TODOS,
 } from '@/lib/mock/initial-data';
 import { useAuth } from './auth-context';
 import { isTaskQualifyingFinished } from '@/lib/services/workload-engine';
@@ -98,6 +100,12 @@ interface DataContextType {
   setCustomBookBalance: (amount: number | null) => void;
   updateSheetConfig: (config: Partial<FinanceSheetConfig>) => void;
   syncFromGoogleSheet: (sheetUrlOrCsv?: string) => Promise<{ success: boolean; count: number; error?: string }>;
+  todos: WorkspaceTodo[];
+  addTodo: (todo: Omit<WorkspaceTodo, 'id' | 'created_at' | 'updated_at'>) => Promise<WorkspaceTodo>;
+  updateTodo: (id: string, updates: Partial<WorkspaceTodo>) => Promise<boolean>;
+  deleteTodo: (id: string) => Promise<boolean>;
+  toggleTodoStatus: (id: string) => Promise<boolean>;
+  syncStudentDonationsFromSheet: (sheetName: 'SS1' | 'SS2') => Promise<{ success: boolean; count: number; error?: string }>;
   pushToGoogleSheet: (webhookUrl?: string) => Promise<{ success: boolean; error?: string }>;
 }
 
@@ -118,6 +126,19 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
     'd2222222-2222-2222-2222-222222222222': 3, // Media
     'd3333333-3333-3333-3333-333333333333': 2, // Video
     'd4444444-4444-4444-4444-444444444444': 3, // Outreach
+    'd5555555-5555-5555-5555-555555555555': 2, // Programe
+    'd6666666-6666-6666-6666-666666666666': 1, // Finance
+  });
+
+  // Workspace To-Do State
+  const [todos, setTodos] = useState<WorkspaceTodo[]>(() => {
+    if (typeof window !== 'undefined') {
+      const stored = localStorage.getItem('chromadiaries_workspace_todos');
+      if (stored) {
+        try { return JSON.parse(stored); } catch {}
+      }
+    }
+    return INITIAL_TODOS;
   });
 
   // Financial Workspace States (Ledger, Money Holdings, Student Donations)
@@ -773,7 +794,8 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
     };
 
     setLedgerEntries((prev) => {
-      const updated = [newEntry, ...prev];
+      // Add at bottom as requested
+      const updated = [...prev, newEntry];
       if (typeof window !== 'undefined') {
         localStorage.setItem('chromadiaries_ledger_entries', JSON.stringify(updated));
       }
@@ -824,7 +846,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
     }));
 
     setLedgerEntries((prev) => {
-      const updated = [...formatted, ...prev];
+      const updated = [...prev, ...formatted];
       if (typeof window !== 'undefined') {
         localStorage.setItem('chromadiaries_ledger_entries', JSON.stringify(updated));
       }
@@ -844,12 +866,25 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
     };
 
     setStudentDonations((prev) => {
-      const updated = [newDonation, ...prev];
+      const updated = [...prev, newDonation];
       if (typeof window !== 'undefined') {
         localStorage.setItem('chromadiaries_student_donations', JSON.stringify(updated));
       }
       return updated;
     });
+
+    if (sheetConfig.apps_script_url) {
+      fetch('/api/finance/sync-sheet', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'push_student',
+          webhookUrl: sheetConfig.apps_script_url,
+          sheet: newDonation.sheet_name || 'SS1',
+          student: newDonation,
+        }),
+      }).catch((e) => console.error('Failed to push student to sheet:', e));
+    }
 
     return newDonation;
   };
@@ -1000,6 +1035,89 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
+  const syncStudentDonationsFromSheet = async (sheetName: 'SS1' | 'SS2'): Promise<{ success: boolean; count: number; error?: string }> => {
+    try {
+      const res = await fetch(`/api/finance/sync-sheet?sheet=${sheetName}`, {
+        method: 'GET',
+      });
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        return { success: false, count: 0, error: data.error || `Failed to pull ${sheetName} from Google Sheet.` };
+      }
+      if (data.students && Array.isArray(data.students) && data.students.length > 0) {
+        setStudentDonations((prev) => {
+          const otherStudents = prev.filter((s) => s.sheet_name !== sheetName);
+          const updated = [...otherStudents, ...data.students];
+          if (typeof window !== 'undefined') {
+            localStorage.setItem('chromadiaries_student_donations', JSON.stringify(updated));
+          }
+          return updated;
+        });
+        return { success: true, count: data.students.length };
+      }
+      return { success: false, count: 0, error: `No rows returned for ${sheetName}` };
+    } catch (err: any) {
+      return { success: false, count: 0, error: err.message || `Error syncing ${sheetName}` };
+    }
+  };
+
+  // Workspace To-Do Methods
+  const addTodo = async (todoData: Omit<WorkspaceTodo, 'id' | 'created_at' | 'updated_at'>): Promise<WorkspaceTodo> => {
+    const newTodo: WorkspaceTodo = {
+      ...todoData,
+      id: generateUUID(),
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    };
+    setTodos((prev) => {
+      const updated = [newTodo, ...prev];
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('chromadiaries_workspace_todos', JSON.stringify(updated));
+      }
+      return updated;
+    });
+    return newTodo;
+  };
+
+  const updateTodo = async (id: string, updates: Partial<WorkspaceTodo>): Promise<boolean> => {
+    setTodos((prev) => {
+      const updated = prev.map((t) => (t.id === id ? { ...t, ...updates, updated_at: new Date().toISOString() } : t));
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('chromadiaries_workspace_todos', JSON.stringify(updated));
+      }
+      return updated;
+    });
+    return true;
+  };
+
+  const deleteTodo = async (id: string): Promise<boolean> => {
+    setTodos((prev) => {
+      const updated = prev.filter((t) => t.id !== id);
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('chromadiaries_workspace_todos', JSON.stringify(updated));
+      }
+      return updated;
+    });
+    return true;
+  };
+
+  const toggleTodoStatus = async (id: string): Promise<boolean> => {
+    setTodos((prev) => {
+      const updated: WorkspaceTodo[] = prev.map((t) => {
+        if (t.id === id) {
+          const nextStatus: 'pending' | 'completed' = t.status === 'completed' ? 'pending' : 'completed';
+          return { ...t, status: nextStatus, updated_at: new Date().toISOString() };
+        }
+        return t;
+      });
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('chromadiaries_workspace_todos', JSON.stringify(updated));
+      }
+      return updated;
+    });
+    return true;
+  };
+
   return (
     <DataContext.Provider
       value={{
@@ -1055,6 +1173,12 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
         updateSheetConfig,
         syncFromGoogleSheet,
         pushToGoogleSheet,
+        syncStudentDonationsFromSheet,
+        todos,
+        addTodo,
+        updateTodo,
+        deleteTodo,
+        toggleTodoStatus,
       }}
     >
       {children}

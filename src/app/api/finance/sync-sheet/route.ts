@@ -49,6 +49,24 @@ export async function POST(req: NextRequest) {
       }
     }
 
+    if (action === 'push_student') {
+      try {
+        const res = await fetch(targetWebhook, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            action: 'push_student',
+            sheet: body.sheet || 'SS1',
+            student: body.student,
+          }),
+        });
+        const resText = await res.text();
+        return NextResponse.json({ success: true, message: 'Student pushed to Google Sheet successfully.', details: resText });
+      } catch (err: any) {
+        return NextResponse.json({ success: false, error: 'Failed to push student: ' + err.message }, { status: 500 });
+      }
+    }
+
     // 2. PULL FROM GOOGLE SHEET VIA WEBHOOK (DIRECT 2D ARRAY FROM SPREADSHEET)
     if (targetWebhook) {
       try {
@@ -203,4 +221,15 @@ export async function POST(req: NextRequest) {
   } catch (err: any) {
     return NextResponse.json({ success: false, error: 'Server error syncing sheet: ' + err.message }, { status: 500 });
   }
+}
+
+export async function GET(req: NextRequest) {
+  const { searchParams } = new URL(req.url);
+  const sheet = searchParams.get('sheet') || 'Main';
+  return NextResponse.json({
+    success: true,
+    sheet,
+    students: [],
+    message: `Sheet ${sheet} query ready.`,
+  });
 }

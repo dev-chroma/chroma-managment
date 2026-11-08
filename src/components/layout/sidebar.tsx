@@ -25,6 +25,7 @@ import {
   Globe,
   ExternalLink,
   Landmark,
+  ListTodo,
 } from 'lucide-react';
 import { useAuth } from '@/lib/context/auth-context';
 import { useData } from '@/lib/context/data-context';
@@ -48,6 +49,8 @@ export function Sidebar({ isOpen = false, onClose }: SidebarProps) {
     if (deptId.startsWith('d2222222')) return 'media';
     if (deptId.startsWith('d3333333')) return 'video';
     if (deptId.startsWith('d4444444')) return 'outreach';
+    if (deptId.startsWith('d5555555')) return 'programe';
+    if (deptId.startsWith('d6666666')) return 'finance';
     return 'editing';
   };
 
@@ -59,18 +62,24 @@ export function Sidebar({ isOpen = false, onClose }: SidebarProps) {
     ? roleRequests.filter((r) => r.status === 'submitted').length
     : roleRequests.filter((r) => r.status === 'submitted' && r.requested_department_id === user?.department_id).length;
 
-  // 1. Department Workspace Links
+  // 1. Department Workspace Links (Workspaces Group)
   const allDepartmentLinks = [
     { slug: 'editing', name: 'Editing Workspace', href: '/workspace/editing', icon: Feather, color: 'text-emerald-500' },
     { slug: 'media', name: 'Media Workspace', href: '/workspace/media', icon: Palette, color: 'text-amber-500' },
     { slug: 'video', name: 'Video Workspace', href: '/workspace/video', icon: Video, color: 'text-indigo-500' },
     { slug: 'outreach', name: 'Outreach Workspace', href: '/workspace/outreach', icon: Send, color: 'text-cyan-500' },
+    { slug: 'programe', name: 'Programe Workspace', href: '/workspace/programe', icon: Sparkles, color: 'text-purple-500' },
     { slug: 'finance', name: 'Financial Workspace', href: '/finance', icon: Landmark, color: 'text-emerald-500' },
+    { slug: 'todo', name: 'Workspace To-Do', href: '/todo', icon: ListTodo, color: 'text-blue-500' },
   ];
 
   const departmentLinks = (role === 'owner' || role === 'general_member')
     ? allDepartmentLinks
-    : allDepartmentLinks.filter((d) => d.slug === userDeptSlug);
+    : [
+        ...allDepartmentLinks.filter((d) => d.slug === userDeptSlug),
+        allDepartmentLinks.find((d) => d.slug === 'finance')!,
+        allDepartmentLinks.find((d) => d.slug === 'todo')!,
+      ].filter(Boolean);
 
   return (
     <>
@@ -268,20 +277,6 @@ export function Sidebar({ isOpen = false, onClose }: SidebarProps) {
                   >
                     <Layers className="h-4 w-4" />
                     <span>Task Management & Oversight</span>
-                  </Link>
-
-                  <Link
-                    href="/finance"
-                    onClick={onClose}
-                    className={cn(
-                      'flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-semibold transition-colors',
-                      pathname === '/finance'
-                        ? 'bg-primary text-primary-foreground'
-                        : 'text-muted-foreground hover:bg-muted hover:text-foreground'
-                    )}
-                  >
-                    <Landmark className="h-4 w-4 text-emerald-500" />
-                    <span>Financial Workspace</span>
                   </Link>
 
                   <Link
@@ -604,20 +599,6 @@ export function Sidebar({ isOpen = false, onClose }: SidebarProps) {
                   >
                     <Layers className="h-4 w-4" />
                     <span>Task Management & Oversight</span>
-                  </Link>
-
-                  <Link
-                    href="/finance"
-                    onClick={onClose}
-                    className={cn(
-                      'flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-semibold transition-colors',
-                      pathname === '/finance'
-                        ? 'bg-primary text-primary-foreground'
-                        : 'text-muted-foreground hover:bg-muted hover:text-foreground'
-                    )}
-                  >
-                    <Landmark className="h-4 w-4 text-emerald-500" />
-                    <span>Financial Workspace</span>
                   </Link>
 
                   <Link

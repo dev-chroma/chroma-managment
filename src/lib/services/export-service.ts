@@ -997,3 +997,214 @@ export function exportStudentDonationsToPdf(donations: StudentDonation[]) {
   printWindow.document.write(htmlContent);
   printWindow.document.close();
 }
+
+/**
+ * Prints an official ChromaDiaries donation receipt for a single student
+ */
+export function exportSingleStudentReceiptPdf(student: StudentDonation) {
+  const printWindow = window.open('', '_blank');
+  if (!printWindow) {
+    alert('Please allow popups to export the receipt PDF.');
+    return;
+  }
+
+  const due = Math.max(0, student.pledged_amount - student.collected_amount);
+  const isPaid = student.collected_amount >= student.pledged_amount;
+  const isPartial = student.collected_amount > 0 && !isPaid;
+  const statusColor = isPaid ? '#059669' : isPartial ? '#d97706' : '#e11d48';
+  const statusLabel = isPaid ? 'PAID FULLY' : isPartial ? 'PARTIALLY PAID' : 'PAYMENT PENDING';
+
+  const htmlContent = `
+    <!DOCTYPE html>
+    <html>
+      <head>
+        <title>Receipt - ${student.student_name} (${student.admission_no || student.student_id || ''})</title>
+        <style>
+          @page { size: A5 landscape; margin: 10mm; }
+          body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; color: #0f172a; margin: 0; padding: 20px; background: #fff; }
+          .receipt-box { border: 2px solid #0f172a; border-radius: 12px; padding: 24px; position: relative; background: #fafafa; }
+          .header { display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 2px solid #e2e8f0; padding-bottom: 14px; margin-bottom: 18px; }
+          .logo-title { font-size: 22px; font-weight: 800; color: #059669; letter-spacing: -0.5px; }
+          .subtitle { font-size: 11px; color: #64748b; font-weight: 500; }
+          .receipt-tag { background: #0f172a; color: #fff; padding: 4px 12px; border-radius: 6px; font-size: 11px; font-weight: 700; text-transform: uppercase; }
+          .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 20px; }
+          .field-lbl { font-size: 10px; font-weight: 700; text-transform: uppercase; color: #64748b; margin-bottom: 3px; }
+          .field-val { font-size: 14px; font-weight: 700; color: #0f172a; }
+          .amount-box { background: #ffffff; border: 1.5px solid #cbd5e1; border-radius: 10px; padding: 14px; display: grid; grid-template-columns: repeat(3, 1fr); text-align: center; gap: 10px; margin-bottom: 20px; }
+          .status-badge { display: inline-block; padding: 5px 12px; border-radius: 20px; font-size: 12px; font-weight: 800; color: #fff; background: ${statusColor}; }
+          .footer { display: flex; justify-content: space-between; align-items: flex-end; padding-top: 14px; border-top: 1px dashed #cbd5e1; }
+          .sign-line { border-top: 1.5px solid #0f172a; width: 140px; margin-top: 30px; text-align: center; font-size: 10px; font-weight: 700; }
+        </style>
+      </head>
+      <body>
+        <div class="receipt-box">
+          <div class="header">
+            <div>
+              <div class="logo-title">ChromaDiaries</div>
+              <div class="subtitle">Centralized Literary Magazine & Student Welfare</div>
+              <div class="subtitle">Official Donation Receipt • 250 Donation Fund</div>
+            </div>
+            <div style="text-align: right;">
+              <div class="receipt-tag">${student.receipt_no || `REC-${student.sheet_name || 'SS1'}-${student.admission_no || 'GEN'}`}</div>
+              <div style="font-size: 10px; color: #64748b; margin-top: 6px;">Date: <strong>${student.date || format(new Date(), 'dd-MM-yyyy')}</strong></div>
+            </div>
+          </div>
+
+          <div class="grid">
+            <div>
+              <div class="field-lbl">Student Name</div>
+              <div class="field-val" style="font-size: 16px;">${student.student_name}</div>
+            </div>
+            <div>
+              <div class="field-lbl">Admission No / Roll No</div>
+              <div class="field-val" style="font-family: monospace; font-size: 16px;">${student.admission_no || student.student_id || '—'}</div>
+            </div>
+            <div>
+              <div class="field-lbl">Workspace Sheet / Batch</div>
+              <div class="field-val">${student.sheet_name ? student.sheet_name + ' Sheet' : student.batch_or_class || 'General Student'}</div>
+            </div>
+            <div>
+              <div class="field-lbl">Ledger Addition Status</div>
+              <div class="field-val" style="color: ${student.addition_status === 'Added' ? '#059669' : '#d97706'};">
+                ${student.addition_status || 'Added'}
+              </div>
+            </div>
+          </div>
+
+          <div class="amount-box">
+            <div>
+              <div class="field-lbl">Target Amount</div>
+              <div class="field-val" style="color: #64748b;">₹${student.pledged_amount.toLocaleString('en-IN')}</div>
+            </div>
+            <div>
+              <div class="field-lbl">Amount Paid</div>
+              <div class="field-val" style="color: #059669; font-size: 18px;">₹${student.collected_amount.toLocaleString('en-IN')}</div>
+            </div>
+            <div>
+              <div class="field-lbl">Balance Due</div>
+              <div class="field-val" style="color: ${due > 0 ? '#e11d48' : '#059669'}; font-size: 16px;">
+                ${due > 0 ? '₹' + due.toLocaleString('en-IN') : '₹0 (Cleared)'}
+              </div>
+            </div>
+          </div>
+
+          <div class="footer">
+            <div>
+              <div class="status-badge">${statusLabel}</div>
+              <div style="font-size: 9px; color: #94a3b8; margin-top: 6px;">
+                Verified ChromaDiaries Computer Generated Voucher • www.chromadiaries.in
+              </div>
+            </div>
+            <div>
+              <div class="sign-line">Authorized Signatory<br><span style="font-size: 9px; font-weight: 500; color: #64748b;">Financial Controller</span></div>
+            </div>
+          </div>
+        </div>
+
+        <script>
+          window.onload = function() {
+            window.print();
+          };
+        </script>
+      </body>
+    </html>
+  `;
+
+  printWindow.document.open();
+  printWindow.document.write(htmlContent);
+  printWindow.document.close();
+}
+
+/**
+ * Prints all receipts in a consolidated printable multi-voucher document
+ */
+export function exportAllStudentReceiptsPdf(donations: StudentDonation[], title = 'Student Donation Slips') {
+  const printWindow = window.open('', '_blank');
+  if (!printWindow) {
+    alert('Please allow popups to export receipts.');
+    return;
+  }
+
+  const slipsHtml = donations
+    .map((s) => {
+      const due = Math.max(0, s.pledged_amount - s.collected_amount);
+      const isPaid = s.collected_amount >= s.pledged_amount;
+      const isPartial = s.collected_amount > 0 && !isPaid;
+      const statusColor = isPaid ? '#059669' : isPartial ? '#d97706' : '#e11d48';
+      const statusLabel = isPaid ? 'PAID FULLY' : isPartial ? 'PARTIALLY PAID' : 'PENDING';
+
+      return `
+        <div style="page-break-inside: avoid; border: 1.5px solid #cbd5e1; border-radius: 8px; padding: 12px 16px; margin-bottom: 12px; background: #fff;">
+          <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #e2e8f0; padding-bottom: 6px; margin-bottom: 8px;">
+            <div>
+              <strong style="color: #059669; font-size: 13px;">ChromaDiaries</strong>
+              <span style="font-size: 10px; color: #64748b; margin-left: 8px;">Receipt Voucher</span>
+            </div>
+            <div style="font-size: 10px; font-family: monospace; font-weight: 700; background: #f1f5f9; padding: 2px 6px; border-radius: 4px;">
+              ${s.receipt_no || `REC-${s.sheet_name || 'SS'}-${s.admission_no || 'NA'}`}
+            </div>
+          </div>
+          <div style="display: grid; grid-template-columns: 2fr 1fr 1fr 1fr 1fr; gap: 8px; align-items: center; font-size: 11px;">
+            <div>
+              <div style="font-size: 9px; color: #64748b; text-transform: uppercase;">Student</div>
+              <strong>${s.student_name}</strong>
+              <div style="font-size: 9px; color: #64748b;">Ad.No: ${s.admission_no || '—'} | ${s.sheet_name || 'SS1'}</div>
+            </div>
+            <div>
+              <div style="font-size: 9px; color: #64748b; text-transform: uppercase;">Target</div>
+              <span>₹${s.pledged_amount}</span>
+            </div>
+            <div>
+              <div style="font-size: 9px; color: #64748b; text-transform: uppercase;">Paid</div>
+              <strong style="color: #059669;">₹${s.collected_amount}</strong>
+            </div>
+            <div>
+              <div style="font-size: 9px; color: #64748b; text-transform: uppercase;">Balance</div>
+              <strong style="color: ${due > 0 ? '#e11d48' : '#64748b'};">${due > 0 ? '₹' + due : '₹0'}</strong>
+            </div>
+            <div style="text-align: right;">
+              <span style="display: inline-block; padding: 3px 8px; border-radius: 12px; font-size: 9px; font-weight: 800; background: ${statusColor}; color: #fff;">
+                ${statusLabel}
+              </span>
+              <div style="font-size: 8px; color: #64748b; margin-top: 2px;">${s.addition_status || 'Added'}</div>
+            </div>
+          </div>
+        </div>
+      `;
+    })
+    .join('');
+
+  const htmlContent = `
+    <!DOCTYPE html>
+    <html>
+      <head>
+        <title>${title}</title>
+        <style>
+          @page { size: A4 portrait; margin: 12mm; }
+          body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; color: #0f172a; margin: 0; padding: 15px; }
+          .header { border-bottom: 2px solid #059669; padding-bottom: 8px; margin-bottom: 14px; display: flex; justify-content: space-between; align-items: center; }
+        </style>
+      </head>
+      <body>
+        <div class="header">
+          <div>
+            <h2 style="margin: 0; color: #059669; font-size: 18px;">ChromaDiaries • All Student Donation Slips</h2>
+            <div style="font-size: 10px; color: #64748b;">Consolidated Student Receipts Directory (${donations.length} Students)</div>
+          </div>
+          <div style="text-align: right; font-size: 10px; color: #64748b;">
+            <div>Printed: ${format(new Date(), 'dd-MM-yyyy HH:mm')}</div>
+            <div>www.chromadiaries.in</div>
+          </div>
+        </div>
+        ${slipsHtml}
+        <script>
+          window.onload = function() { window.print(); };
+        </script>
+      </body>
+    </html>
+  `;
+
+  printWindow.document.open();
+  printWindow.document.write(htmlContent);
+  printWindow.document.close();
+}

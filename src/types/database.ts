@@ -264,3 +264,128 @@ export interface FinanceSheetConfig {
   auto_sync: boolean;
   last_synced_at?: string | null;
 }
+
+// =============================================================================
+// PROGRAMME MANAGEMENT WORKSPACE TYPES
+// =============================================================================
+
+export type ProgrammeStandardStatus = 'Pending' | 'Planned' | 'Progressed' | 'Scheduled' | 'Completed';
+export type ProgrammeStandardCategory = 'Promotion Programme' | 'Trend Programme' | 'Special Programme' | 'Other Programme';
+
+export interface Programme {
+  id: string;
+  unique_code: string; // e.g. 'CD-PRG-001'
+  title: string;
+  description: string;
+  category: string;
+  status: string;
+  deadline: string;
+  assigned_to?: string | null;
+  created_by?: string | null;
+  is_paused?: boolean;
+  is_archived?: boolean;
+  venue?: string | null;
+  created_at: string;
+  updated_at: string;
+  assignee?: Profile;
+  creator?: Profile;
+}
+
+export interface ProgrammeCategoryConfig {
+  id: string;
+  name: string;
+  color: string;
+  is_active: boolean;
+  order: number;
+}
+
+export interface ProgrammeStatusConfig {
+  id: string;
+  name: string;
+  color: string;
+  counts_as_progress: boolean;
+  counts_as_completed: boolean;
+  is_active: boolean;
+  order: number;
+}
+
+export interface ProgrammeTask {
+  id: string;
+  programme_id: string;
+  title: string;
+  description?: string;
+  assigned_to?: string | null;
+  priority: 'Low' | 'Medium' | 'High' | 'Urgent';
+  deadline?: string | null;
+  status: 'Pending' | 'In Progress' | 'Completed';
+  created_at: string;
+  updated_at?: string;
+  assignee?: Profile;
+}
+
+export interface ProgrammeNote {
+  id: string;
+  programme_id: string;
+  title: string;
+  content: string;
+  author_id?: string | null;
+  author_name?: string | null;
+  created_at: string;
+  updated_at: string;
+  author?: Profile;
+}
+
+export interface ProgrammeGuest {
+  id: string;
+  programme_id: string;
+  full_name: string;
+  designation?: string | null;
+  organization?: string | null;
+  phone?: string | null;
+  email?: string | null;
+  category?: string | null;
+  invitation_status: 'Not Sent' | 'Sent' | 'Delivered';
+  confirmation_status: 'Pending' | 'Confirmed' | 'Tentative' | 'Declined';
+  special_requirements?: string | null;
+  notes?: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ProgrammeCandidate {
+  id: string;
+  programme_id: string;
+  full_name: string;
+  phone?: string | null;
+  email?: string | null;
+  institution?: string | null;
+  category?: string | null;
+  selection_status: 'Applied' | 'Screening' | 'Shortlisted' | 'Selected' | 'Rejected';
+  remarks?: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ProgrammeParticipant {
+  id: string;
+  programme_id: string;
+  full_name: string;
+  phone?: string | null;
+  institution_or_class?: string | null;
+  registration_id?: string | null;
+  attendance_status: 'Registered' | 'Present' | 'Absent' | 'Excused';
+  notes?: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ProgrammeActivity {
+  id: string;
+  programme_id: string;
+  action: string;
+  user_id?: string | null;
+  user_name?: string | null;
+  details: string;
+  created_at: string;
+}
+

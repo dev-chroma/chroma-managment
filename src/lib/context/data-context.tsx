@@ -17,6 +17,15 @@ import {
   MoneyHolding,
   FinanceSheetConfig,
   WorkspaceTodo,
+  Programme,
+  ProgrammeCategoryConfig,
+  ProgrammeStatusConfig,
+  ProgrammeTask,
+  ProgrammeNote,
+  ProgrammeGuest,
+  ProgrammeCandidate,
+  ProgrammeParticipant,
+  ProgrammeActivity,
 } from '@/types/database';
 import {
   INITIAL_DEPARTMENTS,
@@ -32,6 +41,15 @@ import {
   INITIAL_STUDENT_DONATIONS,
   INITIAL_FINANCE_SHEET_CONFIG,
   INITIAL_TODOS,
+  INITIAL_PROGRAMMES,
+  INITIAL_PROGRAMME_CATEGORIES,
+  INITIAL_PROGRAMME_STATUSES,
+  INITIAL_PROGRAMME_TASKS,
+  INITIAL_PROGRAMME_NOTES,
+  INITIAL_PROGRAMME_GUESTS,
+  INITIAL_PROGRAMME_CANDIDATES,
+  INITIAL_PROGRAMME_PARTICIPANTS,
+  INITIAL_PROGRAMME_ACTIVITIES,
 } from '@/lib/mock/initial-data';
 import { useAuth } from './auth-context';
 import { isTaskQualifyingFinished } from '@/lib/services/workload-engine';
@@ -109,6 +127,38 @@ interface DataContextType {
   pushToGoogleSheet: (webhookUrl?: string) => Promise<{ success: boolean; error?: string }>;
   toggleTaskTodo: (taskId: string, todoId: string) => Promise<boolean>;
   addTaskTodo: (taskId: string, text: string) => Promise<boolean>;
+  // Programme Management
+  programmes: Programme[];
+  programmeCategories: ProgrammeCategoryConfig[];
+  programmeStatuses: ProgrammeStatusConfig[];
+  programmeTasks: ProgrammeTask[];
+  programmeNotes: ProgrammeNote[];
+  programmeGuests: ProgrammeGuest[];
+  programmeCandidates: ProgrammeCandidate[];
+  programmeParticipants: ProgrammeParticipant[];
+  programmeActivities: ProgrammeActivity[];
+  addProgramme: (programme: Omit<Programme, 'id' | 'unique_code' | 'created_at' | 'updated_at'>) => Promise<Programme>;
+  updateProgramme: (id: string, updates: Partial<Programme>) => Promise<boolean>;
+  deleteProgramme: (id: string) => Promise<boolean>;
+  toggleProgrammePause: (id: string) => Promise<boolean>;
+  addProgrammeTask: (task: Omit<ProgrammeTask, 'id' | 'created_at'>) => Promise<ProgrammeTask>;
+  updateProgrammeTask: (id: string, updates: Partial<ProgrammeTask>) => Promise<boolean>;
+  deleteProgrammeTask: (id: string) => Promise<boolean>;
+  toggleProgrammeTaskStatus: (id: string) => Promise<boolean>;
+  addProgrammeNote: (note: Omit<ProgrammeNote, 'id' | 'created_at' | 'updated_at'>) => Promise<ProgrammeNote>;
+  updateProgrammeNote: (id: string, updates: Partial<ProgrammeNote>) => Promise<boolean>;
+  deleteProgrammeNote: (id: string) => Promise<boolean>;
+  addProgrammeGuest: (guest: Omit<ProgrammeGuest, 'id' | 'created_at' | 'updated_at'>) => Promise<ProgrammeGuest>;
+  updateProgrammeGuest: (id: string, updates: Partial<ProgrammeGuest>) => Promise<boolean>;
+  deleteProgrammeGuest: (id: string) => Promise<boolean>;
+  addProgrammeCandidate: (candidate: Omit<ProgrammeCandidate, 'id' | 'created_at' | 'updated_at'>) => Promise<ProgrammeCandidate>;
+  updateProgrammeCandidate: (id: string, updates: Partial<ProgrammeCandidate>) => Promise<boolean>;
+  deleteProgrammeCandidate: (id: string) => Promise<boolean>;
+  addProgrammeParticipant: (participant: Omit<ProgrammeParticipant, 'id' | 'created_at' | 'updated_at'>) => Promise<ProgrammeParticipant>;
+  updateProgrammeParticipant: (id: string, updates: Partial<ProgrammeParticipant>) => Promise<boolean>;
+  deleteProgrammeParticipant: (id: string) => Promise<boolean>;
+  addProgrammeActivity: (activity: Omit<ProgrammeActivity, 'id' | 'created_at'>) => Promise<ProgrammeActivity>;
+  updateProgrammeControlSettings: (categories: ProgrammeCategoryConfig[], statuses: ProgrammeStatusConfig[]) => Promise<boolean>;
 }
 
 const DataContext = createContext<DataContextType | undefined>(undefined);
@@ -208,6 +258,97 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
       }
     }
     return INITIAL_FINANCE_SHEET_CONFIG;
+  });
+
+  // Programme Management States
+  const [programmeCategories, setProgrammeCategories] = useState<ProgrammeCategoryConfig[]>(() => {
+    if (typeof window !== 'undefined') {
+      const stored = localStorage.getItem('chromadiaries_programme_categories');
+      if (stored) {
+        try { return JSON.parse(stored); } catch {}
+      }
+    }
+    return INITIAL_PROGRAMME_CATEGORIES;
+  });
+
+  const [programmeStatuses, setProgrammeStatuses] = useState<ProgrammeStatusConfig[]>(() => {
+    if (typeof window !== 'undefined') {
+      const stored = localStorage.getItem('chromadiaries_programme_statuses');
+      if (stored) {
+        try { return JSON.parse(stored); } catch {}
+      }
+    }
+    return INITIAL_PROGRAMME_STATUSES;
+  });
+
+  const [programmes, setProgrammes] = useState<Programme[]>(() => {
+    if (typeof window !== 'undefined') {
+      const stored = localStorage.getItem('chromadiaries_programmes');
+      if (stored) {
+        try { return JSON.parse(stored); } catch {}
+      }
+    }
+    return INITIAL_PROGRAMMES;
+  });
+
+  const [programmeTasks, setProgrammeTasks] = useState<ProgrammeTask[]>(() => {
+    if (typeof window !== 'undefined') {
+      const stored = localStorage.getItem('chromadiaries_programme_tasks');
+      if (stored) {
+        try { return JSON.parse(stored); } catch {}
+      }
+    }
+    return INITIAL_PROGRAMME_TASKS;
+  });
+
+  const [programmeNotes, setProgrammeNotes] = useState<ProgrammeNote[]>(() => {
+    if (typeof window !== 'undefined') {
+      const stored = localStorage.getItem('chromadiaries_programme_notes');
+      if (stored) {
+        try { return JSON.parse(stored); } catch {}
+      }
+    }
+    return INITIAL_PROGRAMME_NOTES;
+  });
+
+  const [programmeGuests, setProgrammeGuests] = useState<ProgrammeGuest[]>(() => {
+    if (typeof window !== 'undefined') {
+      const stored = localStorage.getItem('chromadiaries_programme_guests');
+      if (stored) {
+        try { return JSON.parse(stored); } catch {}
+      }
+    }
+    return INITIAL_PROGRAMME_GUESTS;
+  });
+
+  const [programmeCandidates, setProgrammeCandidates] = useState<ProgrammeCandidate[]>(() => {
+    if (typeof window !== 'undefined') {
+      const stored = localStorage.getItem('chromadiaries_programme_candidates');
+      if (stored) {
+        try { return JSON.parse(stored); } catch {}
+      }
+    }
+    return INITIAL_PROGRAMME_CANDIDATES;
+  });
+
+  const [programmeParticipants, setProgrammeParticipants] = useState<ProgrammeParticipant[]>(() => {
+    if (typeof window !== 'undefined') {
+      const stored = localStorage.getItem('chromadiaries_programme_participants');
+      if (stored) {
+        try { return JSON.parse(stored); } catch {}
+      }
+    }
+    return INITIAL_PROGRAMME_PARTICIPANTS;
+  });
+
+  const [programmeActivities, setProgrammeActivities] = useState<ProgrammeActivity[]>(() => {
+    if (typeof window !== 'undefined') {
+      const stored = localStorage.getItem('chromadiaries_programme_activities');
+      if (stored) {
+        try { return JSON.parse(stored); } catch {}
+      }
+    }
+    return INITIAL_PROGRAMME_ACTIVITIES;
   });
 
   const [departmentCategories, setDepartmentCategories] = useState<Record<string, string[]>>(() => {
@@ -953,15 +1094,35 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
   };
 
   const updateStudentDonation = async (id: string, updates: Partial<StudentDonation>): Promise<boolean> => {
+    let targetDonation: StudentDonation | undefined;
     setStudentDonations((prev) => {
-      const updated = prev.map((d) =>
-        d.id === id ? { ...d, ...updates, updated_at: new Date().toISOString() } : d
-      );
+      const updated = prev.map((d) => {
+        if (d.id === id) {
+          targetDonation = { ...d, ...updates, updated_at: new Date().toISOString() };
+          return targetDonation;
+        }
+        return d;
+      });
       if (typeof window !== 'undefined') {
         localStorage.setItem('chromadiaries_student_donations', JSON.stringify(updated));
       }
       return updated;
     });
+
+    // Auto-push updated donation to Google Sheet
+    if (targetDonation && sheetConfig.apps_script_url) {
+      fetch('/api/finance/sync-sheet', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'push_student',
+          webhookUrl: sheetConfig.apps_script_url,
+          sheet: (targetDonation as StudentDonation).sheet_name || 'SS1',
+          student: targetDonation,
+        }),
+      }).catch((e) => console.error('Failed to auto-push updated student to sheet:', e));
+    }
+
     return true;
   };
 
@@ -1181,6 +1342,377 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
     return true;
   };
 
+  // Programme Methods
+  const addProgramme = async (programmeData: Omit<Programme, 'id' | 'unique_code' | 'created_at' | 'updated_at'>): Promise<Programme> => {
+    const existingCodes = programmes.map((p) => {
+      const m = p.unique_code?.match(/CD-PRG-(\d+)/);
+      return m ? parseInt(m[1], 10) : 0;
+    });
+    const nextSeq = existingCodes.length > 0 ? Math.max(...existingCodes) + 1 : 1;
+    const unique_code = `CD-PRG-${String(nextSeq).padStart(3, '0')}`;
+
+    const newProgramme: Programme = {
+      ...programmeData,
+      id: generateUUID(),
+      unique_code,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    };
+
+    setProgrammes((prev) => {
+      const updated = [newProgramme, ...prev];
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('chromadiaries_programmes', JSON.stringify(updated));
+      }
+      return updated;
+    });
+
+    addProgrammeActivity({
+      programme_id: newProgramme.id,
+      action: 'Programme Created',
+      user_name: user?.full_name || 'Admin',
+      details: `Programme "${newProgramme.title}" (${newProgramme.unique_code}) was initiated.`,
+    });
+
+    return newProgramme;
+  };
+
+  const updateProgramme = async (id: string, updates: Partial<Programme>): Promise<boolean> => {
+    setProgrammes((prev) => {
+      const updated = prev.map((p) => (p.id === id ? { ...p, ...updates, updated_at: new Date().toISOString() } : p));
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('chromadiaries_programmes', JSON.stringify(updated));
+      }
+      return updated;
+    });
+
+    if (updates.status) {
+      addProgrammeActivity({
+        programme_id: id,
+        action: 'Status Changed',
+        user_name: user?.full_name || 'Admin',
+        details: `Status transitioned to "${updates.status}".`,
+      });
+    }
+
+    return true;
+  };
+
+  const deleteProgramme = async (id: string): Promise<boolean> => {
+    setProgrammes((prev) => {
+      const updated = prev.filter((p) => p.id !== id);
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('chromadiaries_programmes', JSON.stringify(updated));
+      }
+      return updated;
+    });
+    return true;
+  };
+
+  const toggleProgrammePause = async (id: string): Promise<boolean> => {
+    let newPaused = false;
+    setProgrammes((prev) => {
+      const updated = prev.map((p) => {
+        if (p.id === id) {
+          newPaused = !p.is_paused;
+          return { ...p, is_paused: newPaused, updated_at: new Date().toISOString() };
+        }
+        return p;
+      });
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('chromadiaries_programmes', JSON.stringify(updated));
+      }
+      return updated;
+    });
+
+    addProgrammeActivity({
+      programme_id: id,
+      action: newPaused ? 'Programme Paused' : 'Programme Resumed',
+      user_name: user?.full_name || 'Admin',
+      details: newPaused ? 'Programme was placed on temporary hold.' : 'Programme was resumed.',
+    });
+
+    return true;
+  };
+
+  const addProgrammeTask = async (taskData: Omit<ProgrammeTask, 'id' | 'created_at'>): Promise<ProgrammeTask> => {
+    const newTask: ProgrammeTask = {
+      ...taskData,
+      id: generateUUID(),
+      created_at: new Date().toISOString(),
+    };
+    setProgrammeTasks((prev) => {
+      const updated = [...prev, newTask];
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('chromadiaries_programme_tasks', JSON.stringify(updated));
+      }
+      return updated;
+    });
+    addProgrammeActivity({
+      programme_id: newTask.programme_id,
+      action: 'Task Added',
+      user_name: user?.full_name || 'Admin',
+      details: `New task "${newTask.title}" added with ${newTask.priority} priority.`,
+    });
+    return newTask;
+  };
+
+  const updateProgrammeTask = async (id: string, updates: Partial<ProgrammeTask>): Promise<boolean> => {
+    setProgrammeTasks((prev) => {
+      const updated = prev.map((t) => (t.id === id ? { ...t, ...updates, updated_at: new Date().toISOString() } : t));
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('chromadiaries_programme_tasks', JSON.stringify(updated));
+      }
+      return updated;
+    });
+    return true;
+  };
+
+  const deleteProgrammeTask = async (id: string): Promise<boolean> => {
+    setProgrammeTasks((prev) => {
+      const updated = prev.filter((t) => t.id !== id);
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('chromadiaries_programme_tasks', JSON.stringify(updated));
+      }
+      return updated;
+    });
+    return true;
+  };
+
+  const toggleProgrammeTaskStatus = async (id: string): Promise<boolean> => {
+    let pId = '';
+    let newStatus: 'Pending' | 'In Progress' | 'Completed' = 'Completed';
+    setProgrammeTasks((prev) => {
+      const updated = prev.map((t) => {
+        if (t.id === id) {
+          pId = t.programme_id;
+          newStatus = t.status === 'Completed' ? 'Pending' : 'Completed';
+          return { ...t, status: newStatus, updated_at: new Date().toISOString() };
+        }
+        return t;
+      });
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('chromadiaries_programme_tasks', JSON.stringify(updated));
+      }
+      return updated;
+    });
+    if (pId) {
+      addProgrammeActivity({
+        programme_id: pId,
+        action: 'Task Status Updated',
+        user_name: user?.full_name || 'Admin',
+        details: `Task status changed to ${newStatus}.`,
+      });
+    }
+    return true;
+  };
+
+  const addProgrammeNote = async (noteData: Omit<ProgrammeNote, 'id' | 'created_at' | 'updated_at'>): Promise<ProgrammeNote> => {
+    const newNote: ProgrammeNote = {
+      ...noteData,
+      id: generateUUID(),
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    };
+    setProgrammeNotes((prev) => {
+      const updated = [newNote, ...prev];
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('chromadiaries_programme_notes', JSON.stringify(updated));
+      }
+      return updated;
+    });
+    addProgrammeActivity({
+      programme_id: newNote.programme_id,
+      action: 'Planning Note Added',
+      user_name: user?.full_name || 'Admin',
+      details: `Created document "${newNote.title}".`,
+    });
+    return newNote;
+  };
+
+  const updateProgrammeNote = async (id: string, updates: Partial<ProgrammeNote>): Promise<boolean> => {
+    setProgrammeNotes((prev) => {
+      const updated = prev.map((n) => (n.id === id ? { ...n, ...updates, updated_at: new Date().toISOString() } : n));
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('chromadiaries_programme_notes', JSON.stringify(updated));
+      }
+      return updated;
+    });
+    return true;
+  };
+
+  const deleteProgrammeNote = async (id: string): Promise<boolean> => {
+    setProgrammeNotes((prev) => {
+      const updated = prev.filter((n) => n.id !== id);
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('chromadiaries_programme_notes', JSON.stringify(updated));
+      }
+      return updated;
+    });
+    return true;
+  };
+
+  const addProgrammeGuest = async (guestData: Omit<ProgrammeGuest, 'id' | 'created_at' | 'updated_at'>): Promise<ProgrammeGuest> => {
+    const newGuest: ProgrammeGuest = {
+      ...guestData,
+      id: generateUUID(),
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    };
+    setProgrammeGuests((prev) => {
+      const updated = [...prev, newGuest];
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('chromadiaries_programme_guests', JSON.stringify(updated));
+      }
+      return updated;
+    });
+    addProgrammeActivity({
+      programme_id: newGuest.programme_id,
+      action: 'Guest Added',
+      user_name: user?.full_name || 'Admin',
+      details: `Added ${newGuest.full_name} (${newGuest.category || 'Guest'}).`,
+    });
+    return newGuest;
+  };
+
+  const updateProgrammeGuest = async (id: string, updates: Partial<ProgrammeGuest>): Promise<boolean> => {
+    setProgrammeGuests((prev) => {
+      const updated = prev.map((g) => (g.id === id ? { ...g, ...updates, updated_at: new Date().toISOString() } : g));
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('chromadiaries_programme_guests', JSON.stringify(updated));
+      }
+      return updated;
+    });
+    return true;
+  };
+
+  const deleteProgrammeGuest = async (id: string): Promise<boolean> => {
+    setProgrammeGuests((prev) => {
+      const updated = prev.filter((g) => g.id !== id);
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('chromadiaries_programme_guests', JSON.stringify(updated));
+      }
+      return updated;
+    });
+    return true;
+  };
+
+  const addProgrammeCandidate = async (candidateData: Omit<ProgrammeCandidate, 'id' | 'created_at' | 'updated_at'>): Promise<ProgrammeCandidate> => {
+    const newCandidate: ProgrammeCandidate = {
+      ...candidateData,
+      id: generateUUID(),
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    };
+    setProgrammeCandidates((prev) => {
+      const updated = [...prev, newCandidate];
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('chromadiaries_programme_candidates', JSON.stringify(updated));
+      }
+      return updated;
+    });
+    addProgrammeActivity({
+      programme_id: newCandidate.programme_id,
+      action: 'Candidate Added',
+      user_name: user?.full_name || 'Admin',
+      details: `Added candidate "${newCandidate.full_name}".`,
+    });
+    return newCandidate;
+  };
+
+  const updateProgrammeCandidate = async (id: string, updates: Partial<ProgrammeCandidate>): Promise<boolean> => {
+    setProgrammeCandidates((prev) => {
+      const updated = prev.map((c) => (c.id === id ? { ...c, ...updates, updated_at: new Date().toISOString() } : c));
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('chromadiaries_programme_candidates', JSON.stringify(updated));
+      }
+      return updated;
+    });
+    return true;
+  };
+
+  const deleteProgrammeCandidate = async (id: string): Promise<boolean> => {
+    setProgrammeCandidates((prev) => {
+      const updated = prev.filter((c) => c.id !== id);
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('chromadiaries_programme_candidates', JSON.stringify(updated));
+      }
+      return updated;
+    });
+    return true;
+  };
+
+  const addProgrammeParticipant = async (participantData: Omit<ProgrammeParticipant, 'id' | 'created_at' | 'updated_at'>): Promise<ProgrammeParticipant> => {
+    const newParticipant: ProgrammeParticipant = {
+      ...participantData,
+      id: generateUUID(),
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    };
+    setProgrammeParticipants((prev) => {
+      const updated = [...prev, newParticipant];
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('chromadiaries_programme_participants', JSON.stringify(updated));
+      }
+      return updated;
+    });
+    addProgrammeActivity({
+      programme_id: newParticipant.programme_id,
+      action: 'Participant Registered',
+      user_name: user?.full_name || 'Admin',
+      details: `Registered participant "${newParticipant.full_name}".`,
+    });
+    return newParticipant;
+  };
+
+  const updateProgrammeParticipant = async (id: string, updates: Partial<ProgrammeParticipant>): Promise<boolean> => {
+    setProgrammeParticipants((prev) => {
+      const updated = prev.map((p) => (p.id === id ? { ...p, ...updates, updated_at: new Date().toISOString() } : p));
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('chromadiaries_programme_participants', JSON.stringify(updated));
+      }
+      return updated;
+    });
+    return true;
+  };
+
+  const deleteProgrammeParticipant = async (id: string): Promise<boolean> => {
+    setProgrammeParticipants((prev) => {
+      const updated = prev.filter((p) => p.id !== id);
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('chromadiaries_programme_participants', JSON.stringify(updated));
+      }
+      return updated;
+    });
+    return true;
+  };
+
+  const addProgrammeActivity = async (activityData: Omit<ProgrammeActivity, 'id' | 'created_at'>): Promise<ProgrammeActivity> => {
+    const newActivity: ProgrammeActivity = {
+      ...activityData,
+      id: generateUUID(),
+      created_at: new Date().toISOString(),
+    };
+    setProgrammeActivities((prev) => {
+      const updated = [newActivity, ...prev];
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('chromadiaries_programme_activities', JSON.stringify(updated));
+      }
+      return updated;
+    });
+    return newActivity;
+  };
+
+  const updateProgrammeControlSettings = async (categories: ProgrammeCategoryConfig[], statuses: ProgrammeStatusConfig[]): Promise<boolean> => {
+    setProgrammeCategories(categories);
+    setProgrammeStatuses(statuses);
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('chromadiaries_programme_categories', JSON.stringify(categories));
+      localStorage.setItem('chromadiaries_programme_statuses', JSON.stringify(statuses));
+    }
+    return true;
+  };
+
   return (
     <DataContext.Provider
       value={{
@@ -1244,6 +1776,37 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
         toggleTodoStatus,
         toggleTaskTodo,
         addTaskTodo,
+        programmes,
+        programmeCategories,
+        programmeStatuses,
+        programmeTasks,
+        programmeNotes,
+        programmeGuests,
+        programmeCandidates,
+        programmeParticipants,
+        programmeActivities,
+        addProgramme,
+        updateProgramme,
+        deleteProgramme,
+        toggleProgrammePause,
+        addProgrammeTask,
+        updateProgrammeTask,
+        deleteProgrammeTask,
+        toggleProgrammeTaskStatus,
+        addProgrammeNote,
+        updateProgrammeNote,
+        deleteProgrammeNote,
+        addProgrammeGuest,
+        updateProgrammeGuest,
+        deleteProgrammeGuest,
+        addProgrammeCandidate,
+        updateProgrammeCandidate,
+        deleteProgrammeCandidate,
+        addProgrammeParticipant,
+        updateProgrammeParticipant,
+        deleteProgrammeParticipant,
+        addProgrammeActivity,
+        updateProgrammeControlSettings,
       }}
     >
       {children}

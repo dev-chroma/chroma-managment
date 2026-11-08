@@ -51,17 +51,36 @@ export async function POST(req: NextRequest) {
 
     if (action === 'push_student') {
       try {
+        const student = body.student || {};
+        const targetSheet = body.sheet || student.sheet_name || 'SS1';
+        const row = [
+          student.serial_no || '',
+          student.admission_no || '',
+          student.student_name || '',
+          student.pledged_amount || 250,
+          student.collected_amount || 0,
+          student.balance !== undefined ? student.balance : Math.max(0, (student.pledged_amount || 250) - (student.collected_amount || 0)),
+          student.addition_status || 'Added'
+        ];
+
         const res = await fetch(targetWebhook, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             action: 'push_student',
-            sheet: body.sheet || 'SS1',
-            student: body.student,
+            sheet: targetSheet,
+            student,
+            row,
+            adNo: student.admission_no,
+            name: student.student_name,
+            amount: student.pledged_amount,
+            paid: student.collected_amount,
+            balance: student.balance,
+            status: student.addition_status
           }),
         });
         const resText = await res.text();
-        return NextResponse.json({ success: true, message: 'Student pushed to Google Sheet successfully.', details: resText });
+        return NextResponse.json({ success: true, message: `Student pushed to Google Sheet tab ${targetSheet} successfully.`, details: resText });
       } catch (err: any) {
         return NextResponse.json({ success: false, error: 'Failed to push student: ' + err.message }, { status: 500 });
       }

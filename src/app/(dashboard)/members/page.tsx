@@ -136,7 +136,9 @@ export default function TeamMembersPage() {
     setFormError(null);
 
     const targetDeptId = role === 'admin' ? (user?.department_id || departments[0]?.id) : departmentId;
-    const targetRole: SystemRole = role === 'admin' ? 'member' : newRole;
+    const targetDept = departments.find((d) => d.id === targetDeptId);
+    const isFinance = targetDept?.slug === 'finance' || targetDept?.name.toLowerCase().includes('finance');
+    const targetRole: SystemRole = isFinance ? 'admin' : (role === 'admin' ? 'member' : newRole);
 
     setIsSubmitting(true);
     try {
@@ -673,16 +675,51 @@ export default function TeamMembersPage() {
                 <div>
                   <label className="block font-semibold text-foreground mb-1">Role</label>
                   {role === 'owner' ? (
-                    <select
-                      value={editRole}
-                      onChange={(e) => setEditRole(e.target.value as SystemRole)}
-                      className="w-full bg-background border border-border rounded-xl px-3 py-2 text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
-                    >
-                      <option value="member">Department Member</option>
-                      <option value="general_member">General Member (Cross-Department)</option>
-                      <option value="admin">Department Admin</option>
-                      <option value="owner">Owner</option>
-                    </select>
+                    (() => {
+                      const selDept = departments.find((d) => d.id === editDepartmentId);
+                      const isFinance = selDept?.slug === 'finance' || selDept?.name.toLowerCase().includes('finance');
+                      const isPrograme = selDept?.slug === 'programe' || selDept?.name.toLowerCase().includes('programe');
+                      if (isFinance) {
+                        return (
+                          <div>
+                            <select
+                              value="admin"
+                              disabled
+                              className="w-full bg-muted border border-border rounded-xl px-3 py-2 text-foreground cursor-not-allowed font-medium"
+                            >
+                              <option value="admin">Finance Admin (Admin Only)</option>
+                            </select>
+                            <span className="text-[10px] text-amber-600 dark:text-amber-400 mt-1 block">
+                              Finance is strictly Admin only.
+                            </span>
+                          </div>
+                        );
+                      }
+                      if (isPrograme) {
+                        return (
+                          <select
+                            value={editRole === 'owner' || editRole === 'general_member' ? 'member' : editRole}
+                            onChange={(e) => setEditRole(e.target.value as SystemRole)}
+                            className="w-full bg-background border border-border rounded-xl px-3 py-2 text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
+                          >
+                            <option value="member">Programe Team Member</option>
+                            <option value="admin">Programe Department Admin</option>
+                          </select>
+                        );
+                      }
+                      return (
+                        <select
+                          value={editRole}
+                          onChange={(e) => setEditRole(e.target.value as SystemRole)}
+                          className="w-full bg-background border border-border rounded-xl px-3 py-2 text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
+                        >
+                          <option value="member">Department Member</option>
+                          <option value="general_member">General Member (Cross-Department)</option>
+                          <option value="admin">Department Admin</option>
+                          <option value="owner">Owner</option>
+                        </select>
+                      );
+                    })()
                   ) : (
                     <input
                       type="text"
@@ -698,7 +735,16 @@ export default function TeamMembersPage() {
                   {role === 'owner' ? (
                     <select
                       value={editDepartmentId}
-                      onChange={(e) => setEditDepartmentId(e.target.value)}
+                      onChange={(e) => {
+                        const newDeptId = e.target.value;
+                        setEditDepartmentId(newDeptId);
+                        const selDept = departments.find((d) => d.id === newDeptId);
+                        if (selDept?.slug === 'finance' || selDept?.name.toLowerCase().includes('finance')) {
+                          setEditRole('admin');
+                        } else if (selDept?.slug === 'programe' || selDept?.name.toLowerCase().includes('programe')) {
+                          if (editRole !== 'admin') setEditRole('member');
+                        }
+                      }}
                       className="w-full bg-background border border-border rounded-xl px-3 py-2 text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
                     >
                       {departments.map((d) => (
@@ -839,16 +885,51 @@ export default function TeamMembersPage() {
                 <div>
                   <label className="block font-semibold text-foreground mb-1">System Role</label>
                   {role === 'owner' ? (
-                    <select
-                      value={newRole}
-                      onChange={(e) => setNewRole(e.target.value as SystemRole)}
-                      className="w-full bg-background border border-border rounded-xl px-3 py-2 text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
-                    >
-                      <option value="member">Department Member</option>
-                      <option value="general_member">General Member (Cross-Department)</option>
-                      <option value="admin">Department Admin</option>
-                      <option value="owner">Owner</option>
-                    </select>
+                    (() => {
+                      const selDept = departments.find((d) => d.id === departmentId);
+                      const isFinance = selDept?.slug === 'finance' || selDept?.name.toLowerCase().includes('finance');
+                      const isPrograme = selDept?.slug === 'programe' || selDept?.name.toLowerCase().includes('programe');
+                      if (isFinance) {
+                        return (
+                          <div>
+                            <select
+                              value="admin"
+                              disabled
+                              className="w-full bg-muted border border-border rounded-xl px-3 py-2 text-foreground cursor-not-allowed font-medium"
+                            >
+                              <option value="admin">Finance Admin (Admin Only)</option>
+                            </select>
+                            <span className="text-[10px] text-amber-600 dark:text-amber-400 mt-1 block">
+                              Finance department is strictly Admin only.
+                            </span>
+                          </div>
+                        );
+                      }
+                      if (isPrograme) {
+                        return (
+                          <select
+                            value={newRole === 'owner' || newRole === 'general_member' ? 'member' : newRole}
+                            onChange={(e) => setNewRole(e.target.value as SystemRole)}
+                            className="w-full bg-background border border-border rounded-xl px-3 py-2 text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
+                          >
+                            <option value="member">Programe Team Member</option>
+                            <option value="admin">Programe Department Admin</option>
+                          </select>
+                        );
+                      }
+                      return (
+                        <select
+                          value={newRole}
+                          onChange={(e) => setNewRole(e.target.value as SystemRole)}
+                          className="w-full bg-background border border-border rounded-xl px-3 py-2 text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
+                        >
+                          <option value="member">Department Member</option>
+                          <option value="general_member">General Member (Cross-Department)</option>
+                          <option value="admin">Department Admin</option>
+                          <option value="owner">Owner</option>
+                        </select>
+                      );
+                    })()
                   ) : (
                     <input
                       type="text"
@@ -864,7 +945,16 @@ export default function TeamMembersPage() {
                   {role === 'owner' ? (
                     <select
                       value={departmentId}
-                      onChange={(e) => setDepartmentId(e.target.value)}
+                      onChange={(e) => {
+                        const newDeptId = e.target.value;
+                        setDepartmentId(newDeptId);
+                        const selDept = departments.find((d) => d.id === newDeptId);
+                        if (selDept?.slug === 'finance' || selDept?.name.toLowerCase().includes('finance')) {
+                          setNewRole('admin');
+                        } else if (selDept?.slug === 'programe' || selDept?.name.toLowerCase().includes('programe')) {
+                          if (newRole !== 'admin') setNewRole('member');
+                        }
+                      }}
                       className="w-full bg-background border border-border rounded-xl px-3 py-2 text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
                     >
                       {departments.map((d) => (

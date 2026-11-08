@@ -6,8 +6,10 @@ import { AlertTriangle, Trash2, X } from 'lucide-react';
 interface TwoStepDeleteModalProps {
   isOpen: boolean;
   title: string;
-  itemTitle: string;
+  itemTitle?: string;
+  itemName?: string;
   itemDetails?: string;
+  itemType?: string;
   onClose: () => void;
   onConfirmDelete: () => Promise<any> | any;
 }
@@ -16,13 +18,18 @@ export function TwoStepDeleteModal({
   isOpen,
   title,
   itemTitle,
+  itemName,
   itemDetails,
+  itemType,
   onClose,
   onConfirmDelete,
 }: TwoStepDeleteModalProps) {
   const [confirmText, setConfirmText] = useState('');
   const [isDeleting, setIsDeleting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const displayTitle = itemTitle || itemName || 'Selected item';
+  const displayDetails = itemDetails || itemType;
 
   if (!isOpen) return null;
 
@@ -81,10 +88,10 @@ export function TwoStepDeleteModal({
 
         {/* Item Target Display */}
         <div className="p-3.5 rounded-2xl bg-muted/40 border border-border text-xs space-y-1">
-          <div className="font-bold text-foreground truncate">{itemTitle}</div>
-          {itemDetails && (
+          <div className="font-bold text-foreground truncate">{displayTitle}</div>
+          {displayDetails && (
             <div className="text-[11px] text-muted-foreground font-mono">
-              {itemDetails}
+              {displayDetails}
             </div>
           )}
         </div>

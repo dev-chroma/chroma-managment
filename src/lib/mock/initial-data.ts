@@ -17,6 +17,15 @@ import {
   MoneyHolding,
   FinanceSheetConfig,
   WorkspaceTodo,
+  Programme,
+  ProgrammeCategoryConfig,
+  ProgrammeStatusConfig,
+  ProgrammeTask,
+  ProgrammeNote,
+  ProgrammeGuest,
+  ProgrammeCandidate,
+  ProgrammeParticipant,
+  ProgrammeActivity,
 } from '@/types/database';
 
 const now = new Date();
@@ -183,6 +192,18 @@ export const INITIAL_PROFILES: Profile[] = [
     avatar_url: '/profile-icon.png',
     phone: '+91 98471 00000',
     bio: 'Financial Department Administrator',
+    system_role: 'admin',
+    department_id: 'd6666666-6666-6666-6666-666666666666',
+    created_at: now.toISOString(),
+    updated_at: now.toISOString(),
+  },
+  {
+    id: 'u0000000-0000-0000-0000-000000000008',
+    email: 'finance.admin@chromadiaries.in',
+    full_name: 'Financial Controller Admin',
+    avatar_url: '/profile-icon.png',
+    phone: '+91 80755 85732',
+    bio: 'Financial Department Administrator (Admin Only)',
     system_role: 'admin',
     department_id: 'd6666666-6666-6666-6666-666666666666',
     created_at: now.toISOString(),
@@ -532,3 +553,382 @@ export const INITIAL_FINANCE_SHEET_CONFIG: FinanceSheetConfig = {
   auto_sync: true,
   last_synced_at: now.toISOString(),
 };
+
+// =============================================================================
+// PROGRAMME MANAGEMENT INITIAL DATA
+// =============================================================================
+
+export const INITIAL_PROGRAMME_CATEGORIES: ProgrammeCategoryConfig[] = [
+  { id: 'pcat-1', name: 'Promotion Programme', color: '#3b82f6', is_active: true, order: 1 },
+  { id: 'pcat-2', name: 'Trend Programme', color: '#8b5cf6', is_active: true, order: 2 },
+  { id: 'pcat-3', name: 'Special Programme', color: '#ec4899', is_active: true, order: 3 },
+  { id: 'pcat-4', name: 'Other Programme', color: '#10b981', is_active: true, order: 4 },
+];
+
+export const INITIAL_PROGRAMME_STATUSES: ProgrammeStatusConfig[] = [
+  { id: 'pstat-1', name: 'Pending', color: '#94a3b8', counts_as_progress: false, counts_as_completed: false, is_active: true, order: 1 },
+  { id: 'pstat-2', name: 'Planned', color: '#38bdf8', counts_as_progress: true, counts_as_completed: false, is_active: true, order: 2 },
+  { id: 'pstat-3', name: 'Progressed', color: '#6366f1', counts_as_progress: true, counts_as_completed: false, is_active: true, order: 3 },
+  { id: 'pstat-4', name: 'Scheduled', color: '#f59e0b', counts_as_progress: true, counts_as_completed: false, is_active: true, order: 4 },
+  { id: 'pstat-5', name: 'Completed', color: '#10b981', counts_as_progress: false, counts_as_completed: true, is_active: true, order: 5 },
+];
+
+export const INITIAL_PROGRAMMES: Programme[] = [
+  {
+    id: 'prg-001',
+    unique_code: 'CD-PRG-001',
+    title: 'ChromaDiaries Youth Literature Fest 2026',
+    description: 'Annual flagship youth festival: poetry recitation, author panel, and ChromaDiaries print edition release ceremony.',
+    category: 'Special Programme',
+    status: 'Planned',
+    deadline: '2026-11-20',
+    assigned_to: 'u0000000-0000-0000-0000-000000000005',
+    created_by: 'a0000000-0000-0000-0000-000000000001',
+    venue: 'Main Campus Auditorium & YouTube Live',
+    is_paused: false,
+    is_archived: false,
+    created_at: '2026-11-01T10:00:00.000Z',
+    updated_at: '2026-11-08T09:00:00.000Z',
+  },
+  {
+    id: 'prg-002',
+    unique_code: 'CD-PRG-002',
+    title: 'English Creative Writing & Poetry Masterclass',
+    description: 'Interactive session with literary mentors on English prose, poetic meter, and magazine story editing.',
+    category: 'Promotion Programme',
+    status: 'Progressed',
+    deadline: '2026-11-16',
+    assigned_to: 'u0000000-0000-0000-0000-000000000006',
+    created_by: 'u0000000-0000-0000-0000-000000000005',
+    venue: 'Seminar Hall B',
+    is_paused: false,
+    is_archived: false,
+    created_at: '2026-11-02T11:00:00.000Z',
+    updated_at: '2026-11-08T08:30:00.000Z',
+  },
+  {
+    id: 'prg-003',
+    unique_code: 'CD-PRG-003',
+    title: 'Viral Literary Reel & Micro-Story Trend Series',
+    description: 'Social media reel challenge highlighting youth flash fiction, reader reactions, and trending audio narratives.',
+    category: 'Trend Programme',
+    status: 'Scheduled',
+    deadline: '2026-11-25',
+    assigned_to: 'u0000000-0000-0000-0000-000000000006',
+    created_by: 'a0000000-0000-0000-0000-000000000001',
+    venue: 'Instagram & YouTube Shorts Studio',
+    is_paused: false,
+    is_archived: false,
+    created_at: '2026-11-03T12:00:00.000Z',
+    updated_at: '2026-11-07T14:00:00.000Z',
+  },
+  {
+    id: 'prg-004',
+    unique_code: 'CD-PRG-004',
+    title: 'Chroma Youth Outreach & Inter-School Book Drive',
+    description: 'Connecting literary clubs and book donors across 12 institutions for student library book contributions.',
+    category: 'Promotion Programme',
+    status: 'Completed',
+    deadline: '2026-11-05',
+    assigned_to: 'u0000000-0000-0000-0000-000000000005',
+    created_by: 'a0000000-0000-0000-0000-000000000001',
+    venue: 'District High Schools Network',
+    is_paused: false,
+    is_archived: false,
+    created_at: '2026-10-20T09:00:00.000Z',
+    updated_at: '2026-11-05T18:00:00.000Z',
+  },
+  {
+    id: 'prg-005',
+    unique_code: 'CD-PRG-005',
+    title: 'Winter Annual Editorial Symposium & Writers Gala',
+    description: 'Gathering of magazine writers, columnists, and reviewers to plan next year’s publication roadmaps.',
+    category: 'Other Programme',
+    status: 'Pending',
+    deadline: '2026-12-15',
+    assigned_to: 'u0000000-0000-0000-0000-000000000005',
+    created_by: 'a0000000-0000-0000-0000-000000000001',
+    venue: 'ChromaDiaries Conference Suite',
+    is_paused: false,
+    is_archived: false,
+    created_at: '2026-11-05T15:00:00.000Z',
+    updated_at: '2026-11-05T15:00:00.000Z',
+  },
+];
+
+export const INITIAL_PROGRAMME_TASKS: ProgrammeTask[] = [
+  {
+    id: 'ptsk-001',
+    programme_id: 'prg-001',
+    title: 'Confirm auditorium booking & AV stage lights',
+    description: 'Finalize auditorium permit with administration and test acoustic speakers & stage mics.',
+    assigned_to: 'u0000000-0000-0000-0000-000000000005',
+    priority: 'Urgent',
+    deadline: '2026-11-12',
+    status: 'Completed',
+    created_at: '2026-11-01T10:30:00.000Z',
+  },
+  {
+    id: 'ptsk-002',
+    programme_id: 'prg-001',
+    title: 'Send formal invitation letters to 4 guest authors',
+    description: 'Draft official invitation emails with docket schedule, honorarium details, and travel allowance.',
+    assigned_to: 'u0000000-0000-0000-0000-000000000005',
+    priority: 'High',
+    deadline: '2026-11-14',
+    status: 'Completed',
+    created_at: '2026-11-01T11:00:00.000Z',
+  },
+  {
+    id: 'ptsk-003',
+    programme_id: 'prg-001',
+    title: 'Print magazine commemorative edition copies',
+    description: 'Coordinate with print press for 250 deluxe copies of the literary edition.',
+    assigned_to: 'u0000000-0000-0000-0000-000000000006',
+    priority: 'High',
+    deadline: '2026-11-18',
+    status: 'In Progress',
+    created_at: '2026-11-02T10:00:00.000Z',
+  },
+  {
+    id: 'ptsk-004',
+    programme_id: 'prg-001',
+    title: 'Assign student volunteer anchors and stage hosts',
+    description: 'Brief the master of ceremonies, reception greeting squad, and timekeepers.',
+    assigned_to: 'u0000000-0000-0000-0000-000000000006',
+    priority: 'Medium',
+    deadline: '2026-11-19',
+    status: 'Pending',
+    created_at: '2026-11-02T11:30:00.000Z',
+  },
+  {
+    id: 'ptsk-005',
+    programme_id: 'prg-002',
+    title: 'Circulate Google Forms registration link to colleges',
+    description: 'Share poster with QR registration link to partner literature societies.',
+    assigned_to: 'u0000000-0000-0000-0000-000000000006',
+    priority: 'Urgent',
+    deadline: '2026-11-10',
+    status: 'Completed',
+    created_at: '2026-11-02T12:00:00.000Z',
+  },
+  {
+    id: 'ptsk-006',
+    programme_id: 'prg-002',
+    title: 'Prepare slide presentation and writing workbooks',
+    description: 'Assemble 15 exercise prompts on poetic meter and flash fiction structure.',
+    assigned_to: 'u0000000-0000-0000-0000-000000000006',
+    priority: 'High',
+    deadline: '2026-11-14',
+    status: 'In Progress',
+    created_at: '2026-11-03T09:00:00.000Z',
+  },
+];
+
+export const INITIAL_PROGRAMME_NOTES: ProgrammeNote[] = [
+  {
+    id: 'pnote-001',
+    programme_id: 'prg-001',
+    title: 'Executive Concept & Stage Run-of-Show',
+    content: `# ChromaDiaries Youth Literature Fest 2026
+## Concept & Objectives
+To celebrate student creative writing, honour magazine contributors, and launch our printed commemorative edition.
+
+### Key Segments:
+- **09:30 AM**: Registration and Welcome Reception
+- **10:00 AM**: Inauguration & Keynote Address by Guest Author
+- **11:15 AM**: Panel Discussion: "The Future of Youth Writing in the Digital Era"
+- **01:30 PM**: Poetry Slam Showcase
+- **03:30 PM**: ChromaDiaries Print Edition Release Ceremony & Awards
+
+### VIP Protocol:
+- Reception escort assigned at the gate
+- Mementoes and bouquets prepared by Outreach team
+- Honorarium vouchers to be signed by Financial Controller`,
+    author_id: 'u0000000-0000-0000-0000-000000000005',
+    author_name: 'Program Coordinator Admin',
+    created_at: '2026-11-01T14:00:00.000Z',
+    updated_at: '2026-11-06T11:20:00.000Z',
+  },
+  {
+    id: 'pnote-002',
+    programme_id: 'prg-001',
+    title: 'Hospitality & Guest Requirements',
+    content: `### Guest Accommodations:
+- Keynote speaker traveling from Calicut; arranged cab pickup at 8:30 AM.
+- Dietary preferences: Vegetarian snacks and tea during the intermission.
+- Audio preference: Lapel wireless microphone for the poetry reading.`,
+    author_id: 'u0000000-0000-0000-0000-000000000006',
+    author_name: 'Program Team Member',
+    created_at: '2026-11-04T16:00:00.000Z',
+    updated_at: '2026-11-07T10:15:00.000Z',
+  },
+];
+
+export const INITIAL_PROGRAMME_GUESTS: ProgrammeGuest[] = [
+  {
+    id: 'pguest-001',
+    programme_id: 'prg-001',
+    full_name: 'Dr. K. R. Haridas',
+    designation: 'Professor of English & Renowned Essayist',
+    organization: 'Kerala University of Letters',
+    phone: '+91 94471 23456',
+    email: 'krharidas@kul.edu.in',
+    category: 'Chief Guest',
+    invitation_status: 'Delivered',
+    confirmation_status: 'Confirmed',
+    special_requirements: 'Lapel mic and projector for slides',
+    notes: 'Agreed to deliver the 30-min keynote address and unveil the print issue.',
+    created_at: '2026-11-02T10:00:00.000Z',
+    updated_at: '2026-11-06T15:00:00.000Z',
+  },
+  {
+    id: 'pguest-002',
+    programme_id: 'prg-001',
+    full_name: 'Fathima Zahra',
+    designation: 'Award-winning Spoken Word Poet',
+    organization: 'Youth Writers Collective',
+    phone: '+91 98460 78912',
+    email: 'zahra.poetry@gmail.com',
+    category: 'Keynote Speaker',
+    invitation_status: 'Delivered',
+    confirmation_status: 'Confirmed',
+    special_requirements: 'Microphone stand with guitar input',
+    notes: 'Leading the afternoon poetry slam judge panel.',
+    created_at: '2026-11-03T11:00:00.000Z',
+    updated_at: '2026-11-07T12:00:00.000Z',
+  },
+  {
+    id: 'pguest-003',
+    programme_id: 'prg-001',
+    full_name: 'V. M. Sreekumar',
+    designation: 'Senior Editor & Columnist',
+    organization: 'The Lit Gazette',
+    phone: '+91 94955 44332',
+    email: 'sreekumar.vm@litgazette.in',
+    category: 'Judge',
+    invitation_status: 'Sent',
+    confirmation_status: 'Pending',
+    special_requirements: 'Printed copies of shortlisted student essays',
+    notes: 'Awaiting confirmation on travel schedule.',
+    created_at: '2026-11-04T09:00:00.000Z',
+    updated_at: '2026-11-04T09:00:00.000Z',
+  },
+];
+
+export const INITIAL_PROGRAMME_CANDIDATES: ProgrammeCandidate[] = [
+  {
+    id: 'pcand-001',
+    programme_id: 'prg-001',
+    full_name: 'Amina Nihal',
+    phone: '+91 97451 11223',
+    email: 'amina.nihal@campus.ac.in',
+    institution: 'St. Teresa’s College',
+    category: 'Poetry Slam Finalist',
+    selection_status: 'Selected',
+    remarks: 'Original composition "Echoes of Malabar" approved by the screening committee.',
+    created_at: '2026-11-03T14:00:00.000Z',
+    updated_at: '2026-11-06T10:00:00.000Z',
+  },
+  {
+    id: 'pcand-002',
+    programme_id: 'prg-001',
+    full_name: 'Mohammed Basil',
+    phone: '+91 98952 33445',
+    email: 'basil.m@farook.edu.in',
+    institution: 'Farook College',
+    category: 'Micro-Fiction Contestant',
+    selection_status: 'Shortlisted',
+    remarks: 'Passed first round review; scheduled for live on-stage finals.',
+    created_at: '2026-11-04T11:30:00.000Z',
+    updated_at: '2026-11-07T09:00:00.000Z',
+  },
+  {
+    id: 'pcand-003',
+    programme_id: 'prg-001',
+    full_name: 'Devika Menon',
+    phone: '+91 96450 77889',
+    email: 'devika.m@marivanios.in',
+    institution: 'Mar Ivanios College',
+    category: 'Student Anchor Audition',
+    selection_status: 'Selected',
+    remarks: 'Selected as Co-Host for the morning keynote and panel.',
+    created_at: '2026-11-05T16:00:00.000Z',
+    updated_at: '2026-11-07T14:30:00.000Z',
+  },
+];
+
+export const INITIAL_PROGRAMME_PARTICIPANTS: ProgrammeParticipant[] = [
+  {
+    id: 'ppart-001',
+    programme_id: 'prg-001',
+    full_name: 'Muhammed Rayan',
+    phone: '+91 90481 22334',
+    institution_or_class: 'BA English Literature, Sem 5',
+    registration_id: 'FEST-2026-001',
+    attendance_status: 'Registered',
+    notes: 'Pre-registered via campus portal.',
+    created_at: '2026-11-03T10:00:00.000Z',
+    updated_at: '2026-11-03T10:00:00.000Z',
+  },
+  {
+    id: 'ppart-002',
+    programme_id: 'prg-001',
+    full_name: 'Aysha Shamna',
+    phone: '+91 99955 66778',
+    institution_or_class: 'MA Journalism & Mass Comm',
+    registration_id: 'FEST-2026-002',
+    attendance_status: 'Present',
+    notes: 'Early delegate kit issued.',
+    created_at: '2026-11-03T10:30:00.000Z',
+    updated_at: '2026-11-08T09:00:00.000Z',
+  },
+  {
+    id: 'ppart-003',
+    programme_id: 'prg-001',
+    full_name: 'Rahul K. Varma',
+    phone: '+91 94462 88990',
+    institution_or_class: 'BSc Computer Science, Sem 3',
+    registration_id: 'FEST-2026-003',
+    attendance_status: 'Registered',
+    notes: 'Volunteering for audience stage setup.',
+    created_at: '2026-11-04T12:00:00.000Z',
+    updated_at: '2026-11-04T12:00:00.000Z',
+  },
+];
+
+export const INITIAL_PROGRAMME_ACTIVITIES: ProgrammeActivity[] = [
+  {
+    id: 'pact-001',
+    programme_id: 'prg-001',
+    action: 'Programme Created',
+    user_name: 'General Manager',
+    details: 'Initial programme record CD-PRG-001 created and scheduled for 20 Nov 2026.',
+    created_at: '2026-11-01T10:00:00.000Z',
+  },
+  {
+    id: 'pact-002',
+    programme_id: 'prg-001',
+    action: 'Assignee Assigned',
+    user_name: 'General Manager',
+    details: 'Assigned leadership to Program Coordinator Admin.',
+    created_at: '2026-11-01T10:05:00.000Z',
+  },
+  {
+    id: 'pact-003',
+    programme_id: 'prg-001',
+    action: 'Guest Confirmed',
+    user_name: 'Program Coordinator Admin',
+    details: 'Dr. K. R. Haridas confirmed attendance as Chief Guest.',
+    created_at: '2026-11-06T15:00:00.000Z',
+  },
+  {
+    id: 'pact-004',
+    programme_id: 'prg-001',
+    action: 'Status Updated',
+    user_name: 'Program Coordinator Admin',
+    details: 'Programme status transitioned to Planned.',
+    created_at: '2026-11-07T11:00:00.000Z',
+  },
+];
+

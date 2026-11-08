@@ -246,10 +246,10 @@ export default function FinancialWorkspacePage() {
       collected += d.collected_amount || 0;
       if (d.addition_status === 'Not Added') {
         notAddedC++;
-        notAddedA += d.pledged_amount || 0;
+        notAddedA += d.collected_amount || 0; // Calculates actual paid amount (e.g. ₹200 for Muhammed Jalal .AT)
       } else {
         addedC++;
-        addedA += d.pledged_amount || 0;
+        addedA += d.collected_amount || 0; // Calculates actual collected paid amount
       }
     });
 
@@ -1166,7 +1166,7 @@ export default function FinancialWorkspacePage() {
                   {addedCount} Students Added (₹{addedAmount.toLocaleString('en-IN')})
                 </div>
                 <p className="text-[11px] text-emerald-700 dark:text-emerald-300 mt-0.5">
-                  Successfully synced and verified in the centralized database.
+                  Total Paid Amount Collected: ₹{addedAmount.toLocaleString('en-IN')} (Added to Ledger)
                 </p>
               </div>
               <span className="p-3 rounded-2xl bg-emerald-500 text-white font-black text-sm">
@@ -1183,7 +1183,7 @@ export default function FinancialWorkspacePage() {
                   {notAddedCount} Students Pending (₹{notAddedAmount.toLocaleString('en-IN')})
                 </div>
                 <p className="text-[11px] text-amber-700 dark:text-amber-300 mt-0.5">
-                  Records marked as "Not Added" awaiting reconciliation.
+                  Total Paid Amount Collected: ₹{notAddedAmount.toLocaleString('en-IN')} (Awaiting addition to Ledger)
                 </p>
               </div>
               <span className="p-3 rounded-2xl bg-amber-500 text-white font-black text-sm">

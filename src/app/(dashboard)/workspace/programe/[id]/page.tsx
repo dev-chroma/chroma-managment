@@ -1964,8 +1964,9 @@ export default function IndividualProgrammeWorkspacePage({ params }: PageProps) 
         </div>
         <div className="text-center min-w-[180px]">
           <img src="/sign.png" alt="GM Signature" className="h-12 object-contain mx-auto mb-1 block" />
-          <div className="border-t border-gray-900 pt-1 text-xs font-bold text-gray-900">General Manager (GM)</div>
-          <div className="text-[9px] text-gray-600 font-semibold">Authorized Signatory • ChromaDiaries</div>
+          <div className="border-t border-gray-900 pt-1 text-xs font-bold text-gray-900">Naseef Ugrapuram</div>
+          <div className="text-[10px] font-semibold text-gray-700">General Manager (GM)</div>
+          <div className="text-[8px] text-gray-500">Authorized Signatory • ChromaDiaries</div>
         </div>
       </div>
     </div>

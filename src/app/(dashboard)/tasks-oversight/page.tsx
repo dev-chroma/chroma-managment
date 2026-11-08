@@ -305,8 +305,9 @@ export default function TasksOversightPage() {
             </div>
             <div style="text-align: center; min-width: 180px;">
               <img src="${GM_SIGN_BASE64}" alt="GM Signature" style="height: 50px; max-width: 150px; object-fit: contain; margin: 0 auto 4px auto; display: block;" />
-              <div style="border-top: 1.5px solid #0f172a; padding-top: 4px; font-size: 11px; font-weight: 700; color: #0f172a;">General Manager (GM)</div>
-              <div style="font-size: 9px; color: #64748b; font-weight: 600;">Authorized Signatory • Operations Oversight</div>
+              <div style="border-top: 1.5px solid #0f172a; padding-top: 4px; font-size: 11px; font-weight: 700; color: #0f172a;">Naseef Ugrapuram</div>
+              <div style="font-size: 9px; font-weight: 600; color: #334155;">General Manager (GM)</div>
+              <div style="font-size: 8px; color: #64748b;">Authorized Signatory • Operations Oversight</div>
             </div>
           </div>
           <script>window.onload = function() { window.print(); };</script>

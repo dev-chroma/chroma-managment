@@ -1730,8 +1730,9 @@ export default function FinancialWorkspacePage() {
                 </div>
                 <div className="text-center min-w-[140px]">
                   <img src="/sign.png" alt="GM Signature" className="h-10 object-contain mx-auto block mb-0.5" />
-                  <div className="border-t border-border pt-1 font-bold text-[10px] text-foreground">General Manager (GM)</div>
-                  <div className="text-[9px] text-muted-foreground">Authorized Signatory</div>
+                  <div className="border-t border-border pt-1 font-bold text-[10px] text-foreground">Naseef Ugrapuram</div>
+                  <div className="text-[9px] font-semibold text-muted-foreground">General Manager (GM)</div>
+                  <div className="text-[8px] text-muted-foreground/80">Authorized Signatory</div>
                 </div>
               </div>
             </div>

@@ -415,9 +415,12 @@ export function exportAnalysisToPdf({
           <div style="text-align: center; min-width: 180px;">
             <img src="${GM_SIGN_BASE64}" alt="GM Signature" style="height: 52px; max-width: 160px; object-fit: contain; margin: 0 auto 4px auto; display: block;" />
             <div style="border-top: 1.5px solid #0f172a; padding-top: 4px; font-size: 11px; font-weight: 700; color: #0f172a;">
+              Naseef Ugrapuram
+            </div>
+            <div style="font-size: 9px; font-weight: 600; color: #334155;">
               General Manager (GM)
             </div>
-            <div style="font-size: 9px; color: #64748b; font-weight: 600;">
+            <div style="font-size: 8px; color: #64748b;">
               Authorized Signatory • Executive Oversight
             </div>
           </div>
@@ -589,9 +592,12 @@ export function exportTasksToPdf(
           <div style="text-align: center; min-width: 180px;">
             <img src="${GM_SIGN_BASE64}" alt="GM Signature" style="height: 50px; max-width: 150px; object-fit: contain; margin: 0 auto 4px auto; display: block;" />
             <div style="border-top: 1.5px solid #0f172a; padding-top: 4px; font-size: 11px; font-weight: 700; color: #0f172a;">
+              Naseef Ugrapuram
+            </div>
+            <div style="font-size: 9px; font-weight: 600; color: #334155;">
               General Manager (GM)
             </div>
-            <div style="font-size: 9px; color: #64748b; font-weight: 600;">
+            <div style="font-size: 8px; color: #64748b;">
               Authorized Signatory • Department Operations
             </div>
           </div>
@@ -710,9 +716,12 @@ export function exportAuditLogsToPdf(logs: ActivityLog[]) {
           <div style="text-align: center; min-width: 180px;">
             <img src="${GM_SIGN_BASE64}" alt="GM Signature" style="height: 50px; max-width: 150px; object-fit: contain; margin: 0 auto 4px auto; display: block;" />
             <div style="border-top: 1.5px solid #0f172a; padding-top: 4px; font-size: 11px; font-weight: 700; color: #0f172a;">
+              Naseef Ugrapuram
+            </div>
+            <div style="font-size: 9px; font-weight: 600; color: #334155;">
               General Manager (GM)
             </div>
-            <div style="font-size: 9px; color: #64748b; font-weight: 600;">
+            <div style="font-size: 8px; color: #64748b;">
               Authorized Signatory • System Integrity
             </div>
           </div>
@@ -876,9 +885,12 @@ export function exportLedgerToPdf(
           <div style="text-align: center; min-width: 180px;">
             <img src="${GM_SIGN_BASE64}" alt="GM Signature" style="height: 52px; max-width: 160px; object-fit: contain; margin: 0 auto 4px auto; display: block;" />
             <div style="border-top: 1.5px solid #0f172a; padding-top: 4px; font-size: 11px; font-weight: 700; color: #0f172a;">
+              Naseef Ugrapuram
+            </div>
+            <div style="font-size: 9px; font-weight: 600; color: #334155;">
               General Manager (GM)
             </div>
-            <div style="font-size: 9px; color: #64748b; font-weight: 600;">
+            <div style="font-size: 8px; color: #64748b;">
               Authorized Signatory • Financial Controller
             </div>
           </div>
@@ -1050,9 +1062,12 @@ export function exportStudentDonationsToPdf(donations: StudentDonation[]) {
           <div style="text-align: center; min-width: 180px;">
             <img src="${GM_SIGN_BASE64}" alt="GM Signature" style="height: 52px; max-width: 160px; object-fit: contain; margin: 0 auto 4px auto; display: block;" />
             <div style="border-top: 1.5px solid #0f172a; padding-top: 4px; font-size: 11px; font-weight: 700; color: #0f172a;">
+              Naseef Ugrapuram
+            </div>
+            <div style="font-size: 9px; font-weight: 600; color: #334155;">
               General Manager (GM)
             </div>
-            <div style="font-size: 9px; color: #64748b; font-weight: 600;">
+            <div style="font-size: 8px; color: #64748b;">
               Authorized Signatory • Campaign Controller
             </div>
           </div>
@@ -1175,8 +1190,9 @@ export function exportSingleStudentReceiptPdf(student: StudentDonation) {
             <div style="text-align: center;">
               <img src="${GM_SIGN_BASE64}" alt="GM Signature" style="height: 50px; max-width: 150px; object-fit: contain; margin: 0 auto 2px auto; display: block;" />
               <div class="sign-line" style="margin-top: 2px; width: 170px;">
-                General Manager (GM)<br>
-                <span style="font-size: 9px; font-weight: 500; color: #64748b;">Authorized Signatory • ChromaDiaries</span>
+                Naseef Ugrapuram<br>
+                <span style="font-size: 9px; font-weight: 600; color: #334155;">General Manager (GM)</span><br>
+                <span style="font-size: 8px; color: #64748b;">Authorized Signatory • ChromaDiaries</span>
               </div>
             </div>
           </div>
@@ -1288,8 +1304,9 @@ export function exportAllStudentReceiptsPdf(donations: StudentDonation[], title 
           </div>
           <div style="text-align: center; min-width: 180px;">
             <img src="${GM_SIGN_BASE64}" alt="GM Signature" style="height: 50px; max-width: 150px; object-fit: contain; margin: 0 auto 4px auto; display: block;" />
-            <div style="border-top: 1.5px solid #0f172a; padding-top: 4px; font-size: 11px; font-weight: 700; color: #0f172a;">General Manager (GM)</div>
-            <div style="font-size: 9px; color: #64748b; font-weight: 600;">Authorized Signatory • Campaign Oversight</div>
+            <div style="border-top: 1.5px solid #0f172a; padding-top: 4px; font-size: 11px; font-weight: 700; color: #0f172a;">Naseef Ugrapuram</div>
+            <div style="font-size: 9px; font-weight: 600; color: #334155;">General Manager (GM)</div>
+            <div style="font-size: 8px; color: #64748b;">Authorized Signatory • Campaign Oversight</div>
           </div>
         </div>
         <script>

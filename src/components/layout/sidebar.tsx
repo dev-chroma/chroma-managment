@@ -104,7 +104,7 @@ export function Sidebar({ isOpen = false, onClose }: SidebarProps) {
       <aside
         className={cn(
           'w-64 border-r border-border bg-card flex flex-col h-screen select-none z-50 md:z-30 transition-transform duration-300',
-          'fixed inset-y-0 left-0 md:static md:translate-x-0',
+          'fixed inset-y-0 left-0 md:sticky md:top-0 md:translate-x-0',
           isOpen ? 'translate-x-0 border-r-primary/40' : '-translate-x-full md:translate-x-0'
         )}
       >
@@ -135,7 +135,7 @@ export function Sidebar({ isOpen = false, onClose }: SidebarProps) {
         </div>
 
         {/* Navigation Sections */}
-        <div className="flex-1 overflow-y-auto px-3 py-4 space-y-5">
+        <div className="flex-1 overflow-y-auto px-3 py-4 space-y-5 min-h-0">
           {/* ROLE: MEMBER NAVIGATION */}
           {role === 'member' && (
             <>
@@ -739,69 +739,72 @@ export function Sidebar({ isOpen = false, onClose }: SidebarProps) {
           </div>
         </div>
 
-        {/* Studio Quick Banner (matching "Upgrade Pro!" from reference image) */}
-        <div className="px-3 pb-3">
-          <div className="rounded-2xl bg-gradient-to-br from-emerald-800 via-emerald-900 to-teal-950 p-3.5 text-white shadow-sm space-y-2">
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-extrabold flex items-center gap-1.5 text-emerald-100">
-                <span>ChromaDiaries</span>
-                <span>🌿</span>
-              </span>
-              <span className="text-[9px] font-mono uppercase font-bold px-2 py-0.5 rounded-full bg-emerald-500/30 text-emerald-300">
-                Studio
-              </span>
-            </div>
-            <p className="text-[11px] text-emerald-100/80 leading-snug">
-              Official literary magazine publication & creative community.
-            </p>
-            <a
-              href="https://www.chromadiaries.in"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="w-full py-2 px-3 rounded-xl bg-white text-emerald-950 hover:bg-emerald-50 font-extrabold text-xs flex items-center justify-center gap-1.5 shadow-xs transition-all cursor-pointer"
-            >
-              <Globe className="h-3.5 w-3.5 text-emerald-700" />
-              <span>www.chromadiaries.in</span>
-              <ExternalLink className="h-3 w-3 text-emerald-800/60" />
-            </a>
-          </div>
-        </div>
-
-        {/* User Card & Logout Footer */}
-        <div className="p-3 border-t border-border bg-muted/30">
-          <div className="flex items-center justify-between gap-2 px-1">
-            <Link
-              href={user ? `/profile/${user.id}` : '/profile'}
-              onClick={onClose}
-              className="flex items-center gap-2.5 min-w-0 hover:opacity-85 transition-opacity"
-            >
-              <UserAvatar
-                src={user?.avatar_url}
-                name={user?.full_name}
-                size="md"
-              />
-              <div className="min-w-0">
-                <div className="text-xs font-bold text-foreground truncate flex items-center gap-1.5">
-                  <span className="truncate">{user?.full_name || 'Admin'}</span>
-                  <span className={cn('text-[9px] px-1.5 py-0.2 rounded font-mono uppercase font-bold shrink-0',
-                    role === 'owner' ? 'bg-purple-100 text-purple-700 dark:bg-purple-950 dark:text-purple-300' :
-                    role === 'admin' ? 'bg-blue-100 text-blue-700 dark:bg-blue-950 dark:text-blue-300' :
-                    'bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300'
-                  )}>
-                    {role}
-                  </span>
-                </div>
-                <div className="text-[11px] text-muted-foreground truncate">{user?.email}</div>
+        {/* Bottom Pinned Section: Official Site Bar & Profile Logout Switch */}
+        <div className="shrink-0 mt-auto border-t border-border bg-card">
+          {/* Studio Quick Banner (Official Site bar) */}
+          <div className="p-3 pb-2">
+            <div className="rounded-2xl bg-gradient-to-br from-emerald-800 via-emerald-900 to-teal-950 p-3.5 text-white shadow-sm space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-extrabold flex items-center gap-1.5 text-emerald-100">
+                  <span>ChromaDiaries</span>
+                  <span>🌿</span>
+                </span>
+                <span className="text-[9px] font-mono uppercase font-bold px-2 py-0.5 rounded-full bg-emerald-500/30 text-emerald-300">
+                  Studio
+                </span>
               </div>
-            </Link>
+              <p className="text-[11px] text-emerald-100/80 leading-snug">
+                Official literary magazine publication & creative community.
+              </p>
+              <a
+                href="https://www.chromadiaries.in"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="w-full py-2 px-3 rounded-xl bg-white text-emerald-950 hover:bg-emerald-50 font-extrabold text-xs flex items-center justify-center gap-1.5 shadow-xs transition-all cursor-pointer"
+              >
+                <Globe className="h-3.5 w-3.5 text-emerald-700" />
+                <span>www.chromadiaries.in</span>
+                <ExternalLink className="h-3 w-3 text-emerald-800/60" />
+              </a>
+            </div>
+          </div>
 
-            <button
-              onClick={logout}
-              className="p-1.5 rounded-lg text-muted-foreground hover:bg-rose-500/10 hover:text-rose-500 transition-colors cursor-pointer shrink-0"
-              title="Log Out"
-            >
-              <LogOut className="h-4 w-4" />
-            </button>
+          {/* User Card & Logout Footer */}
+          <div className="p-3 pt-1 border-t border-border/70 bg-muted/30">
+            <div className="flex items-center justify-between gap-2 px-1">
+              <Link
+                href={user ? `/profile/${user.id}` : '/profile'}
+                onClick={onClose}
+                className="flex items-center gap-2.5 min-w-0 hover:opacity-85 transition-opacity"
+              >
+                <UserAvatar
+                  src={user?.avatar_url}
+                  name={user?.full_name}
+                  size="md"
+                />
+                <div className="min-w-0">
+                  <div className="text-xs font-bold text-foreground truncate flex items-center gap-1.5">
+                    <span className="truncate">{user?.full_name || 'Admin'}</span>
+                    <span className={cn('text-[9px] px-1.5 py-0.2 rounded font-mono uppercase font-bold shrink-0',
+                      role === 'owner' ? 'bg-purple-100 text-purple-700 dark:bg-purple-950 dark:text-purple-300' :
+                      role === 'admin' ? 'bg-blue-100 text-blue-700 dark:bg-blue-950 dark:text-blue-300' :
+                      'bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300'
+                    )}>
+                      {role}
+                    </span>
+                  </div>
+                  <div className="text-[11px] text-muted-foreground truncate">{user?.email}</div>
+                </div>
+              </Link>
+
+              <button
+                onClick={logout}
+                className="p-1.5 rounded-lg text-muted-foreground hover:bg-rose-500/10 hover:text-rose-500 transition-colors cursor-pointer shrink-0"
+                title="Log Out"
+              >
+                <LogOut className="h-4 w-4" />
+              </button>
+            </div>
           </div>
         </div>
       </aside>

@@ -22,6 +22,7 @@ import {
   Compass,
   AlertTriangle,
   Landmark,
+  CheckCircle2,
 } from 'lucide-react';
 import { useAuth } from '@/lib/context/auth-context';
 import { useData } from '@/lib/context/data-context';
@@ -134,6 +135,43 @@ export function Navbar({ onToggleMobileMenu }: NavbarProps) {
   const isLastDayOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate() === now.getDate();
   const isLastDayOfYear = now.getMonth() === 11 && now.getDate() === 31;
 
+  // Cycle key for clearance e.g. "sat-2026-11-14", "month-2026-11-30", "year-2026-12-31" or date
+  const currentClearanceCycleKey = React.useMemo(() => {
+    const d = new Date();
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    if (d.getMonth() === 11 && d.getDate() === 31) return `year-${y}-12-31`;
+    const lastDay = new Date(y, d.getMonth() + 1, 0).getDate();
+    if (d.getDate() === lastDay) return `month-${y}-${m}-${day}`;
+    if (d.getDay() === 6) return `sat-${y}-${m}-${day}`;
+    return `day-${y}-${m}-${day}`;
+  }, []);
+
+  const [isLedgerCleared, setIsLedgerCleared] = useState(false);
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const stored = localStorage.getItem('chroma_ledger_cleared_cycle');
+      if (stored === currentClearanceCycleKey) {
+        setIsLedgerCleared(true);
+      }
+      const handleClearedEvent = () => setIsLedgerCleared(true);
+      window.addEventListener('chroma_ledger_cleared', handleClearedEvent);
+      return () => window.removeEventListener('chroma_ledger_cleared', handleClearedEvent);
+    }
+  }, [currentClearanceCycleKey]);
+
+  const handleClearLedgerNotification = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsLedgerCleared(true);
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('chroma_ledger_cleared_cycle', currentClearanceCycleKey);
+      window.dispatchEvent(new Event('chroma_ledger_cleared'));
+    }
+  };
+
   const incompleteDonationsCount = (studentDonations || []).filter(
     (d) => d.addition_status === 'Not Added' || (Number(d.collected_amount || 0) > 0 && !d.receipt_no?.trim())
   ).length;
@@ -145,7 +183,9 @@ export function Navbar({ onToggleMobileMenu }: NavbarProps) {
   const hasIncompleteFinancialData = incompleteDonationsCount > 0 || incompleteLedgerCount > 0;
 
   const showFinancialClearanceNotification =
-    isFinanceAuthorized && (isSaturdayNight || isLastDayOfMonth || isLastDayOfYear || hasIncompleteFinancialData);
+    !isLedgerCleared &&
+    isFinanceAuthorized &&
+    (isSaturdayNight || isLastDayOfMonth || isLastDayOfYear || hasIncompleteFinancialData);
 
   const totalNotifications =
     pendingRequestsCount +
@@ -421,32 +461,49 @@ export function Navbar({ onToggleMobileMenu }: NavbarProps) {
 
               <div className="py-2 space-y-2 max-h-64 overflow-y-auto">
                 {showFinancialClearanceNotification && (
-                  <Link
-                    href="/finance"
-                    onClick={() => setShowNotifications(false)}
-                    className="block p-2.5 rounded-xl bg-emerald-500/10 border border-emerald-500/25 text-xs hover:bg-emerald-500/15 transition-colors"
-                  >
-                    <div className="font-semibold text-emerald-700 dark:text-emerald-300 flex items-center justify-between">
-                      <div className="flex items-center gap-1.5 min-w-0 pr-1">
-                        <Landmark className="h-3.5 w-3.5 shrink-0 text-emerald-600 dark:text-emerald-400" />
-                        <span className="truncate">Ledger and other financial data clearerness Day</span>
+                  <div className="p-2.5 rounded-xl bg-emerald-500/10 border border-emerald-500/25 text-xs hover:bg-emerald-500/15 transition-colors">
+                    <Link
+                      href="/finance"
+                      onClick={() => setShowNotifications(false)}
+                      className="block group"
+                    >
+                      <div className="font-semibold text-emerald-700 dark:text-emerald-300 flex items-center justify-between">
+                        <div className="flex items-center gap-1.5 min-w-0 pr-1">
+                          <Landmark className="h-3.5 w-3.5 shrink-0 text-emerald-600 dark:text-emerald-400" />
+                          <span className="truncate group-hover:underline">Ledger and other financial data clearerness Day</span>
+                        </div>
+                        <span className="text-[9px] uppercase font-bold px-1.5 py-0.5 rounded-md bg-emerald-500/20 text-emerald-800 dark:text-emerald-300 shrink-0">
+                          {isLastDayOfYear ? 'Year End' : isLastDayOfMonth ? 'Month End' : isSaturdayNight ? 'Saturday Night' : 'Audit'}
+                        </span>
                       </div>
-                      <span className="text-[9px] uppercase font-bold px-1.5 py-0.5 rounded-md bg-emerald-500/20 text-emerald-800 dark:text-emerald-300 shrink-0">
-                        {isLastDayOfYear ? 'Year End' : isLastDayOfMonth ? 'Month End' : isSaturdayNight ? 'Saturday Night' : 'Audit'}
+                      <div className="text-muted-foreground text-[11px] mt-1 leading-relaxed">
+                        {hasIncompleteFinancialData ? (
+                          <>
+                            Clearance required: {incompleteDonationsCount > 0 ? `${incompleteDonationsCount} unadded donation(s)` : ''}
+                            {incompleteDonationsCount > 0 && incompleteLedgerCount > 0 ? ' and ' : ''}
+                            {incompleteLedgerCount > 0 ? `${incompleteLedgerCount} pending ledger item(s)` : ''}.
+                          </>
+                        ) : (
+                          'Scheduled financial clearance day. Reconcile ledger entries, student donation statuses, and book vouchers.'
+                        )}
+                      </div>
+                    </Link>
+
+                    <div className="flex items-center justify-between gap-2 mt-2 pt-2 border-t border-emerald-500/20">
+                      <span className="text-[10px] text-emerald-800/80 dark:text-emerald-300/80 font-medium">
+                        Ledger Verification
                       </span>
+                      <button
+                        type="button"
+                        onClick={handleClearLedgerNotification}
+                        className="px-2.5 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-[10px] flex items-center gap-1 shadow-xs transition-colors cursor-pointer shrink-0"
+                        title="Mark ledger data as cleared and remove notification"
+                      >
+                        <CheckCircle2 className="h-3 w-3" />
+                        <span>Cleared</span>
+                      </button>
                     </div>
-                    <div className="text-muted-foreground text-[11px] mt-1 leading-relaxed">
-                      {hasIncompleteFinancialData ? (
-                        <>
-                          Clearance required: {incompleteDonationsCount > 0 ? `${incompleteDonationsCount} unadded donation(s)` : ''}
-                          {incompleteDonationsCount > 0 && incompleteLedgerCount > 0 ? ' and ' : ''}
-                          {incompleteLedgerCount > 0 ? `${incompleteLedgerCount} pending ledger item(s)` : ''}.
-                        </>
-                      ) : (
-                        'Scheduled financial clearance day. Reconcile ledger entries, student donation statuses, and book vouchers.'
-                      )}
-                    </div>
-                  </Link>
+                  </div>
                 )}
 
                 {incompleteTasks.length > 0 && (

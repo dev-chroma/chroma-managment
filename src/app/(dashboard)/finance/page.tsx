@@ -235,6 +235,41 @@ export default function FinancialWorkspacePage() {
   const [isScriptCopied, setIsScriptCopied] = useState(false);
   const [dismissClearanceBanner, setDismissClearanceBanner] = useState(false);
 
+  // Clearance cycle key for syncing with navbar
+  const currentClearanceCycleKey = useMemo(() => {
+    const d = new Date();
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    if (d.getMonth() === 11 && d.getDate() === 31) return `year-${y}-12-31`;
+    const lastDay = new Date(y, d.getMonth() + 1, 0).getDate();
+    if (d.getDate() === lastDay) return `month-${y}-${m}-${day}`;
+    if (d.getDay() === 6) return `sat-${y}-${m}-${day}`;
+    return `day-${y}-${m}-${day}`;
+  }, []);
+
+  const [isLedgerCleared, setIsLedgerCleared] = useState(false);
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const stored = localStorage.getItem('chroma_ledger_cleared_cycle');
+      if (stored === currentClearanceCycleKey) {
+        setIsLedgerCleared(true);
+      }
+      const handleClearedEvent = () => setIsLedgerCleared(true);
+      window.addEventListener('chroma_ledger_cleared', handleClearedEvent);
+      return () => window.removeEventListener('chroma_ledger_cleared', handleClearedEvent);
+    }
+  }, [currentClearanceCycleKey]);
+
+  const handleClearLedgerBanner = () => {
+    setIsLedgerCleared(true);
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('chroma_ledger_cleared_cycle', currentClearanceCycleKey);
+      window.dispatchEvent(new Event('chroma_ledger_cleared'));
+    }
+  };
+
   const { isClearanceDue, clearanceReason, incompleteCount, incompleteDonationsCount, incompleteLedgerCount } = useMemo(() => {
     const now = new Date();
     const isSatNight = now.getDay() === 6;
@@ -557,7 +592,7 @@ export default function FinancialWorkspacePage() {
       )}
 
       {/* Financial Clearance Day Banner */}
-      {isClearanceDue && !dismissClearanceBanner && (
+      {isClearanceDue && !isLedgerCleared && !dismissClearanceBanner && (
         <div className="p-3.5 rounded-2xl border border-emerald-500/30 bg-emerald-500/10 text-emerald-950 dark:text-emerald-200 text-xs flex items-center justify-between gap-3 animate-in fade-in">
           <div className="flex items-center gap-2.5">
             <span className="p-2 rounded-xl bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 shrink-0">
@@ -577,13 +612,24 @@ export default function FinancialWorkspacePage() {
               </p>
             </div>
           </div>
-          <button
-            onClick={() => setDismissClearanceBanner(true)}
-            className="p-1 rounded-lg hover:bg-black/5 dark:hover:bg-white/5 cursor-pointer text-muted-foreground hover:text-foreground shrink-0"
-            title="Dismiss notice"
-          >
-            <X className="h-4 w-4" />
-          </button>
+          <div className="flex items-center gap-2 shrink-0">
+            <button
+              type="button"
+              onClick={handleClearLedgerBanner}
+              className="px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs flex items-center gap-1.5 shadow-xs transition-colors cursor-pointer shrink-0"
+              title="Mark ledger data as cleared and remove notice"
+            >
+              <CheckCircle2 className="h-3.5 w-3.5" />
+              <span>Cleared</span>
+            </button>
+            <button
+              onClick={() => setDismissClearanceBanner(true)}
+              className="p-1 rounded-lg hover:bg-black/5 dark:hover:bg-white/5 cursor-pointer text-muted-foreground hover:text-foreground shrink-0"
+              title="Dismiss notice"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          </div>
         </div>
       )}
 

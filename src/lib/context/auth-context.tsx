@@ -371,6 +371,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
     }
 
+    if (currentUser?.id === userId) {
+      logout();
+    }
+
     return { success: true };
   };
 

@@ -1,13 +1,14 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { useParams } from 'next/navigation';
+import { useParams, useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/context/auth-context';
 import { useData } from '@/lib/context/data-context';
 import { MemberWorkloadBar } from '@/components/tasks/member-workload-bar';
 import { getStatusBadgeClasses } from '@/lib/services/status-engine';
 import { UserAvatar } from '@/components/common/user-avatar';
 import { AvatarPicker } from '@/components/common/avatar-picker';
+import { DeleteAccountModal } from '@/components/profile/delete-account-modal';
 import {
   User,
   Mail,
@@ -23,16 +24,19 @@ import {
   EyeOff,
   Sparkles,
   AlertCircle,
+  AlertTriangle,
+  Trash2,
   X,
 } from 'lucide-react';
 import { cn, sortTasksDescending } from '@/lib/utils';
 import { format, parseISO } from 'date-fns';
 
 export default function MemberProfilePage() {
+  const router = useRouter();
   const params = useParams();
   const profileId = (params?.id as string) || '';
 
-  const { allProfiles, user, role, updateAccount, getAccountPassword } = useAuth();
+  const { allProfiles, user, role, updateAccount, getAccountPassword, deleteAccount } = useAuth();
   const { tasks, statuses, departments } = useData();
 
   const profile = allProfiles.find((p) => p.id === profileId) || user;
@@ -49,6 +53,7 @@ export default function MemberProfilePage() {
   const [saveSuccess, setSaveSuccess] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
 
   // Sync state whenever profile changes
   useEffect(() => {
@@ -118,6 +123,19 @@ export default function MemberProfilePage() {
     } finally {
       setIsSaving(false);
     }
+  };
+
+  const handleConfirmDeleteAccount = async (pwd: string) => {
+    const res = await deleteAccount(profile.id);
+    if (res?.error) {
+      return { error: res.error };
+    }
+    if (user?.id === profile.id) {
+      router.push('/login');
+    } else {
+      router.push('/members');
+    }
+    return { success: true };
   };
 
   return (
@@ -418,6 +436,51 @@ export default function MemberProfilePage() {
             </div>
           </div>
         </>
+      )}
+
+      {/* Danger Zone: Account Deletion (with 2-Step Verification) */}
+      {canEdit && (
+        <div className="bg-card text-card-foreground border border-destructive/30 rounded-2xl p-5 md:p-6 space-y-4 shadow-2xs">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div className="space-y-1">
+              <h4 className="font-extrabold text-sm text-destructive flex items-center gap-2">
+                <AlertCircle className="h-4 w-4 shrink-0" />
+                <span>Danger Zone: Account Deletion</span>
+              </h4>
+              <p className="text-xs text-muted-foreground leading-relaxed">
+                {profile.system_role === 'owner'
+                  ? 'The primary workspace Owner account is protected and cannot be deleted to preserve organization stability.'
+                  : 'Permanently delete this account profile, revoke credentials, and clear sessions. Requires 2-step verification.'}
+              </p>
+            </div>
+
+            {profile.system_role === 'owner' ? (
+              <span className="text-[11px] font-mono font-bold px-3 py-1.5 rounded-xl bg-muted text-muted-foreground border border-border shrink-0">
+                Protected Owner
+              </span>
+            ) : (
+              <button
+                type="button"
+                onClick={() => setShowDeleteModal(true)}
+                className="px-4 py-2 rounded-xl bg-destructive/10 text-destructive border border-destructive/30 hover:bg-destructive hover:text-destructive-foreground font-bold text-xs transition-all cursor-pointer shadow-xs flex items-center gap-1.5 shrink-0"
+              >
+                <Trash2 className="h-3.5 w-3.5" />
+                <span>Delete Account</span>
+              </button>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* 2-Step Verification Delete Account Modal */}
+      {showDeleteModal && (
+        <DeleteAccountModal
+          isOpen={showDeleteModal}
+          profile={profile}
+          onClose={() => setShowDeleteModal(false)}
+          onConfirmDelete={handleConfirmDeleteAccount}
+          expectedPassword={getAccountPassword(profile.id)}
+        />
       )}
     </div>
   );

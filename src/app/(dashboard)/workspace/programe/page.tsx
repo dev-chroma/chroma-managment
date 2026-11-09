@@ -28,18 +28,22 @@ import {
   Sparkles,
   ArrowUpDown,
   Filter,
+  Megaphone,
 } from 'lucide-react';
 import { useData } from '@/lib/context/data-context';
 import { useAuth } from '@/lib/context/auth-context';
 import { Programme, ProgrammeCategoryConfig, ProgrammeStatusConfig } from '@/types/database';
 import { UserAvatar } from '@/components/common/user-avatar';
 import { TwoStepDeleteModal } from '@/components/common/two-step-delete-modal';
+import { DepartmentAnnouncementBanner } from '@/components/announcements/department-announcement-banner';
+import { AddDepartmentAnnouncementModal } from '@/components/announcements/add-department-announcement-modal';
 import * as XLSX from 'xlsx';
 
 export default function ProgrammeWorkspacePage() {
   const router = useRouter();
   const { user, role, allProfiles } = useAuth();
   const {
+    departments,
     programmes,
     programmeCategories,
     programmeStatuses,
@@ -65,6 +69,8 @@ export default function ProgrammeWorkspacePage() {
   const [sortBy, setSortBy] = useState<'deadline_asc' | 'deadline_desc' | 'title' | 'progress'>('deadline_asc');
 
   // Modals
+  const programeDept = departments.find((d) => d.slug === 'programe');
+  const [isAnnouncementModalOpen, setIsAnnouncementModalOpen] = useState(false);
   const [isAddOpen, setIsAddOpen] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [editingProgramme, setEditingProgramme] = useState<Programme | null>(null);
@@ -408,6 +414,17 @@ export default function ProgrammeWorkspacePage() {
             </button>
           )}
 
+          {isPrivileged && (
+            <button
+              onClick={() => setIsAnnouncementModalOpen(true)}
+              title="Post announcement to Programme Workspace"
+              className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-card border border-border text-foreground hover:bg-muted text-xs font-semibold transition-colors cursor-pointer"
+            >
+              <Megaphone className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
+              <span className="hidden sm:inline">Announce</span>
+            </button>
+          )}
+
           <button
             onClick={handleExportAllToExcel}
             title="Export programmes to Excel"
@@ -428,6 +445,12 @@ export default function ProgrammeWorkspacePage() {
           )}
         </div>
       </div>
+
+      {/* Department Announcement Banner (Ledger notification style with Cleared button) */}
+      <DepartmentAnnouncementBanner
+        departmentId={programeDept?.id || ''}
+        departmentName="Programme"
+      />
 
       {/* VIEW 1: PROGRAMMES DOCKET */}
       {activeView === 'programmes' && (
@@ -1219,6 +1242,16 @@ export default function ProgrammeWorkspacePage() {
           }
         }}
       />
+
+      {/* ADD DEPARTMENT ANNOUNCEMENT MODAL */}
+      {isAnnouncementModalOpen && (
+        <AddDepartmentAnnouncementModal
+          isOpen={isAnnouncementModalOpen}
+          departmentId={programeDept?.id || ''}
+          departmentName="Programme"
+          onClose={() => setIsAnnouncementModalOpen(false)}
+        />
+      )}
     </div>
   );
 }

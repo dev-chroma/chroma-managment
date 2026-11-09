@@ -14,6 +14,8 @@ import { isTaskQualifyingFinished, classifyTaskStatus } from '@/lib/services/wor
 import { EditTaskModal } from '@/components/tasks/edit-task-modal';
 import { DeleteTaskModal } from '@/components/tasks/delete-task-modal';
 import { BulkImportModal } from '@/components/tasks/bulk-import-modal';
+import { DepartmentAnnouncementBanner } from '@/components/announcements/department-announcement-banner';
+import { AddDepartmentAnnouncementModal } from '@/components/announcements/add-department-announcement-modal';
 import { UserAvatar } from '@/components/common/user-avatar';
 import {
   Plus,
@@ -36,6 +38,7 @@ import {
   Pause,
   Play,
   Trash2,
+  Megaphone,
 } from 'lucide-react';
 import { cn, sortTasksDescending } from '@/lib/utils';
 import { format, parseISO, isBefore } from 'date-fns';
@@ -59,6 +62,7 @@ export default function DepartmentWorkspacePage() {
   const [newTodoInput, setNewTodoInput] = useState<Record<string, string>>({});
 
   // Modals state
+  const [isAnnouncementModalOpen, setIsAnnouncementModalOpen] = useState(false);
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [isBulkImportOpen, setIsBulkImportOpen] = useState(false);
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
@@ -233,6 +237,14 @@ export default function DepartmentWorkspacePage() {
           {(role === 'owner' || role === 'admin') && (
             <>
               <button
+                onClick={() => setIsAnnouncementModalOpen(true)}
+                className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-card border border-border text-foreground hover:bg-muted text-xs font-semibold shadow-xs transition-colors cursor-pointer"
+                title="Post an announcement to this department workspace"
+              >
+                <Megaphone className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
+                <span>Announce</span>
+              </button>
+              <button
                 onClick={() => setIsBulkImportOpen(true)}
                 className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-card border border-border text-foreground hover:bg-muted text-xs font-semibold shadow-xs transition-colors cursor-pointer"
                 title="Bulk import tasks from Excel / CSV"
@@ -251,6 +263,12 @@ export default function DepartmentWorkspacePage() {
           )}
         </div>
       </div>
+
+      {/* Department Announcements Banner (Ledger notification style with Cleared button) */}
+      <DepartmentAnnouncementBanner
+        departmentId={department.id}
+        departmentName={department.name}
+      />
 
       {/* Quick Overview Metric Cards (matching reference image) */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3.5 text-xs">
@@ -938,6 +956,16 @@ export default function DepartmentWorkspacePage() {
             await deleteTask(taskId);
             setTaskToDelete(null);
           }}
+        />
+      )}
+
+      {/* Add Department Announcement Modal */}
+      {isAnnouncementModalOpen && (
+        <AddDepartmentAnnouncementModal
+          isOpen={isAnnouncementModalOpen}
+          departmentId={department.id}
+          departmentName={department.name}
+          onClose={() => setIsAnnouncementModalOpen(false)}
         />
       )}
     </div>

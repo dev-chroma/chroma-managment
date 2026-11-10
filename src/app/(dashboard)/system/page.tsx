@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { useData } from '@/lib/context/data-context';
 import { useAuth } from '@/lib/context/auth-context';
 import { TaskStatus, Department, StatusType } from '@/types/database';
@@ -26,11 +26,23 @@ import {
   ToggleLeft,
   ToggleRight,
   Palette,
+  User,
+  Megaphone,
+  Calendar,
+  GitPullRequest,
+  CheckSquare,
+  Search,
+  Filter,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { exportAuditLogsToExcel, exportAuditLogsToPdf } from '@/lib/services/export-service';
 import { TwoStepDeleteModal } from '@/components/common/two-step-delete-modal';
 import { getStatusBadgeClasses } from '@/lib/services/status-engine';
+import {
+  getSystemAuditLogs,
+  SystemAuditLog,
+  AuditCategory,
+} from '@/lib/services/audit-service';
 
 const PRESET_COLORS = [
   { label: 'Amber', hex: '#f59e0b' },
@@ -84,6 +96,38 @@ export default function SystemControlPage() {
   const [newStatProgress, setNewStatProgress] = useState(true);
   const [newStatCompleted, setNewStatCompleted] = useState(false);
   const [prgNotice, setPrgNotice] = useState<string | null>(null);
+
+  // System Audit Trail state
+  const [systemAuditLogs, setSystemAuditLogs] = useState<SystemAuditLog[]>([]);
+  const [auditCategoryFilter, setAuditCategoryFilter] = useState<string>('all');
+  const [auditSearchQuery, setAuditSearchQuery] = useState('');
+
+  useEffect(() => {
+    setSystemAuditLogs(getSystemAuditLogs());
+    const handler = () => setSystemAuditLogs(getSystemAuditLogs());
+    window.addEventListener('chroma_audit_log_updated', handler);
+    return () => window.removeEventListener('chroma_audit_log_updated', handler);
+  }, []);
+
+  const filteredAuditLogs = useMemo(() => {
+    return systemAuditLogs.filter((log) => {
+      if (auditCategoryFilter !== 'all' && log.category !== auditCategoryFilter) {
+        return false;
+      }
+      if (auditSearchQuery.trim()) {
+        const q = auditSearchQuery.toLowerCase();
+        const actorMatch = log.actor_name?.toLowerCase().includes(q);
+        const targetMatch = log.target_name?.toLowerCase().includes(q);
+        const actionMatch = log.action?.toLowerCase().includes(q);
+        const detailsMatch = log.details?.toLowerCase().includes(q);
+        const deptMatch = log.department_name?.toLowerCase().includes(q);
+        if (!actorMatch && !targetMatch && !actionMatch && !detailsMatch && !deptMatch) {
+          return false;
+        }
+      }
+      return true;
+    });
+  }, [systemAuditLogs, auditCategoryFilter, auditSearchQuery]);
 
   React.useEffect(() => {
     setPrgCats(programmeCategories);
@@ -1299,34 +1343,34 @@ export default function SystemControlPage() {
         </div>
       )}
 
-      {/* Tab 3: Audit Logs (Section 13.5 & SYS-018) */}
+      {/* Tab 3: System Audit Logs (With Filters, Search, Human Names, and Excluded Task Data) */}
       {activeTab === 'audit' && (
-        <div className="bg-card border border-border rounded-2xl p-5 space-y-4">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-3 border-b border-border gap-3">
+        <div className="bg-card border border-border rounded-2xl p-5 md:p-6 space-y-5 shadow-xs">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-4 border-b border-border gap-3">
             <div>
-              <h3 className="font-bold text-sm text-foreground flex items-center gap-2">
-                <History className="h-4 w-4 text-primary" />
-                <span>System & Task Activity Logs</span>
+              <h3 className="font-extrabold text-base text-foreground flex items-center gap-2">
+                <History className="h-5 w-5 text-primary" />
+                <span>Executive Activity & Governance Audit Trail</span>
               </h3>
-              <span className="text-[11px] text-muted-foreground font-mono">
-                {activityLogs.length} events logged
-              </span>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                Human-readable logs for accounts, meetings, announcements, role requests, to-dos, and deletions. Workspace tasks are tracked in their respective workspace.
+              </p>
             </div>
 
             <div className="flex items-center gap-2">
               <button
-                onClick={() => exportAuditLogsToPdf(activityLogs)}
+                onClick={() => exportAuditLogsToPdf(filteredAuditLogs)}
                 className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-border bg-card text-foreground text-xs font-semibold hover:bg-muted transition-colors cursor-pointer"
-                title="Export Audit Logs as PDF Report"
+                title="Export Filtered Audit Trail as PDF Report"
               >
                 <Printer className="h-3.5 w-3.5 text-primary" />
                 <span>Export PDF</span>
               </button>
 
               <button
-                onClick={() => exportAuditLogsToExcel(activityLogs)}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-border bg-card text-foreground text-xs font-semibold hover:bg-muted transition-colors cursor-pointer"
-                title="Export Audit Logs as Excel / CSV"
+                onClick={() => exportAuditLogsToExcel(filteredAuditLogs)}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-primary text-primary-foreground text-xs font-semibold hover:bg-primary/90 transition-colors cursor-pointer shadow-xs"
+                title="Export Filtered Audit Trail as Excel / CSV"
               >
                 <Download className="h-3.5 w-3.5" />
                 <span>Export Excel</span>
@@ -1334,30 +1378,137 @@ export default function SystemControlPage() {
             </div>
           </div>
 
-          <div className="divide-y divide-border text-xs">
-            {activityLogs.length === 0 ? (
-              <div className="py-6 text-center text-muted-foreground">
-                No activity records yet. Status changes and task creations will appear here in real time.
+          {/* Filter Bar & Search */}
+          <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3 text-xs">
+            {/* Search Input */}
+            <div className="relative flex-1 max-w-md">
+              <Search className="absolute left-3 top-2.5 h-3.5 w-3.5 text-muted-foreground" />
+              <input
+                type="text"
+                value={auditSearchQuery}
+                onChange={(e) => setAuditSearchQuery(e.target.value)}
+                placeholder="Search audit trail by actor, action, target, or details..."
+                className="w-full bg-background border border-border rounded-xl pl-9 pr-3 py-2 text-foreground focus:outline-none focus:ring-1 focus:ring-primary shadow-2xs"
+              />
+            </div>
+
+            {/* Category Filter Pills */}
+            <div className="flex items-center gap-1.5 flex-wrap">
+              {[
+                { id: 'all', label: 'All Activity' },
+                { id: 'account', label: 'Accounts & Sign-in' },
+                { id: 'announcement', label: 'Announcements' },
+                { id: 'meeting', label: 'Meetings' },
+                { id: 'role_request', label: 'Role Requests' },
+                { id: 'todo', label: 'Workspace To-Dos' },
+                { id: 'deletion', label: 'Deletions' },
+              ].map((cat) => (
+                <button
+                  key={cat.id}
+                  type="button"
+                  onClick={() => setAuditCategoryFilter(cat.id)}
+                  className={cn(
+                    'px-3 py-1.5 rounded-xl font-semibold transition-all cursor-pointer text-xs',
+                    auditCategoryFilter === cat.id
+                      ? 'bg-primary text-primary-foreground shadow-2xs'
+                      : 'bg-muted/60 text-muted-foreground hover:text-foreground hover:bg-muted'
+                  )}
+                >
+                  {cat.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Audit Events List */}
+          <div className="space-y-3">
+            <div className="text-[11px] text-muted-foreground font-semibold flex items-center justify-between px-1">
+              <span>Showing {filteredAuditLogs.length} of {systemAuditLogs.length} events logged</span>
+              <span className="font-mono uppercase text-[10px]">Realtime Audit Persistence</span>
+            </div>
+
+            {filteredAuditLogs.length === 0 ? (
+              <div className="py-12 text-center text-xs text-muted-foreground bg-muted/20 border border-border rounded-2xl">
+                No activity records found matching your filter or search query.
               </div>
             ) : (
-              activityLogs.map((log) => (
-                <div key={log.id} className="py-2.5 flex items-center justify-between gap-4">
-                  <div className="space-y-0.5">
-                    <div className="font-semibold text-foreground flex items-center gap-2">
-                      <span className="px-1.5 py-0.5 rounded bg-muted text-[10px] font-mono">
-                        {log.action}
-                      </span>
-                      <span>Task {log.task_id}</span>
+              <div className="divide-y divide-border/60 border border-border rounded-2xl overflow-hidden bg-background">
+                {filteredAuditLogs.map((log) => {
+                  const dateStr = log.created_at;
+                  let categoryColor = 'bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/20';
+                  let IconComponent = User;
+
+                  if (log.category === 'announcement') {
+                    categoryColor = 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20';
+                    IconComponent = Megaphone;
+                  } else if (log.category === 'meeting') {
+                    categoryColor = 'bg-purple-500/10 text-purple-600 dark:text-purple-400 border-purple-500/20';
+                    IconComponent = Calendar;
+                  } else if (log.category === 'role_request') {
+                    categoryColor = 'bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border-indigo-500/20';
+                    IconComponent = GitPullRequest;
+                  } else if (log.category === 'todo') {
+                    categoryColor = 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20';
+                    IconComponent = CheckSquare;
+                  } else if (log.category === 'deletion') {
+                    categoryColor = 'bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/20';
+                    IconComponent = Trash2;
+                  }
+
+                  return (
+                    <div key={log.id} className="p-4 hover:bg-muted/30 transition-colors flex flex-col md:flex-row md:items-center justify-between gap-3 text-xs">
+                      <div className="flex items-start gap-3 min-w-0">
+                        <span className={cn('p-2 rounded-xl shrink-0 mt-0.5 border', categoryColor)}>
+                          <IconComponent className="h-4 w-4" />
+                        </span>
+
+                        <div className="space-y-1 min-w-0">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span className="font-bold text-foreground text-sm">{log.action}</span>
+                            <span className={cn('text-[10px] font-bold uppercase px-2 py-0.5 rounded-full border', categoryColor)}>
+                              {log.category.replace('_', ' ')}
+                            </span>
+                            {log.target_name && (
+                              <span className="text-[11px] font-semibold text-foreground/90 bg-muted px-2 py-0.5 rounded-lg truncate max-w-xs">
+                                {log.target_name}
+                              </span>
+                            )}
+                            {log.department_name && (
+                              <span className="text-[10px] text-muted-foreground font-mono">
+                                • {log.department_name}
+                              </span>
+                            )}
+                          </div>
+
+                          <p className="text-xs text-muted-foreground leading-relaxed">
+                            {log.details}
+                          </p>
+
+                          <div className="flex items-center gap-2 text-[10px] text-muted-foreground pt-0.5">
+                            <span>Performed by:</span>
+                            <strong className="text-foreground">{log.actor_name}</strong>
+                            {log.actor_role && (
+                              <span className="uppercase text-[9px] font-mono px-1.5 py-0.2 rounded bg-muted">
+                                {log.actor_role}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="text-right shrink-0 self-end md:self-center font-mono text-[11px] text-muted-foreground">
+                        {dateStr ? new Date(dateStr).toLocaleString(undefined, {
+                          month: 'short',
+                          day: 'numeric',
+                          year: 'numeric',
+                          hour: '2-digit',
+                          minute: '2-digit',
+                        }) : 'Recent'}
+                      </div>
                     </div>
-                    {log.remarks && (
-                      <div className="text-muted-foreground italic text-[11px]">&quot;{log.remarks}&quot;</div>
-                    )}
-                  </div>
-                  <span className="font-mono text-[11px] text-muted-foreground">
-                    {new Date(log.created_at).toLocaleTimeString()}
-                  </span>
-                </div>
-              ))
+                  );
+                })}
+              </div>
             )}
           </div>
         </div>

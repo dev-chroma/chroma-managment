@@ -55,6 +55,7 @@ import { useAuth } from './auth-context';
 import { isTaskQualifyingFinished } from '@/lib/services/workload-engine';
 import { createClient, isSupabaseConfigured } from '@/lib/supabase/client';
 import { sortTasksDescending } from '@/lib/utils';
+import { recordAuditLog } from '@/lib/services/audit-service';
 
 const generateUUID = (): string => {
   if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
@@ -182,7 +183,7 @@ interface DataContextType {
 const DataContext = createContext<DataContextType | undefined>(undefined);
 
 export function DataProvider({ children }: { children: React.ReactNode }) {
-  const { user } = useAuth();
+  const { user, role } = useAuth();
   const [departments, setDepartments] = useState<Department[]>(INITIAL_DEPARTMENTS);
   const [statuses, setStatuses] = useState<TaskStatus[]>(INITIAL_STATUSES);
   const [tasks, setTasks] = useState<Task[]>(() => {
@@ -1214,6 +1215,20 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
         }
       }
     }
+
+    const reqDept = departments.find((d) => d.id === targetDeptId);
+    const applicant = data.applicant_name?.trim() || user?.full_name || 'Applicant';
+    recordAuditLog({
+      category: 'role_request',
+      action: 'Role Request Submitted',
+      actor_name: applicant,
+      actor_role: data.current_role || 'visitor',
+      target_name: `${applicant} (${data.requested_role})`,
+      department_name: reqDept?.name || 'General / Organization',
+      details: `${applicant} requested elevation to ${data.requested_role}${reqDept ? ` in ${reqDept.name}` : ''}. Reason: ${data.reason.trim()}`,
+      status: 'submitted',
+    });
+
     return req;
   };
 
@@ -1262,6 +1277,21 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
         }
       }
     }
+
+    const reqItem = roleRequests.find((r) => r.id === requestId);
+    const reqDept = departments.find((d) => d.id === reqItem?.requested_department_id);
+    const applicantName = reqItem?.applicant_name || 'Applicant';
+    recordAuditLog({
+      category: 'role_request',
+      action: decision === 'approved' ? 'Role Request Approved' : 'Role Request Rejected',
+      actor_name: user?.full_name || 'Owner',
+      actor_role: role || 'owner',
+      target_name: applicantName,
+      department_name: reqDept?.name || 'General / Organization',
+      details: `${decision === 'approved' ? 'Approved' : 'Rejected'} role request for ${applicantName} (${reqItem?.requested_role || 'member'}). ${remarks ? `Remarks: ${remarks}` : ''}`.trim(),
+      status: decision,
+    });
+
     return true;
   };
 
@@ -1311,6 +1341,20 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
         }
       }
     }
+
+    const reqItem = roleRequests.find((r) => r.id === requestId);
+    const applicantName = reqItem?.applicant_name || 'Applicant';
+    recordAuditLog({
+      category: 'deletion',
+      action: permanent ? 'Role Request Permanently Removed' : 'Role Request Moved to Trash',
+      actor_name: user?.full_name || 'Admin',
+      actor_role: role || 'admin',
+      target_name: applicantName,
+      department_name: 'Authorizations',
+      details: `${permanent ? 'Permanently deleted' : 'Moved to trash'} role request for ${applicantName}.`,
+      status: 'deleted',
+    });
+
     return true;
   };
 
@@ -1354,6 +1398,20 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
         }
       }
     }
+
+    const reqItem = roleRequests.find((r) => r.id === requestId);
+    const applicantName = reqItem?.applicant_name || 'Applicant';
+    recordAuditLog({
+      category: 'role_request',
+      action: 'Role Request Restored',
+      actor_name: user?.full_name || 'Admin',
+      actor_role: role || 'admin',
+      target_name: applicantName,
+      department_name: 'Authorizations',
+      details: `Restored rejected role request for ${applicantName} back to pending queue.`,
+      status: 'submitted',
+    });
+
     return true;
   };
 
@@ -1373,6 +1431,20 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
         });
       }
     }
+
+    const targetDept = departments.find((d) => d.id === data.department_id);
+    const deptName = targetDept?.name || 'Organization-wide';
+    recordAuditLog({
+      category: 'announcement',
+      action: 'Announcement Created',
+      actor_name: user?.full_name || 'Admin',
+      actor_role: role || 'admin',
+      target_name: data.title,
+      department_name: deptName,
+      details: `Created announcement "${data.title}" for ${deptName}.`,
+      status: 'active',
+    });
+
     return ann;
   };
 
@@ -1393,6 +1465,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
   };
 
   const deleteAnnouncement = async (id: string): Promise<boolean> => {
+    const ann = announcements.find((a) => a.id === id);
     setAnnouncements((prev) => prev.filter((a) => a.id !== id));
     if (isSupabaseConfigured()) {
       const supabase = createClient();
@@ -1402,6 +1475,19 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
         });
       }
     }
+
+    const targetDept = departments.find((d) => d.id === ann?.department_id);
+    recordAuditLog({
+      category: 'deletion',
+      action: 'Announcement Deleted',
+      actor_name: user?.full_name || 'Admin',
+      actor_role: role || 'admin',
+      target_name: ann?.title || 'Announcement',
+      department_name: targetDept?.name || 'Organization-wide',
+      details: `Permanently removed announcement "${ann?.title || id}".`,
+      status: 'deleted',
+    });
+
     return true;
   };
 
@@ -1421,6 +1507,20 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
         });
       }
     }
+
+    const targetDept = departments.find((d) => d.id === data.department_id);
+    const deptName = targetDept?.name || 'Organization-wide';
+    recordAuditLog({
+      category: 'meeting',
+      action: 'Meeting Scheduled',
+      actor_name: user?.full_name || 'Admin',
+      actor_role: role || 'admin',
+      target_name: data.title,
+      department_name: deptName,
+      details: `Scheduled meeting "${data.title}" at ${data.meeting_time || 'scheduled time'} for ${deptName}.`,
+      status: 'scheduled',
+    });
+
     return mtg;
   };
 
@@ -1441,6 +1541,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
   };
 
   const deleteMeeting = async (id: string): Promise<boolean> => {
+    const mtg = meetings.find((m) => m.id === id);
     setMeetings((prev) => prev.filter((m) => m.id !== id));
     if (isSupabaseConfigured()) {
       const supabase = createClient();
@@ -1450,6 +1551,19 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
         });
       }
     }
+
+    const targetDept = departments.find((d) => d.id === mtg?.department_id);
+    recordAuditLog({
+      category: 'deletion',
+      action: 'Meeting Deleted',
+      actor_name: user?.full_name || 'Admin',
+      actor_role: role || 'admin',
+      target_name: mtg?.title || 'Meeting',
+      department_name: targetDept?.name || 'Organization-wide',
+      details: `Cancelled and removed meeting "${mtg?.title || id}".`,
+      status: 'deleted',
+    });
+
     return true;
   };
 
@@ -1905,6 +2019,18 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
       }
     }
 
+    const targetDept = departments.find((d) => d.id === todoData.department_id);
+    recordAuditLog({
+      category: 'todo',
+      action: 'Workspace To-Do Created',
+      actor_name: user?.full_name || 'Admin',
+      actor_role: role || 'admin',
+      target_name: todoData.title,
+      department_name: targetDept?.name || 'Workspace',
+      details: `Created new workspace to-do item "${todoData.title}".`,
+      status: 'pending',
+    });
+
     return newTodo;
   };
 
@@ -1931,6 +2057,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
   };
 
   const deleteTodo = async (id: string): Promise<boolean> => {
+    const todoItem = todos.find((t) => t.id === id);
     setTodos((prev) => {
       const updated = prev.filter((t) => t.id !== id);
       if (typeof window !== 'undefined') {
@@ -1948,10 +2075,23 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
       }
     }
 
+    const targetDept = departments.find((d) => d.id === todoItem?.department_id);
+    recordAuditLog({
+      category: 'deletion',
+      action: 'Workspace To-Do Deleted',
+      actor_name: user?.full_name || 'Admin',
+      actor_role: role || 'admin',
+      target_name: todoItem?.title || 'To-Do Task',
+      department_name: targetDept?.name || 'Workspace',
+      details: `Removed workspace to-do item "${todoItem?.title || id}".`,
+      status: 'deleted',
+    });
+
     return true;
   };
 
   const toggleTodoStatus = async (id: string): Promise<boolean> => {
+    const todoItem = todos.find((t) => t.id === id);
     let nextStatus: 'pending' | 'completed' = 'completed';
     setTodos((prev) => {
       const updated: WorkspaceTodo[] = prev.map((t) => {
@@ -1975,6 +2115,19 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
         });
       }
     }
+
+    const targetDept = departments.find((d) => d.id === todoItem?.department_id);
+    const newStatusTitle = todoItem?.status === 'completed' ? 'Reopened' : 'Completed';
+    recordAuditLog({
+      category: 'todo',
+      action: `To-Do ${newStatusTitle}`,
+      actor_name: user?.full_name || 'Admin',
+      actor_role: role || 'admin',
+      target_name: todoItem?.title || 'To-Do Task',
+      department_name: targetDept?.name || 'Workspace',
+      details: `Marked workspace to-do "${todoItem?.title || id}" as ${newStatusTitle.toLowerCase()}.`,
+      status: todoItem?.status === 'completed' ? 'pending' : 'completed',
+    });
 
     return true;
   };

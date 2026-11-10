@@ -24,12 +24,14 @@ import {
   ShieldAlert,
   Printer,
   FileSpreadsheet,
+  Sparkles,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { subWeeks, addWeeks, format } from 'date-fns';
 import { SummaryCards } from '@/components/dashboard/summary-cards';
 import { ExecutiveTelemetry } from '@/components/analytics/executive-telemetry';
 import { UserAvatar } from '@/components/common/user-avatar';
+import { ProgrammeOperationsAnalysis } from '@/components/analytics/programme-operations-analysis';
 import { exportAnalysisToExcel, exportAnalysisToPdf } from '@/lib/services/export-service';
 
 export default function MegaAnalyticsPage() {
@@ -37,6 +39,7 @@ export default function MegaAnalyticsPage() {
   const { departments, statuses, tasks, weeklyTargets } = useData();
   const { allProfiles, role, user } = useAuth();
 
+  const [activeAnalyticsTab, setActiveAnalyticsTab] = useState<'workload' | 'programme'>('workload');
   const [period, setPeriod] = useState<'weekly' | 'monthly' | 'yearly' | 'all'>('weekly');
   const [selectedDeptId, setSelectedDeptId] = useState<string>('all');
   const [targetWeekDate, setTargetWeekDate] = useState<Date>(new Date());
@@ -136,76 +139,112 @@ export default function MegaAnalyticsPage() {
 
         {/* Filters & Export Actions */}
         <div className="flex items-center gap-2 flex-wrap">
-          {/* Export Actions */}
-          <div className="flex items-center gap-1.5 mr-1">
+          {/* Analysis View Mode Switcher */}
+          <div className="flex rounded-xl bg-muted p-1 border border-border">
             <button
-              onClick={() =>
-                exportAnalysisToPdf({
-                  departments: filteredDepartments,
-                  tasks: analysisTasks,
-                  statuses,
-                  members: qualifyingMembers,
-                  weeklyTargets,
-                })
-              }
-              className="px-3 py-2 rounded-xl border border-border bg-card hover:bg-muted text-foreground text-xs font-bold flex items-center gap-1.5 shadow-xs transition-all cursor-pointer"
-              title="Export Executive Analysis as PDF"
+              onClick={() => setActiveAnalyticsTab('workload')}
+              className={cn(
+                'flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors cursor-pointer',
+                activeAnalyticsTab === 'workload'
+                  ? 'bg-card text-foreground shadow-2xs'
+                  : 'text-muted-foreground hover:text-foreground'
+              )}
             >
-              <Printer className="h-3.5 w-3.5 text-primary" />
-              <span>Export PDF</span>
+              <BarChart3 className="h-3.5 w-3.5" />
+              <span>Cross-Department</span>
             </button>
-
             <button
-              onClick={() =>
-                exportAnalysisToExcel({
-                  departments: filteredDepartments,
-                  tasks: analysisTasks,
-                  statuses,
-                  members: qualifyingMembers,
-                  weeklyTargets,
-                })
-              }
-              className="px-3 py-2 rounded-xl bg-primary text-primary-foreground hover:bg-primary/90 text-xs font-bold flex items-center gap-1.5 shadow-xs transition-all cursor-pointer"
-              title="Export Executive Analysis as Excel / CSV"
+              onClick={() => setActiveAnalyticsTab('programme')}
+              className={cn(
+                'flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors cursor-pointer',
+                activeAnalyticsTab === 'programme'
+                  ? 'bg-card text-foreground shadow-2xs'
+                  : 'text-muted-foreground hover:text-foreground'
+              )}
             >
-              <FileSpreadsheet className="h-3.5 w-3.5" />
-              <span>Export Excel</span>
+              <Sparkles className="h-3.5 w-3.5 text-purple-500" />
+              <span>Programme Operations</span>
             </button>
           </div>
 
-          {/* Department Filter */}
-          <select
-            value={selectedDeptId}
-            onChange={(e) => setSelectedDeptId(e.target.value)}
-            className="bg-card border border-border rounded-xl px-3 py-2 text-xs font-semibold text-foreground shadow-xs focus:ring-1 focus:ring-primary cursor-pointer"
-          >
-            <option value="all">All Departments</option>
-            {analysisDepartments.map((d) => (
-              <option key={d.id} value={d.id}>{d.name}</option>
-            ))}
-          </select>
+          {activeAnalyticsTab === 'workload' && (
+            <>
+              {/* Export Actions */}
+              <div className="flex items-center gap-1.5 mr-1">
+                <button
+                  onClick={() =>
+                    exportAnalysisToPdf({
+                      departments: filteredDepartments,
+                      tasks: analysisTasks,
+                      statuses,
+                      members: qualifyingMembers,
+                      weeklyTargets,
+                    })
+                  }
+                  className="px-3 py-2 rounded-xl border border-border bg-card hover:bg-muted text-foreground text-xs font-bold flex items-center gap-1.5 shadow-xs transition-all cursor-pointer"
+                  title="Export Executive Analysis as PDF"
+                >
+                  <Printer className="h-3.5 w-3.5 text-primary" />
+                  <span>Export PDF</span>
+                </button>
 
-          {/* Period Filter */}
-          <div className="flex items-center gap-1 bg-card border border-border p-1 rounded-xl text-xs shadow-xs">
-            {(['weekly', 'monthly', 'yearly', 'all'] as const).map((p) => (
-              <button
-                key={p}
-                onClick={() => setPeriod(p)}
-                className={cn(
-                  'px-3 py-1.5 rounded-lg font-semibold capitalize transition-all cursor-pointer',
-                  period === p
-                    ? 'bg-primary text-primary-foreground shadow-xs'
-                    : 'text-muted-foreground hover:text-foreground'
-                )}
+                <button
+                  onClick={() =>
+                    exportAnalysisToExcel({
+                      departments: filteredDepartments,
+                      tasks: analysisTasks,
+                      statuses,
+                      members: qualifyingMembers,
+                      weeklyTargets,
+                    })
+                  }
+                  className="px-3 py-2 rounded-xl bg-primary text-primary-foreground hover:bg-primary/90 text-xs font-bold flex items-center gap-1.5 shadow-xs transition-all cursor-pointer"
+                  title="Export Executive Analysis as Excel / CSV"
+                >
+                  <FileSpreadsheet className="h-3.5 w-3.5" />
+                  <span>Export Excel</span>
+                </button>
+              </div>
+
+              {/* Department Filter */}
+              <select
+                value={selectedDeptId}
+                onChange={(e) => setSelectedDeptId(e.target.value)}
+                className="bg-card border border-border rounded-xl px-3 py-2 text-xs font-semibold text-foreground shadow-xs focus:ring-1 focus:ring-primary cursor-pointer"
               >
-                {p}
-              </button>
-            ))}
-          </div>
+                <option value="all">All Departments</option>
+                {analysisDepartments.map((d) => (
+                  <option key={d.id} value={d.id}>{d.name}</option>
+                ))}
+              </select>
+
+              {/* Period Filter */}
+              <div className="flex items-center gap-1 bg-card border border-border p-1 rounded-xl text-xs shadow-xs">
+                {(['weekly', 'monthly', 'yearly', 'all'] as const).map((p) => (
+                  <button
+                    key={p}
+                    onClick={() => setPeriod(p)}
+                    className={cn(
+                      'px-3 py-1.5 rounded-lg font-semibold capitalize transition-all cursor-pointer',
+                      period === p
+                        ? 'bg-primary text-primary-foreground shadow-xs'
+                        : 'text-muted-foreground hover:text-foreground'
+                    )}
+                  >
+                    {p}
+                  </button>
+                ))}
+              </div>
+            </>
+          )}
         </div>
       </div>
 
-      {/* On-Time vs Delayed Delivery Audit & Pacing (Section 22) */}
+      {activeAnalyticsTab === 'programme' ? (
+        <ProgrammeOperationsAnalysis />
+      ) : (
+        <>
+          {/* On-Time vs Delayed Delivery Audit & Pacing (Section 22) */}
       <div className="space-y-6">
         <div>
           <h2 className="text-base font-extrabold text-foreground tracking-tight flex items-center gap-2">
@@ -742,6 +781,8 @@ export default function MegaAnalyticsPage() {
           })}
         </div>
       </div>
+        </>
+      )}
     </div>
   );
 }

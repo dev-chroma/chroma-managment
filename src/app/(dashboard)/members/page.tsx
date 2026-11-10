@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/context/auth-context';
 import { useData } from '@/lib/context/data-context';
@@ -29,6 +29,8 @@ import {
   Award,
   UserCheck,
   UserX,
+  LayoutGrid,
+  List,
 } from 'lucide-react';
 import Link from 'next/link';
 import { cn, sortTasksDescending } from '@/lib/utils';
@@ -44,6 +46,7 @@ export default function TeamMembersPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [roleFilter, setRoleFilter] = useState<string>('all');
   const [deptFilter, setDeptFilter] = useState<string>('all');
+  const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
 
   // Modals state
   const [isAddOpen, setIsAddOpen] = useState(false);
@@ -109,6 +112,9 @@ export default function TeamMembersPage() {
 }
 
   const isPrivileged = role === 'owner' || role === 'admin';
+  const userDept = departments.find((d) => d.id === user?.department_id);
+  const isFinanceAdmin = role === 'admin' && (userDept?.slug === 'finance' || user?.department_id?.startsWith('d6666666'));
+  const canAddMember = isPrivileged && !isFinanceAdmin;
 
   // Filter members by role, department, and search query
   const filteredMembers = allProfiles.filter((m) => {
@@ -129,6 +135,23 @@ export default function TeamMembersPage() {
     }
     return true;
   });
+
+  // Strict sorting: First Owner, then Admin, then General Member, then other members
+  const ROLE_PRIORITY: Record<string, number> = {
+    owner: 1,
+    admin: 2,
+    general_member: 3,
+    member: 4,
+  };
+
+  const sortedMembers = useMemo(() => {
+    return [...filteredMembers].sort((a, b) => {
+      const pA = ROLE_PRIORITY[a.system_role] || 99;
+      const pB = ROLE_PRIORITY[b.system_role] || 99;
+      if (pA !== pB) return pA - pB;
+      return (a.full_name || '').localeCompare(b.full_name || '');
+    });
+  }, [filteredMembers]);
 
   const handleAddMember = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -274,15 +297,45 @@ export default function TeamMembersPage() {
           </p>
         </div>
 
-        {isPrivileged && (
-          <button
-            onClick={() => setIsAddOpen(true)}
-            className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-primary text-primary-foreground text-xs font-semibold hover:bg-primary/90 transition-colors shadow-sm self-start sm:self-auto cursor-pointer"
-          >
-            <UserPlus className="h-4 w-4" />
-            <span>Add Team Member</span>
-          </button>
-        )}
+        <div className="flex items-center gap-2.5">
+          {/* View Mode Toggle: Grid & List */}
+          <div className="flex items-center rounded-xl bg-card border border-border p-1 shadow-2xs">
+            <button
+              type="button"
+              onClick={() => setViewMode('grid')}
+              className={cn(
+                'p-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer',
+                viewMode === 'grid' ? 'bg-primary text-primary-foreground shadow-2xs' : 'text-muted-foreground hover:text-foreground'
+              )}
+              title="Card Grid View"
+            >
+              <LayoutGrid className="h-3.5 w-3.5" />
+              <span className="hidden sm:inline">Grid</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setViewMode('list')}
+              className={cn(
+                'p-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer',
+                viewMode === 'list' ? 'bg-primary text-primary-foreground shadow-2xs' : 'text-muted-foreground hover:text-foreground'
+              )}
+              title="Table List View"
+            >
+              <List className="h-3.5 w-3.5" />
+              <span className="hidden sm:inline">List</span>
+            </button>
+          </div>
+
+          {canAddMember && (
+            <button
+              onClick={() => setIsAddOpen(true)}
+              className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-primary text-primary-foreground text-xs font-semibold hover:bg-primary/90 transition-colors shadow-sm cursor-pointer"
+            >
+              <UserPlus className="h-4 w-4" />
+              <span>Add Team Member</span>
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Filter & Search Bar */}
@@ -326,9 +379,10 @@ export default function TeamMembersPage() {
         </div>
       </div>
 
-      {/* Members Grid with CRUD Controls */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {filteredMembers.map((member) => {
+      {/* Members Directory - Grid or List View (Sorted: Owner -> Admin -> General Member -> Member) */}
+      {viewMode === 'grid' ? (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {sortedMembers.map((member) => {
           const memberTasks = tasks.filter((t) => t.assigned_to === member.id && !t.is_archived);
           const totalAssigned = memberTasks.length;
 
@@ -500,6 +554,139 @@ export default function TeamMembersPage() {
           );
         })}
       </div>
+    ) : (
+      /* Members List View (Table Layout) */
+      <div className="bg-card border border-border rounded-2xl overflow-hidden shadow-2xs">
+        <div className="overflow-x-auto">
+          <table className="w-full text-left text-xs">
+            <thead>
+              <tr className="border-b border-border bg-muted/40 text-muted-foreground font-bold tracking-wider text-[11px] uppercase">
+                <th className="py-3 px-4">Member</th>
+                <th className="py-3 px-3">Role</th>
+                <th className="py-3 px-3">Department</th>
+                <th className="py-3 px-3 text-center">Assigned</th>
+                <th className="py-3 px-3 text-center text-emerald-600 dark:text-emerald-400">Completed</th>
+                <th className="py-3 px-3 text-center">Rate</th>
+                <th className="py-3 px-3 text-center">Status</th>
+                <th className="py-3 px-4 text-right">Actions</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-border/60">
+              {sortedMembers.length === 0 ? (
+                <tr>
+                  <td colSpan={8} className="py-8 text-center text-muted-foreground">
+                    No members match your search or filter criteria.
+                  </td>
+                </tr>
+              ) : (
+                sortedMembers.map((member) => {
+                  const memberTasks = tasks.filter((t) => t.assigned_to === member.id && !t.is_archived);
+                  const totalAssigned = memberTasks.length;
+                  let completedCount = 0;
+                  for (const t of memberTasks) {
+                    const dept = departments.find((d) => d.id === t.department_id);
+                    const { isFinished } = isTaskQualifyingFinished(t, statuses, dept?.slug || 'editing');
+                    if (isFinished) completedCount++;
+                  }
+                  const completionRate = totalAssigned > 0 ? Math.round((completedCount / totalAssigned) * 100) : 100;
+                  const dept = departments.find((d) => d.id === member.department_id);
+                  const canManageThisMember = role === 'owner' || (role === 'admin' && member.department_id === user?.department_id);
+                  const isLeadership = member.system_role === 'owner' || member.system_role === 'admin';
+
+                  return (
+                    <tr key={member.id} className="hover:bg-muted/30 transition-colors">
+                      <td className="py-3 px-4">
+                        <div className="flex items-center gap-3">
+                          <UserAvatar src={member.avatar_url} name={member.full_name} size="md" />
+                          <div className="min-w-0">
+                            <span className="font-bold text-foreground block truncate">{member.full_name}</span>
+                            <span className="text-[11px] text-muted-foreground block truncate">{member.email}</span>
+                          </div>
+                        </div>
+                      </td>
+                      <td className="py-3 px-3">
+                        <span className={cn('text-[10px] font-mono uppercase font-bold px-2 py-0.5 rounded-full inline-block',
+                          member.system_role === 'owner' ? 'bg-purple-100 text-purple-700 dark:bg-purple-950 dark:text-purple-300' :
+                          member.system_role === 'admin' ? 'bg-blue-100 text-blue-700 dark:bg-blue-950 dark:text-blue-300' :
+                          member.system_role === 'general_member' ? 'bg-cyan-100 text-cyan-700 dark:bg-cyan-950 dark:text-cyan-300' :
+                          'bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300'
+                        )}>
+                          {member.system_role.replace('_', ' ')}
+                        </span>
+                      </td>
+                      <td className="py-3 px-3">
+                        <span className="text-xs text-muted-foreground font-medium">
+                          {dept?.name || (member.system_role === 'general_member' ? 'Cross-Department' : 'Leadership')}
+                        </span>
+                      </td>
+                      <td className="py-3 px-3 text-center font-mono font-semibold text-foreground">
+                        {isLeadership ? '—' : totalAssigned}
+                      </td>
+                      <td className="py-3 px-3 text-center font-mono font-bold text-emerald-600 dark:text-emerald-400">
+                        {isLeadership ? '—' : completedCount}
+                      </td>
+                      <td className="py-3 px-3 text-center font-mono font-bold">
+                        {isLeadership ? '—' : `${completionRate}%`}
+                      </td>
+                      <td className="py-3 px-3 text-center">
+                        {member.is_active === false ? (
+                          <span className="text-[10px] font-bold uppercase px-2 py-0.5 rounded-full bg-rose-500/10 text-rose-500 border border-rose-500/30">
+                            Deactivated
+                          </span>
+                        ) : (
+                          <span className="text-[10px] font-bold uppercase px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30">
+                            Active
+                          </span>
+                        )}
+                      </td>
+                      <td className="py-3 px-4 text-right">
+                        <div className="flex items-center justify-end gap-1.5">
+                          <Link
+                            href={`/profile/${member.id}`}
+                            className="p-1.5 rounded-lg text-muted-foreground hover:text-primary hover:bg-primary/10 transition-colors"
+                            title="View Profile"
+                          >
+                            <ExternalLink className="h-4 w-4" />
+                          </Link>
+                          <button
+                            type="button"
+                            onClick={() => setViewingMember(member)}
+                            className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted transition-colors cursor-pointer"
+                            title="Quick Dossier"
+                          >
+                            <Eye className="h-4 w-4" />
+                          </button>
+                          {canManageThisMember && (
+                            <button
+                              type="button"
+                              onClick={() => openEditModal(member)}
+                              className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted transition-colors cursor-pointer"
+                              title="Edit User"
+                            >
+                              <Edit3 className="h-4 w-4" />
+                            </button>
+                          )}
+                          {role === 'owner' && member.system_role !== 'owner' && (
+                            <button
+                              type="button"
+                              onClick={() => setMemberToDelete(member)}
+                              className="p-1.5 rounded-lg text-muted-foreground hover:text-rose-500 hover:bg-rose-500/10 transition-colors cursor-pointer"
+                              title="Delete Account"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </button>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    )}
 
       {/* CRUD MODAL 1: VIEW MEMBER DETAILS */}
       {viewingMember && (
@@ -744,9 +931,11 @@ export default function TeamMembersPage() {
                       }}
                       className="w-full bg-background border border-border rounded-xl px-3 py-2 text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
                     >
-                      {departments.map((d) => (
-                        <option key={d.id} value={d.id}>{d.name}</option>
-                      ))}
+                      {departments
+                        .filter((d) => editRole !== 'member' || d.slug !== 'finance')
+                        .map((d) => (
+                          <option key={d.id} value={d.id}>{d.name}</option>
+                        ))}
                     </select>
                   ) : (
                     <input
@@ -949,9 +1138,11 @@ export default function TeamMembersPage() {
                       }}
                       className="w-full bg-background border border-border rounded-xl px-3 py-2 text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
                     >
-                      {departments.map((d) => (
-                        <option key={d.id} value={d.id}>{d.name}</option>
-                      ))}
+                      {departments
+                        .filter((d) => newRole !== 'member' || d.slug !== 'finance')
+                        .map((d) => (
+                          <option key={d.id} value={d.id}>{d.name}</option>
+                        ))}
                     </select>
                   ) : (
                     <input

@@ -629,31 +629,35 @@ export function exportTasksToPdf(
 /**
  * Exports Audit Activity Logs to Excel (CSV)
  */
-export function exportAuditLogsToExcel(logs: ActivityLog[]) {
+export function exportAuditLogsToExcel(logs: any[]) {
   const rows: (string | number)[][] = [
-    ['CHROMADIARIES WORKSPACE - SYSTEM & AUDIT LOGS'],
+    ['CHROMADIARIES WORKSPACE - COMPREHENSIVE SYSTEM AUDIT TRAIL'],
     ['Generated On', format(new Date(), 'yyyy-MM-dd HH:mm')],
     [],
-    ['Log ID', 'Action', 'Task ID', 'Remarks', 'Timestamp'],
+    ['Date & Time', 'Actor Name', 'Role', 'Category', 'Action Taken', 'Subject / Target', 'Department', 'Detailed Remarks'],
   ];
 
   for (const log of logs) {
+    const timeStr = log.created_at ? format(parseISO(log.created_at), 'yyyy-MM-dd HH:mm:ss') : 'N/A';
     rows.push([
-      log.id,
-      log.action,
-      log.task_id,
-      log.remarks || '',
-      format(parseISO(log.created_at), 'yyyy-MM-dd HH:mm:ss'),
+      timeStr,
+      log.actor_name || 'System / Member',
+      log.actor_role || 'member',
+      (log.category || 'general').toUpperCase(),
+      log.action || 'Activity Event',
+      log.target_name || log.task_id || 'System Asset',
+      log.department_name || 'Organization-wide',
+      log.details || log.remarks || '',
     ]);
   }
 
-  downloadExcelCsv(`ChromaDiaries_Audit_Logs_${format(new Date(), 'yyyy-MM-dd')}`, rows);
+  downloadExcelCsv(`ChromaDiaries_System_Audit_Logs_${format(new Date(), 'yyyy-MM-dd')}`, rows);
 }
 
 /**
  * Exports Audit Activity Logs to printable PDF Report
  */
-export function exportAuditLogsToPdf(logs: ActivityLog[]) {
+export function exportAuditLogsToPdf(logs: any[]) {
   const printWindow = window.open('', '_blank');
   if (!printWindow) {
     alert('Please allow popups to generate the PDF report.');
@@ -661,15 +665,19 @@ export function exportAuditLogsToPdf(logs: ActivityLog[]) {
   }
 
   const rowsHtml = logs
-    .map((l) => `
-      <tr>
-        <td style="padding: 8px 10px; border-bottom: 1px solid #e2e8f0; font-family: monospace;">${l.id.slice(0, 10)}</td>
-        <td style="padding: 8px 10px; border-bottom: 1px solid #e2e8f0; font-weight: 700; text-transform: uppercase;">${l.action}</td>
-        <td style="padding: 8px 10px; border-bottom: 1px solid #e2e8f0; font-family: monospace;">${l.task_id}</td>
-        <td style="padding: 8px 10px; border-bottom: 1px solid #e2e8f0;">${l.remarks || '—'}</td>
-        <td style="padding: 8px 10px; border-bottom: 1px solid #e2e8f0; font-family: monospace;">${format(parseISO(l.created_at), 'yyyy-MM-dd HH:mm')}</td>
-      </tr>
-    `)
+    .map((l) => {
+      const timeStr = l.created_at ? format(parseISO(l.created_at), 'yyyy-MM-dd HH:mm') : '—';
+      return `
+        <tr>
+          <td style="padding: 8px 10px; border-bottom: 1px solid #e2e8f0; font-family: monospace; font-size: 11px;">${timeStr}</td>
+          <td style="padding: 8px 10px; border-bottom: 1px solid #e2e8f0; font-weight: 700;">${l.actor_name || 'Member'}<br><span style="font-size: 10px; color: #64748b; text-transform: uppercase;">${l.actor_role || 'member'}</span></td>
+          <td style="padding: 8px 10px; border-bottom: 1px solid #e2e8f0; font-weight: 700; text-transform: uppercase; font-size: 10px;">${l.category || 'SYSTEM'}</td>
+          <td style="padding: 8px 10px; border-bottom: 1px solid #e2e8f0; font-weight: 600;">${l.action}</td>
+          <td style="padding: 8px 10px; border-bottom: 1px solid #e2e8f0;">${l.target_name || l.task_id || '—'}<br><span style="font-size: 10px; color: #64748b;">${l.department_name || 'All'}</span></td>
+          <td style="padding: 8px 10px; border-bottom: 1px solid #e2e8f0; font-size: 11px;">${l.details || l.remarks || '—'}</td>
+        </tr>
+      `;
+    })
     .join('');
 
   const htmlContent = `

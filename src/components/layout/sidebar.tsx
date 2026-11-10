@@ -83,13 +83,17 @@ export function Sidebar({ isOpen = false, onClose }: SidebarProps) {
     { slug: 'todo', name: 'Workspace To-Do', href: '/todo', icon: ListTodo, color: 'text-blue-500' },
   ];
 
-  const departmentLinks = (role === 'owner' || role === 'general_member')
+  const rawDepartmentLinks = role === 'owner'
     ? allDepartmentLinks
-    : [
-        ...allDepartmentLinks.filter((d) => d.slug === userDeptSlug),
-        allDepartmentLinks.find((d) => d.slug === 'finance')!,
-        allDepartmentLinks.find((d) => d.slug === 'todo')!,
-      ].filter(Boolean);
+    : role === 'general_member'
+      ? allDepartmentLinks.filter((d) => d.slug !== 'finance')
+      : [
+          ...allDepartmentLinks.filter((d) => d.slug === userDeptSlug),
+          allDepartmentLinks.find((d) => d.slug === 'todo')!,
+        ].filter(Boolean);
+
+  // Strictly deduplicate by slug using Map so no link can ever be rendered twice
+  const departmentLinks = Array.from(new Map(rawDepartmentLinks.map((item) => [item.slug, item])).values());
 
   return (
     <>
@@ -275,33 +279,37 @@ export function Sidebar({ isOpen = false, onClose }: SidebarProps) {
                   Department Admin
                 </div>
                 <nav className="space-y-1">
-                  <Link
-                    href="/tasks-oversight"
-                    onClick={onClose}
-                    className={cn(
-                      'flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-semibold transition-colors',
-                      pathname === '/tasks-oversight'
-                        ? 'bg-primary text-primary-foreground'
-                        : 'text-muted-foreground hover:bg-muted hover:text-foreground'
-                    )}
-                  >
-                    <Layers className="h-4 w-4" />
-                    <span>Task Management & Oversight</span>
-                  </Link>
+                  {userDeptSlug !== 'finance' && (
+                    <Link
+                      href="/tasks-oversight"
+                      onClick={onClose}
+                      className={cn(
+                        'flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-semibold transition-colors',
+                        pathname === '/tasks-oversight'
+                          ? 'bg-primary text-primary-foreground'
+                          : 'text-muted-foreground hover:bg-muted hover:text-foreground'
+                      )}
+                    >
+                      <Layers className="h-4 w-4" />
+                      <span>Task Management & Oversight</span>
+                    </Link>
+                  )}
 
-                  <Link
-                    href="/members"
-                    onClick={onClose}
-                    className={cn(
-                      'flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-semibold transition-colors',
-                      pathname === '/members'
-                        ? 'bg-primary text-primary-foreground'
-                        : 'text-muted-foreground hover:bg-muted hover:text-foreground'
-                    )}
-                  >
-                    <Users className="h-4 w-4" />
-                    <span>Team Members</span>
-                  </Link>
+                  {userDeptSlug !== 'finance' && (
+                    <Link
+                      href="/members"
+                      onClick={onClose}
+                      className={cn(
+                        'flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-semibold transition-colors',
+                        pathname === '/members'
+                          ? 'bg-primary text-primary-foreground'
+                          : 'text-muted-foreground hover:bg-muted hover:text-foreground'
+                      )}
+                    >
+                      <Users className="h-4 w-4" />
+                      <span>Team Members</span>
+                    </Link>
+                  )}
 
                   <Link
                     href="/requests"

@@ -5,6 +5,7 @@ import { Profile, SystemRole } from '@/types/database';
 import { INITIAL_PROFILES } from '@/lib/mock/initial-data';
 import { createClient, isSupabaseConfigured } from '@/lib/supabase/client';
 import { useRouter, usePathname } from 'next/navigation';
+import { recordAuditLog } from '@/lib/services/audit-service';
 
 interface UserAccount extends Profile {
   password?: string;
@@ -183,6 +184,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       localStorage.setItem(STORAGE_KEY_USER, JSON.stringify(safeUser));
     }
 
+    try {
+      recordAuditLog({
+        category: 'account',
+        action: 'Account Session Opened',
+        actor_name: account.full_name,
+        actor_role: account.system_role,
+        target_name: 'Studio Workspace Session',
+        details: `${account.full_name} (${account.system_role.toUpperCase()}) logged into the workspace.`,
+        status: 'active',
+      });
+    } catch {}
+
     router.push('/');
     return {};
   };
@@ -266,6 +279,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
 
     const { password: _, ...safeUser } = newAccount;
+    try {
+      recordAuditLog({
+        category: 'account',
+        action: 'Account Created',
+        actor_name: currentUser?.full_name || 'Owner',
+        actor_role: currentUser?.system_role || 'owner',
+        target_name: data.full_name.trim(),
+        details: `Provisioned new ${effectiveRole} account for "${data.full_name.trim()}" (${cleanEmail}).`,
+        status: 'active',
+      });
+    } catch {}
     return { user: safeUser };
   };
 
@@ -374,6 +398,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (currentUser?.id === userId) {
       logout();
     }
+
+    try {
+      recordAuditLog({
+        category: 'deletion',
+        action: 'Account Deleted',
+        actor_name: currentUser?.full_name || 'Owner',
+        actor_role: currentUser?.system_role || 'owner',
+        target_name: target.full_name,
+        details: `Permanently deleted account for "${target.full_name}" (${target.email}).`,
+        status: 'deleted',
+      });
+    } catch {}
 
     return { success: true };
   };

@@ -3,6 +3,7 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { useData } from '@/lib/context/data-context';
 import { useAuth } from '@/lib/context/auth-context';
+import { useFinancialClearance } from '@/lib/services/financial-clearance-service';
 import { LedgerEntry, StudentDonation, MoneyHolding } from '@/types/database';
 import {
   exportLedgerToExcel,
@@ -233,74 +234,32 @@ export default function FinancialWorkspacePage() {
   const [syncStatusMsg, setSyncStatusMsg] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
   const [isScriptModalOpen, setIsScriptModalOpen] = useState(false);
   const [isScriptCopied, setIsScriptCopied] = useState(false);
-  const [dismissClearanceBanner, setDismissClearanceBanner] = useState(false);
 
-  // Clearance cycle key for syncing with navbar
-  const currentClearanceCycleKey = useMemo(() => {
-    const d = new Date();
-    const y = d.getFullYear();
-    const m = String(d.getMonth() + 1).padStart(2, '0');
-    const day = String(d.getDate()).padStart(2, '0');
-    if (d.getMonth() === 11 && d.getDate() === 31) return `year-${y}-12-31`;
-    const lastDay = new Date(y, d.getMonth() + 1, 0).getDate();
-    if (d.getDate() === lastDay) return `month-${y}-${m}-${day}`;
-    if (d.getDay() === 6) return `sat-${y}-${m}-${day}`;
-    return `day-${y}-${m}-${day}`;
-  }, []);
+  // Financial clearance milestone engine (Saturday, Month-End, Dec 31)
+  const {
+    shouldShowAnnouncement: isClearanceDue,
+    milestoneLabel,
+    milestoneDateFormatted,
+    isToday: isTodayMilestone,
+    clearanceReason,
+    announcementTitle,
+    announcementDescription,
+    clearMilestone: handleClearLedgerBanner,
+    dismissNotice,
+    isDismissedTemporarily: dismissClearanceBanner,
+  } = useFinancialClearance(user?.full_name, role);
 
-  const [isLedgerCleared, setIsLedgerCleared] = useState(false);
-
-  useEffect(() => {
-    if (typeof window !== 'undefined') {
-      const stored = localStorage.getItem('chroma_ledger_cleared_cycle');
-      if (stored === currentClearanceCycleKey) {
-        setIsLedgerCleared(true);
-      }
-      const handleClearedEvent = () => setIsLedgerCleared(true);
-      window.addEventListener('chroma_ledger_cleared', handleClearedEvent);
-      return () => window.removeEventListener('chroma_ledger_cleared', handleClearedEvent);
-    }
-  }, [currentClearanceCycleKey]);
-
-  const handleClearLedgerBanner = () => {
-    setIsLedgerCleared(true);
-    if (typeof window !== 'undefined') {
-      localStorage.setItem('chroma_ledger_cleared_cycle', currentClearanceCycleKey);
-      window.dispatchEvent(new Event('chroma_ledger_cleared'));
-    }
-  };
-
-  const { isClearanceDue, clearanceReason, incompleteCount, incompleteDonationsCount, incompleteLedgerCount } = useMemo(() => {
-    const now = new Date();
-    const isSatNight = now.getDay() === 6;
-    const isMonthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate() === now.getDate();
-    const isYearEnd = now.getMonth() === 11 && now.getDate() === 31;
-
-    const unaddedDonations = studentDonations.filter(
+  const incompleteDonationsCount = useMemo(() => {
+    return (studentDonations || []).filter(
       (d) => d.addition_status === 'Not Added' || (Number(d.collected_amount || 0) > 0 && !d.receipt_no?.trim())
     ).length;
+  }, [studentDonations]);
 
-    const incompleteLedgers = ledgerEntries.filter(
+  const incompleteLedgerCount = useMemo(() => {
+    return (ledgerEntries || []).filter(
       (e) => !e.item?.trim() || !e.date || ((!e.credit || e.credit === 0) && (!e.debit || e.debit === 0))
     ).length;
-
-    const incomplete = unaddedDonations + incompleteLedgers;
-    const due = isSatNight || isMonthEnd || isYearEnd || incomplete > 0;
-
-    let reason = '';
-    if (isYearEnd) reason = 'Year-End Closing';
-    else if (isMonthEnd) reason = 'Month-End Closing';
-    else if (isSatNight) reason = 'Saturday Night Clearance';
-    else if (incomplete > 0) reason = 'Reconciliation Required';
-
-    return {
-      isClearanceDue: due,
-      clearanceReason: reason,
-      incompleteCount: incomplete,
-      incompleteDonationsCount: unaddedDonations,
-      incompleteLedgerCount: incompleteLedgers,
-    };
-  }, [studentDonations, ledgerEntries]);
+  }, [ledgerEntries]);
 
   // Database is fetched live from Supabase via DataContext on mount.
   // Manual sync can be triggered anytime using the 'Sync Sheet' button.
@@ -592,7 +551,7 @@ export default function FinancialWorkspacePage() {
       )}
 
       {/* Financial Clearance Day Banner */}
-      {isClearanceDue && !isLedgerCleared && !dismissClearanceBanner && (
+      {isClearanceDue && !dismissClearanceBanner && (
         <div className="p-3.5 rounded-2xl border border-emerald-500/30 bg-emerald-500/10 text-emerald-950 dark:text-emerald-200 text-xs flex items-center justify-between gap-3 animate-in fade-in">
           <div className="flex items-center gap-2.5">
             <span className="p-2 rounded-xl bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 shrink-0">
@@ -600,15 +559,18 @@ export default function FinancialWorkspacePage() {
             </span>
             <div>
               <div className="font-bold flex items-center gap-2 flex-wrap">
-                <span>Ledger and other financial data clearerness Day</span>
+                <span>{announcementTitle}</span>
                 <span className="text-[10px] font-bold uppercase px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-800 dark:text-emerald-300">
                   {clearanceReason}
                 </span>
+                {!isTodayMilestone && (
+                  <span className="text-[10px] font-semibold text-amber-700 dark:text-amber-300 font-mono">
+                    (Pending from {milestoneDateFormatted})
+                  </span>
+                )}
               </div>
               <p className="text-[11px] text-muted-foreground mt-0.5">
-                {incompleteCount > 0
-                  ? `Clearance action required: ${incompleteDonationsCount > 0 ? `${incompleteDonationsCount} unadded donation(s)` : ''}${incompleteDonationsCount > 0 && incompleteLedgerCount > 0 ? ', ' : ''}${incompleteLedgerCount > 0 ? `${incompleteLedgerCount} pending ledger item(s)` : ''}. Please reconcile records to ensure clean ledger balances.`
-                  : 'All Saturday night and month/year-end accounts must be finalized and audited. All ledger entries and student collections are currently up to date.'}
+                {announcementDescription}
               </p>
             </div>
           </div>
@@ -617,13 +579,13 @@ export default function FinancialWorkspacePage() {
               type="button"
               onClick={handleClearLedgerBanner}
               className="px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs flex items-center gap-1.5 shadow-xs transition-colors cursor-pointer shrink-0"
-              title="Mark ledger data as cleared and remove notice"
+              title="Mark financial clearance as completed and remove notice"
             >
               <CheckCircle2 className="h-3.5 w-3.5" />
               <span>Cleared</span>
             </button>
             <button
-              onClick={() => setDismissClearanceBanner(true)}
+              onClick={dismissNotice}
               className="p-1 rounded-lg hover:bg-black/5 dark:hover:bg-white/5 cursor-pointer text-muted-foreground hover:text-foreground shrink-0"
               title="Dismiss notice"
             >

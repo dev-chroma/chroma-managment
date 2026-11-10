@@ -439,38 +439,60 @@ export default function MemberProfilePage() {
       )}
 
       {/* Danger Zone: Account Deletion (with 2-Step Verification) */}
-      {canEdit && (
-        <div className="bg-card text-card-foreground border border-destructive/30 rounded-2xl p-5 md:p-6 space-y-4 shadow-2xs">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-            <div className="space-y-1">
-              <h4 className="font-extrabold text-sm text-destructive flex items-center gap-2">
-                <AlertCircle className="h-4 w-4 shrink-0" />
-                <span>Danger Zone: Account Deletion</span>
-              </h4>
-              <p className="text-xs text-muted-foreground leading-relaxed">
-                {profile.system_role === 'owner'
-                  ? 'The primary workspace Owner account is protected and cannot be deleted to preserve organization stability.'
-                  : 'Permanently delete this account profile, revoke credentials, and clear sessions. Requires 2-step verification.'}
-              </p>
-            </div>
+      {canEdit && (() => {
+        const allOwners = allProfiles.filter((p) => p.system_role === 'owner');
+        const isSoleOwner = allOwners.length <= 1;
+        const isSelf = user?.id === profile.id;
+        const isOwner = profile.system_role === 'owner';
 
-            {profile.system_role === 'owner' ? (
-              <span className="text-[11px] font-mono font-bold px-3 py-1.5 rounded-xl bg-muted text-muted-foreground border border-border shrink-0">
-                Protected Owner
-              </span>
-            ) : (
-              <button
-                type="button"
-                onClick={() => setShowDeleteModal(true)}
-                className="px-4 py-2 rounded-xl bg-destructive/10 text-destructive border border-destructive/30 hover:bg-destructive hover:text-destructive-foreground font-bold text-xs transition-all cursor-pointer shadow-xs flex items-center gap-1.5 shrink-0"
-              >
-                <Trash2 className="h-3.5 w-3.5" />
-                <span>Delete Account</span>
-              </button>
-            )}
+        return (
+          <div className="bg-card text-card-foreground border border-destructive/30 rounded-2xl p-5 md:p-6 space-y-4 shadow-2xs">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div className="space-y-1">
+                <h4 className="font-extrabold text-sm text-destructive flex items-center gap-2">
+                  <AlertCircle className="h-4 w-4 shrink-0" />
+                  <span>Danger Zone: Account Deletion</span>
+                </h4>
+                <p className="text-xs text-muted-foreground leading-relaxed">
+                  {isOwner
+                    ? isSelf
+                      ? !isSoleOwner
+                        ? 'You are an Owner of this workspace. Since another Owner is registered, you may delete your own account with 2-step verification. Once deleted, your session will end immediately.'
+                        : 'You are the sole Owner of this workspace. The sole Owner account cannot be deleted to preserve organization stability and governance.'
+                      : 'Owner accounts cannot be deleted by another user or Owner. Only this Owner may delete their own account.'
+                    : 'Permanently delete this account profile, revoke credentials, and clear sessions. Requires 2-step verification.'}
+                </p>
+              </div>
+
+              {isOwner ? (
+                isSelf && !isSoleOwner ? (
+                  <button
+                    type="button"
+                    onClick={() => setShowDeleteModal(true)}
+                    className="px-4 py-2 rounded-xl bg-destructive text-destructive-foreground hover:bg-destructive/90 font-bold text-xs transition-all cursor-pointer shadow-xs flex items-center gap-1.5 shrink-0"
+                  >
+                    <Trash2 className="h-3.5 w-3.5" />
+                    <span>Delete My Owner Account</span>
+                  </button>
+                ) : (
+                  <span className="text-[11px] font-mono font-bold px-3 py-1.5 rounded-xl bg-muted text-muted-foreground border border-border shrink-0">
+                    {isSelf ? 'Sole Owner (Protected)' : 'Owner Protected (Self-Delete Only)'}
+                  </span>
+                )
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => setShowDeleteModal(true)}
+                  className="px-4 py-2 rounded-xl bg-destructive/10 text-destructive border border-destructive/30 hover:bg-destructive hover:text-destructive-foreground font-bold text-xs transition-all cursor-pointer shadow-xs flex items-center gap-1.5 shrink-0"
+                >
+                  <Trash2 className="h-3.5 w-3.5" />
+                  <span>Delete Account</span>
+                </button>
+              )}
+            </div>
           </div>
-        </div>
-      )}
+        );
+      })()}
 
       {/* 2-Step Verification Delete Account Modal */}
       {showDeleteModal && (

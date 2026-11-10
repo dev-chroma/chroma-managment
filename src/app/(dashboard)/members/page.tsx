@@ -169,7 +169,7 @@ export default function TeamMembersPage() {
         full_name: fullName,
         email,
         role: targetRole,
-        department_id: targetDeptId || undefined,
+        department_id: (targetRole === 'owner' || targetRole === 'general_member') ? undefined : (targetDeptId || undefined),
         password: password || 'member@123',
         avatar_url: addAvatarUrl || '/profile-icon.png',
       });
@@ -223,7 +223,7 @@ export default function TeamMembersPage() {
         bio: editBio,
         password: editPassword,
         avatar_url: editAvatarUrl || '/profile-icon.png',
-        department_id: role === 'owner' ? editDepartmentId : undefined,
+        department_id: role === 'owner' ? ((editRole === 'owner' || editRole === 'general_member') ? undefined : editDepartmentId) : undefined,
         system_role: role === 'owner' ? editRole : undefined,
         is_active: editIsActive,
       });
@@ -616,7 +616,7 @@ export default function TeamMembersPage() {
                       </td>
                       <td className="py-3 px-3">
                         <span className="text-xs text-muted-foreground font-medium">
-                          {dept?.name || (member.system_role === 'general_member' ? 'Cross-Department' : 'Leadership')}
+                          {member.system_role === 'owner' ? '—' : dept?.name || (member.system_role === 'general_member' ? 'Cross-Department' : 'Leadership')}
                         </span>
                       </td>
                       <td className="py-3 px-3 text-center font-mono font-semibold text-foreground">
@@ -716,7 +716,7 @@ export default function TeamMembersPage() {
                     {viewingMember.system_role}
                   </span>
                   <span className="text-xs text-muted-foreground">
-                    {departments.find((d) => d.id === viewingMember.department_id)?.name || 'General Department'}
+                    {viewingMember.system_role === 'owner' ? '—' : departments.find((d) => d.id === viewingMember.department_id)?.name || 'General Department'}
                   </span>
                 </div>
               </div>
@@ -860,7 +860,7 @@ export default function TeamMembersPage() {
                 />
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
+              <div className={cn("grid gap-3", editRole === 'owner' ? "grid-cols-1" : "grid-cols-2")}>
                 <div>
                   <label className="block font-semibold text-foreground mb-1">Role</label>
                   {role === 'owner' ? (
@@ -914,38 +914,40 @@ export default function TeamMembersPage() {
                   )}
                 </div>
 
-                <div>
-                  <label className="block font-semibold text-foreground mb-1">Department</label>
-                  {role === 'owner' ? (
-                    <select
-                      value={editDepartmentId}
-                      onChange={(e) => {
-                        const newDeptId = e.target.value;
-                        setEditDepartmentId(newDeptId);
-                        const selDept = departments.find((d) => d.id === newDeptId);
-                        if (selDept?.slug === 'finance') {
-                          setEditRole('admin');
-                        } else if (selDept?.slug === 'programe') {
-                          if (editRole !== 'admin') setEditRole('member');
-                        }
-                      }}
-                      className="w-full bg-background border border-border rounded-xl px-3 py-2 text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
-                    >
-                      {departments
-                        .filter((d) => editRole !== 'member' || d.slug !== 'finance')
-                        .map((d) => (
-                          <option key={d.id} value={d.id}>{d.name}</option>
-                        ))}
-                    </select>
-                  ) : (
-                    <input
-                      type="text"
-                      disabled
-                      value={departments.find((d) => d.id === editingMember.department_id)?.name || 'Assigned Department'}
-                      className="w-full bg-muted border border-border rounded-xl px-3 py-2 text-muted-foreground cursor-not-allowed font-medium truncate"
-                    />
-                  )}
-                </div>
+                {editRole !== 'owner' && (
+                  <div>
+                    <label className="block font-semibold text-foreground mb-1">Department</label>
+                    {role === 'owner' ? (
+                      <select
+                        value={editDepartmentId}
+                        onChange={(e) => {
+                          const newDeptId = e.target.value;
+                          setEditDepartmentId(newDeptId);
+                          const selDept = departments.find((d) => d.id === newDeptId);
+                          if (selDept?.slug === 'finance') {
+                            setEditRole('admin');
+                          } else if (selDept?.slug === 'programe') {
+                            if (editRole !== 'admin') setEditRole('member');
+                          }
+                        }}
+                        className="w-full bg-background border border-border rounded-xl px-3 py-2 text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
+                      >
+                        {departments
+                          .filter((d) => editRole !== 'member' || d.slug !== 'finance')
+                          .map((d) => (
+                            <option key={d.id} value={d.id}>{d.name}</option>
+                          ))}
+                      </select>
+                    ) : (
+                      <input
+                        type="text"
+                        disabled
+                        value={departments.find((d) => d.id === editingMember.department_id)?.name || 'Assigned Department'}
+                        className="w-full bg-muted border border-border rounded-xl px-3 py-2 text-muted-foreground cursor-not-allowed font-medium truncate"
+                      />
+                    )}
+                  </div>
+                )}
               </div>
 
               <div>
@@ -1067,7 +1069,7 @@ export default function TeamMembersPage() {
                 />
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
+              <div className={cn("grid gap-3", newRole === 'owner' ? "grid-cols-1" : "grid-cols-2")}>
                 <div>
                   <label className="block font-semibold text-foreground mb-1">System Role</label>
                   {role === 'owner' ? (
@@ -1121,38 +1123,40 @@ export default function TeamMembersPage() {
                   )}
                 </div>
 
-                <div>
-                  <label className="block font-semibold text-foreground mb-1">Assigned Department</label>
-                  {role === 'owner' ? (
-                    <select
-                      value={departmentId}
-                      onChange={(e) => {
-                        const newDeptId = e.target.value;
-                        setDepartmentId(newDeptId);
-                        const selDept = departments.find((d) => d.id === newDeptId);
-                        if (selDept?.slug === 'finance') {
-                          setNewRole('admin');
-                        } else if (selDept?.slug === 'programe') {
-                          if (newRole !== 'admin') setNewRole('member');
-                        }
-                      }}
-                      className="w-full bg-background border border-border rounded-xl px-3 py-2 text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
-                    >
-                      {departments
-                        .filter((d) => newRole !== 'member' || d.slug !== 'finance')
-                        .map((d) => (
-                          <option key={d.id} value={d.id}>{d.name}</option>
-                        ))}
-                    </select>
-                  ) : (
-                    <input
-                      type="text"
-                      disabled
-                      value={departments.find((d) => d.id === user?.department_id)?.name || 'My Department'}
-                      className="w-full bg-muted border border-border rounded-xl px-3 py-2 text-muted-foreground cursor-not-allowed font-medium"
-                    />
-                  )}
-                </div>
+                {newRole !== 'owner' && (
+                  <div>
+                    <label className="block font-semibold text-foreground mb-1">Assigned Department</label>
+                    {role === 'owner' ? (
+                      <select
+                        value={departmentId}
+                        onChange={(e) => {
+                          const newDeptId = e.target.value;
+                          setDepartmentId(newDeptId);
+                          const selDept = departments.find((d) => d.id === newDeptId);
+                          if (selDept?.slug === 'finance') {
+                            setNewRole('admin');
+                          } else if (selDept?.slug === 'programe') {
+                            if (newRole !== 'admin') setNewRole('member');
+                          }
+                        }}
+                        className="w-full bg-background border border-border rounded-xl px-3 py-2 text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
+                      >
+                        {departments
+                          .filter((d) => newRole !== 'member' || d.slug !== 'finance')
+                          .map((d) => (
+                            <option key={d.id} value={d.id}>{d.name}</option>
+                          ))}
+                      </select>
+                    ) : (
+                      <input
+                        type="text"
+                        disabled
+                        value={departments.find((d) => d.id === user?.department_id)?.name || 'My Department'}
+                        className="w-full bg-muted border border-border rounded-xl px-3 py-2 text-muted-foreground cursor-not-allowed font-medium"
+                      />
+                    )}
+                  </div>
+                )}
               </div>
 
               <div>

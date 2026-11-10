@@ -129,7 +129,7 @@ export default function RoleRequestsPage() {
       current_role: user.system_role,
       current_department_id: user.department_id || null,
       requested_role: requestedRole,
-      requested_department_id: requestedRole === 'general_member' ? null : requestedDeptId,
+      requested_department_id: (requestedRole === 'owner' || requestedRole === 'general_member') ? null : requestedDeptId,
       reason,
     });
 
@@ -145,20 +145,24 @@ export default function RoleRequestsPage() {
 
     // If approving a new guest applicant from the login page, automatically provision their account
     if (decision === 'approved') {
+      const isCrossDept = req?.requested_role === 'owner' || req?.requested_role === 'general_member';
+      const assignedDeptId = isCrossDept ? undefined : (req?.requested_department_id || undefined);
+      const assignedRole = (req?.requested_role || 'member') as SystemRole;
+
       if (req?.applicant_email && !req.user_id) {
         await createAccount({
           full_name: req.applicant_name || 'Team Member',
           email: req.applicant_email,
-          role: (req.requested_role === 'admin' ? 'admin' : req.requested_role === 'general_member' ? 'general_member' : 'member') as SystemRole,
-          department_id: req.requested_department_id || undefined,
+          role: assignedRole,
+          department_id: assignedDeptId,
           password: chosenPassword,
         });
       } else if (req?.user_id) {
         // Update existing member credentials / department
         await updateAccount(req.user_id, {
           password: chosenPassword,
-          system_role: (req.requested_role === 'admin' ? 'admin' : req.requested_role === 'general_member' ? 'general_member' : 'member') as SystemRole,
-          department_id: req.requested_department_id || undefined,
+          system_role: assignedRole,
+          department_id: isCrossDept ? null : (req.requested_department_id || undefined),
         });
       }
     }
@@ -578,28 +582,6 @@ export default function RoleRequestsPage() {
 
             <form onSubmit={handleSubmitRequest} className="space-y-3.5 text-xs">
               <div>
-                <label className="block font-semibold text-foreground mb-1">Target Department</label>
-                <select
-                  value={requestedDeptId}
-                  onChange={(e) => {
-                    const newDeptId = e.target.value;
-                    setRequestedDeptId(newDeptId);
-                    const dept = departments.find((d) => d.id === newDeptId);
-                    if (dept?.slug === 'finance') {
-                      setRequestedRole('admin');
-                    } else if (requestedRole !== 'admin' && requestedRole !== 'member') {
-                      setRequestedRole('member');
-                    }
-                  }}
-                  className="w-full bg-background border border-border rounded-lg px-3 py-2 text-foreground focus:ring-1 focus:ring-primary"
-                >
-                  {departments.map((d) => (
-                    <option key={d.id} value={d.id}>{d.name}</option>
-                  ))}
-                </select>
-              </div>
-
-              <div>
                 <label className="block font-semibold text-foreground mb-1">Requested Role</label>
                 {(() => {
                   const selDept = departments.find((d) => d.id === requestedDeptId);
@@ -640,10 +622,37 @@ export default function RoleRequestsPage() {
                       <option value="member">Department Member</option>
                       <option value="general_member">General Member (Cross-Department)</option>
                       <option value="admin">Department Admin</option>
+                      <option value="owner">Workspace Owner</option>
                     </select>
                   );
                 })()}
               </div>
+
+              {requestedRole !== 'owner' && requestedRole !== 'general_member' && (
+                <div>
+                  <label className="block font-semibold text-foreground mb-1">Target Department</label>
+                  <select
+                    value={requestedDeptId}
+                    onChange={(e) => {
+                      const newDeptId = e.target.value;
+                      setRequestedDeptId(newDeptId);
+                      const dept = departments.find((d) => d.id === newDeptId);
+                      if (dept?.slug === 'finance') {
+                        setRequestedRole('admin');
+                      } else if (requestedRole !== 'admin' && requestedRole !== 'member') {
+                        setRequestedRole('member');
+                      }
+                    }}
+                    className="w-full bg-background border border-border rounded-lg px-3 py-2 text-foreground focus:ring-1 focus:ring-primary"
+                  >
+                    {departments
+                      .filter((d) => requestedRole !== 'member' || d.slug !== 'finance')
+                      .map((d) => (
+                        <option key={d.id} value={d.id}>{d.name}</option>
+                      ))}
+                  </select>
+                </div>
+              )}
 
               <div>
                 <label className="block font-semibold text-foreground mb-1">Justification & Reason *</label>

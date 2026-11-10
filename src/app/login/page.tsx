@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import { cn } from '@/lib/utils';
 import { useAuth } from '@/lib/context/auth-context';
 import { useData } from '@/lib/context/data-context';
 import { 
@@ -288,36 +289,7 @@ export default function LoginPage() {
                   </div>
                 </div>
 
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <label className="block font-semibold text-foreground mb-1">
-                      Department <span className="text-rose-500">*</span>
-                    </label>
-                    <div className="relative">
-                      <Building2 className="absolute left-3 top-2.5 h-3.5 w-3.5 text-muted-foreground pointer-events-none" />
-                      <select
-                        value={reqDeptId}
-                        onChange={(e) => {
-                          const newDeptId = e.target.value;
-                          setReqDeptId(newDeptId);
-                          const dept = departments.find((d) => d.id === newDeptId);
-                          if (dept?.slug === 'finance') {
-                            setReqRole('admin');
-                          } else if (reqRole !== 'admin' && reqRole !== 'member') {
-                            setReqRole('member');
-                          }
-                        }}
-                        className="w-full bg-background border border-border rounded-xl pl-9 pr-2 py-2 text-foreground focus:outline-none focus:ring-1 focus:ring-primary text-xs cursor-pointer shadow-xs"
-                      >
-                        {departments.map((d) => (
-                          <option key={d.id} value={d.id}>
-                            {d.name}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-                  </div>
-
+                <div className={cn("grid gap-3", reqRole === 'general_member' ? "grid-cols-1" : "grid-cols-2")}>
                   <div>
                     <label className="block font-semibold text-foreground mb-1">
                       Requested Role <span className="text-rose-500">*</span>
@@ -365,6 +337,39 @@ export default function LoginPage() {
                       );
                     })()}
                   </div>
+
+                  {reqRole !== 'general_member' && (
+                    <div>
+                      <label className="block font-semibold text-foreground mb-1">
+                        Department <span className="text-rose-500">*</span>
+                      </label>
+                      <div className="relative">
+                        <Building2 className="absolute left-3 top-2.5 h-3.5 w-3.5 text-muted-foreground pointer-events-none" />
+                        <select
+                          value={reqDeptId}
+                          onChange={(e) => {
+                            const newDeptId = e.target.value;
+                            setReqDeptId(newDeptId);
+                            const dept = departments.find((d) => d.id === newDeptId);
+                            if (dept?.slug === 'finance') {
+                              setReqRole('admin');
+                            } else if (reqRole !== 'admin' && reqRole !== 'member') {
+                              setReqRole('member');
+                            }
+                          }}
+                          className="w-full bg-background border border-border rounded-xl pl-9 pr-2 py-2 text-foreground focus:outline-none focus:ring-1 focus:ring-primary text-xs cursor-pointer shadow-xs"
+                        >
+                          {departments
+                            .filter((d) => reqRole !== 'member' || d.slug !== 'finance')
+                            .map((d) => (
+                              <option key={d.id} value={d.id}>
+                                {d.name}
+                              </option>
+                            ))}
+                        </select>
+                      </div>
+                    </div>
+                  )}
                 </div>
 
                 <div>

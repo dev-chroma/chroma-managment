@@ -92,11 +92,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         }
       });
 
+      // Strict Owner Sanitization: Owners belong to no single department (Organization-wide)
+      accounts = accounts.map((acc) => {
+        if (acc.system_role === 'owner') {
+          return { ...acc, department_id: null };
+        }
+        return acc;
+      });
+
       // Check saved session
       const savedUser = localStorage.getItem(STORAGE_KEY_USER);
       if (savedUser) {
         try {
           const parsedUser = JSON.parse(savedUser);
+          if (parsedUser.system_role === 'owner') {
+            parsedUser.department_id = null;
+          }
           setCurrentUser(parsedUser);
         } catch {
           setCurrentUser(null);
@@ -128,9 +139,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
               profData.forEach((p: any) => {
                 const existing = map.get(p.email.toLowerCase());
                 const deptInfo = memberDeptMap.get(p.id);
+                const isOwner = p.system_role === 'owner';
                 map.set(p.email.toLowerCase(), {
                   ...p,
-                  department_id: p.department_id || (deptInfo ? deptInfo.deptId : (existing?.department_id || null)),
+                  department_id: isOwner ? null : (p.department_id || (deptInfo ? deptInfo.deptId : (existing?.department_id || null))),
                   password: existing?.password || 'member@123',
                 });
               });
@@ -228,7 +240,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     // Role Enforcement: Department Admin can only create members for their own department (SYS-005, SYS-006)
     const isAdmin = currentUser?.system_role === 'admin';
     const effectiveRole: SystemRole = isAdmin ? 'member' : data.role;
-    const effectiveDeptId = effectiveRole === 'general_member' 
+    const effectiveDeptId = (effectiveRole === 'general_member' || effectiveRole === 'owner')
       ? null 
       : isAdmin 
       ? currentUser?.department_id 
@@ -311,6 +323,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     let updatedAcc: UserAccount | null = null;
     const updatedProfiles = profiles.map((p) => {
       if (p.id === userId) {
+        const nextRole = data.system_role !== undefined ? data.system_role : p.system_role;
+        const nextDeptId = nextRole === 'owner' || nextRole === 'general_member'
+          ? null
+          : (data.department_id !== undefined ? data.department_id : p.department_id);
+
         updatedAcc = {
           ...p,
           ...(data.full_name !== undefined ? { full_name: data.full_name.trim() } : {}),
@@ -319,8 +336,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           ...(data.bio !== undefined ? { bio: data.bio.trim() } : {}),
           ...(data.password !== undefined && data.password.trim() ? { password: data.password.trim() } : {}),
           ...(data.avatar_url !== undefined ? { avatar_url: data.avatar_url } : {}),
-          ...(data.system_role !== undefined ? { system_role: data.system_role } : {}),
-          ...(data.department_id !== undefined ? { department_id: data.department_id } : {}),
+          system_role: nextRole,
+          department_id: nextDeptId,
           ...(data.is_active !== undefined ? { is_active: data.is_active } : {}),
           updated_at: new Date().toISOString(),
         };
@@ -379,7 +396,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       return { error: 'Account not found.' };
     }
     if (target.system_role === 'owner') {
-      return { error: 'The primary workspace Owner account cannot be deleted.' };
+      if (currentUser?.id !== userId) {
+        return { error: 'An Owner cannot delete another Owner account. Owners can only delete their own account.' };
+      }
+      const ownerCount = profiles.filter((p) => p.system_role === 'owner').length;
+      if (ownerCount <= 1) {
+        return { error: 'Cannot delete the sole Owner account. At least one Owner must remain in the workspace.' };
+      }
     }
 
     const updated = profiles.filter((p) => p.id !== userId);

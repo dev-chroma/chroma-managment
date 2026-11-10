@@ -92,9 +92,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         }
       });
 
-      // Strict Owner Sanitization: Owners belong to no single department (Organization-wide)
+      // Strict Owner & General Member Sanitization: Cross-department roles belong to no single department
       accounts = accounts.map((acc) => {
-        if (acc.system_role === 'owner') {
+        if (acc.system_role === 'owner' || acc.system_role === 'general_member') {
           return { ...acc, department_id: null };
         }
         return acc;
@@ -105,7 +105,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (savedUser) {
         try {
           const parsedUser = JSON.parse(savedUser);
-          if (parsedUser.system_role === 'owner') {
+          if (parsedUser.system_role === 'owner' || parsedUser.system_role === 'general_member') {
             parsedUser.department_id = null;
           }
           setCurrentUser(parsedUser);
@@ -139,10 +139,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
               profData.forEach((p: any) => {
                 const existing = map.get(p.email.toLowerCase());
                 const deptInfo = memberDeptMap.get(p.id);
-                const isOwner = p.system_role === 'owner';
+                const isCrossDept = p.system_role === 'owner' || p.system_role === 'general_member';
                 map.set(p.email.toLowerCase(), {
                   ...p,
-                  department_id: isOwner ? null : (p.department_id || (deptInfo ? deptInfo.deptId : (existing?.department_id || null))),
+                  department_id: isCrossDept ? null : (p.department_id || (deptInfo ? deptInfo.deptId : (existing?.department_id || null))),
                   password: existing?.password || 'member@123',
                 });
               });

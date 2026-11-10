@@ -616,7 +616,7 @@ export default function TeamMembersPage() {
                       </td>
                       <td className="py-3 px-3">
                         <span className="text-xs text-muted-foreground font-medium">
-                          {member.system_role === 'owner' ? '—' : dept?.name || (member.system_role === 'general_member' ? 'Cross-Department' : 'Leadership')}
+                          {member.system_role === 'owner' || member.system_role === 'general_member' ? '—' : dept?.name || 'Leadership'}
                         </span>
                       </td>
                       <td className="py-3 px-3 text-center font-mono font-semibold text-foreground">
@@ -716,7 +716,7 @@ export default function TeamMembersPage() {
                     {viewingMember.system_role}
                   </span>
                   <span className="text-xs text-muted-foreground">
-                    {viewingMember.system_role === 'owner' ? '—' : departments.find((d) => d.id === viewingMember.department_id)?.name || 'General Department'}
+                    {viewingMember.system_role === 'owner' || viewingMember.system_role === 'general_member' ? '—' : departments.find((d) => d.id === viewingMember.department_id)?.name || 'Unassigned'}
                   </span>
                 </div>
               </div>
@@ -860,34 +860,38 @@ export default function TeamMembersPage() {
                 />
               </div>
 
-              <div className={cn("grid gap-3", editRole === 'owner' ? "grid-cols-1" : "grid-cols-2")}>
+              <div className={cn("grid gap-3", (editRole === 'owner' || editRole === 'general_member') ? "grid-cols-1" : "grid-cols-2")}>
                 <div>
                   <label className="block font-semibold text-foreground mb-1">Role</label>
                   {role === 'owner' ? (
                     (() => {
                       const selDept = departments.find((d) => d.id === editDepartmentId);
-                      const isFinance = selDept?.slug === 'finance' || selDept?.name.toLowerCase().includes('finance');
-                      const isPrograme = selDept?.slug === 'programe' || selDept?.name.toLowerCase().includes('programe');
+                      const isFinance = editRole !== 'owner' && editRole !== 'general_member' && (selDept?.slug === 'finance' || selDept?.name.toLowerCase().includes('finance'));
+                      const isPrograme = editRole !== 'owner' && editRole !== 'general_member' && (selDept?.slug === 'programe' || selDept?.name.toLowerCase().includes('programe'));
                       if (isFinance) {
                         return (
                           <select
-                            value="admin"
-                            disabled
-                            className="w-full bg-muted border border-border rounded-xl px-3 py-2 text-foreground font-semibold cursor-not-allowed"
+                            value={editRole}
+                            onChange={(e) => setEditRole(e.target.value as SystemRole)}
+                            className="w-full bg-background border border-border rounded-xl px-3 py-2 text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
                           >
-                            <option value="admin">Finance Department Admin (Admin Only)</option>
+                            <option value="admin">Finance Department Admin</option>
+                            <option value="general_member">General Member (Cross-Department)</option>
+                            <option value="owner">Owner</option>
                           </select>
                         );
                       }
                       if (isPrograme) {
                         return (
                           <select
-                            value={editRole === 'admin' ? 'admin' : 'member'}
+                            value={editRole}
                             onChange={(e) => setEditRole(e.target.value as SystemRole)}
                             className="w-full bg-background border border-border rounded-xl px-3 py-2 text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
                           >
                             <option value="member">Programme Team Member</option>
                             <option value="admin">Programme Department Admin</option>
+                            <option value="general_member">General Member (Cross-Department)</option>
+                            <option value="owner">Owner</option>
                           </select>
                         );
                       }
@@ -914,7 +918,7 @@ export default function TeamMembersPage() {
                   )}
                 </div>
 
-                {editRole !== 'owner' && (
+                {editRole !== 'owner' && editRole !== 'general_member' && (
                   <div>
                     <label className="block font-semibold text-foreground mb-1">Department</label>
                     {role === 'owner' ? (
@@ -1069,34 +1073,38 @@ export default function TeamMembersPage() {
                 />
               </div>
 
-              <div className={cn("grid gap-3", newRole === 'owner' ? "grid-cols-1" : "grid-cols-2")}>
+              <div className={cn("grid gap-3", (newRole === 'owner' || newRole === 'general_member') ? "grid-cols-1" : "grid-cols-2")}>
                 <div>
                   <label className="block font-semibold text-foreground mb-1">System Role</label>
                   {role === 'owner' ? (
                     (() => {
                       const selDept = departments.find((d) => d.id === departmentId);
-                      const isFinance = selDept?.slug === 'finance' || selDept?.name.toLowerCase().includes('finance');
-                      const isPrograme = selDept?.slug === 'programe' || selDept?.name.toLowerCase().includes('programe');
+                      const isFinance = newRole !== 'owner' && newRole !== 'general_member' && (selDept?.slug === 'finance' || selDept?.name.toLowerCase().includes('finance'));
+                      const isPrograme = newRole !== 'owner' && newRole !== 'general_member' && (selDept?.slug === 'programe' || selDept?.name.toLowerCase().includes('programe'));
                       if (isFinance) {
                         return (
                           <select
-                            value="admin"
-                            disabled
-                            className="w-full bg-muted border border-border rounded-xl px-3 py-2 text-foreground font-semibold cursor-not-allowed"
+                            value={newRole}
+                            onChange={(e) => setNewRole(e.target.value as SystemRole)}
+                            className="w-full bg-background border border-border rounded-xl px-3 py-2 text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
                           >
-                            <option value="admin">Finance Department Admin (Admin Only)</option>
+                            <option value="admin">Finance Department Admin</option>
+                            <option value="general_member">General Member (Cross-Department)</option>
+                            <option value="owner">Owner</option>
                           </select>
                         );
                       }
                       if (isPrograme) {
                         return (
                           <select
-                            value={newRole === 'admin' ? 'admin' : 'member'}
+                            value={newRole}
                             onChange={(e) => setNewRole(e.target.value as SystemRole)}
                             className="w-full bg-background border border-border rounded-xl px-3 py-2 text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
                           >
                             <option value="member">Programme Team Member</option>
                             <option value="admin">Programme Department Admin</option>
+                            <option value="general_member">General Member (Cross-Department)</option>
+                            <option value="owner">Owner</option>
                           </select>
                         );
                       }
@@ -1123,7 +1131,7 @@ export default function TeamMembersPage() {
                   )}
                 </div>
 
-                {newRole !== 'owner' && (
+                {newRole !== 'owner' && newRole !== 'general_member' && (
                   <div>
                     <label className="block font-semibold text-foreground mb-1">Assigned Department</label>
                     {role === 'owner' ? (

@@ -585,17 +585,19 @@ export default function RoleRequestsPage() {
                 <label className="block font-semibold text-foreground mb-1">Requested Role</label>
                 {(() => {
                   const selDept = departments.find((d) => d.id === requestedDeptId);
-                  const isFinance = selDept?.slug === 'finance';
-                  const isPrograme = selDept?.slug === 'programe';
+                  const isFinance = requestedRole !== 'owner' && requestedRole !== 'general_member' && selDept?.slug === 'finance';
+                  const isPrograme = requestedRole !== 'owner' && requestedRole !== 'general_member' && selDept?.slug === 'programe';
 
                   if (isFinance) {
                     return (
                       <select
-                        value="admin"
-                        disabled
-                        className="w-full bg-muted border border-border rounded-lg px-3 py-2 text-foreground font-semibold cursor-not-allowed"
+                        value={requestedRole}
+                        onChange={(e) => setRequestedRole(e.target.value)}
+                        className="w-full bg-background border border-border rounded-lg px-3 py-2 text-foreground focus:ring-1 focus:ring-primary"
                       >
-                        <option value="admin">Finance Department Admin (Admin Only)</option>
+                        <option value="admin">Finance Department Admin</option>
+                        <option value="general_member">General Member (Cross-Department)</option>
+                        <option value="owner">Workspace Owner</option>
                       </select>
                     );
                   }
@@ -603,12 +605,14 @@ export default function RoleRequestsPage() {
                   if (isPrograme) {
                     return (
                       <select
-                        value={requestedRole === 'admin' ? 'admin' : 'member'}
+                        value={requestedRole}
                         onChange={(e) => setRequestedRole(e.target.value)}
                         className="w-full bg-background border border-border rounded-lg px-3 py-2 text-foreground focus:ring-1 focus:ring-primary"
                       >
                         <option value="member">Programme Team Member</option>
                         <option value="admin">Programme Department Admin</option>
+                        <option value="general_member">General Member (Cross-Department)</option>
+                        <option value="owner">Workspace Owner</option>
                       </select>
                     );
                   }

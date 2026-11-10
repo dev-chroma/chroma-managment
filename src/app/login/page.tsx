@@ -296,17 +296,18 @@ export default function LoginPage() {
                     </label>
                     {(() => {
                       const selDept = departments.find((d) => d.id === reqDeptId);
-                      const isFinance = selDept?.slug === 'finance';
-                      const isPrograme = selDept?.slug === 'programe';
+                      const isFinance = reqRole !== 'general_member' && selDept?.slug === 'finance';
+                      const isPrograme = reqRole !== 'general_member' && selDept?.slug === 'programe';
 
                       if (isFinance) {
                         return (
                           <select
-                            value="admin"
-                            disabled
-                            className="w-full bg-muted border border-border rounded-xl px-3 py-2 text-foreground focus:outline-none text-xs font-semibold cursor-not-allowed shadow-xs"
+                            value={reqRole}
+                            onChange={(e) => setReqRole(e.target.value as 'member' | 'admin' | 'general_member')}
+                            className="w-full bg-background border border-border rounded-xl px-3 py-2 text-foreground focus:outline-none focus:ring-1 focus:ring-primary text-xs cursor-pointer shadow-xs"
                           >
                             <option value="admin">Finance Admin (Admin Only)</option>
+                            <option value="general_member">General Member (Cross-Department)</option>
                           </select>
                         );
                       }
@@ -314,12 +315,13 @@ export default function LoginPage() {
                       if (isPrograme) {
                         return (
                           <select
-                            value={reqRole === 'admin' ? 'admin' : 'member'}
-                            onChange={(e) => setReqRole(e.target.value as 'member' | 'admin')}
+                            value={reqRole}
+                            onChange={(e) => setReqRole(e.target.value as 'member' | 'admin' | 'general_member')}
                             className="w-full bg-background border border-border rounded-xl px-3 py-2 text-foreground focus:outline-none focus:ring-1 focus:ring-primary text-xs cursor-pointer shadow-xs"
                           >
                             <option value="member">Programme Member</option>
                             <option value="admin">Programme Department Admin</option>
+                            <option value="general_member">General Member (Cross-Department)</option>
                           </select>
                         );
                       }
